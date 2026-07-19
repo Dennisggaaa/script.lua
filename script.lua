@@ -1,4 +1,4 @@
--- Контекст и инициализация хелперов
+ - Контекст и инициализация хелперов
 local MovementController = {}
 MovementController.__index = MovementController
 
@@ -51,7 +51,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = targetGui
 
--- Холст для 2D элементов ESP
+-- Холст для 2D элементов ESP и объектов Adornment
 local FullscreenEspCanvas = Instance.new("Frame")
 FullscreenEspCanvas.Name = "FullscreenEspCanvas"
 FullscreenEspCanvas.Size = UDim2.new(1, 0, 1, 0)
@@ -59,10 +59,13 @@ FullscreenEspCanvas.BackgroundTransparency = 1
 FullscreenEspCanvas.ZIndex = 1
 FullscreenEspCanvas.Parent = ScreenGui
 
--- Переменные состояний fly
+-- Переменные состояний fly и fling
 local flyEnabled = false
 local flySpeedValue = 50
 local shopHackEnabled = false
+local flingMasterEnabled = false
+local selectedFlingTarget = nil
+local isFlinging = false
 local flyController = MovementController.new()
 
 -- Настройки ESP
@@ -74,12 +77,12 @@ local espSettings = {
     Distance = {enabled = false, color = Color3.fromRGB(255, 255, 0)}
 }
 
--- Настройки HIT-BOX (Расширенные)
+-- Настройки HIT-BOX
 local hitboxMasterEnabled = false
 local hitboxSizeValue = 2
 local showHitboxVisuals = false
-local hitboxColor = Color3.fromRGB(255, 0, 0)       -- Дефолтный красный цвет
-local hitboxTransparencyValue = 0.5                  -- Дефолтные 50% прозрачности
+local hitboxColor = Color3.fromRGB(255, 0, 0)
+local hitboxTransparencyValue = 0.5
 
 local function getSpeed() return flySpeedValue end
 local function getState() return flyEnabled end
@@ -105,7 +108,7 @@ MainFrame.Visible = false
 MainFrame.ZIndex = 5
 MainFrame.Parent = ScreenGui
 
--- Окно графического выбора цвета (Color Picker)
+-- Окно выбора цвета (Color Picker)
 local ColorPickerFrame = Instance.new("Frame")
 ColorPickerFrame.Name = "ColorPickerFrame"
 ColorPickerFrame.Size = UDim2.new(0, 160, 0, 170)
@@ -367,16 +370,24 @@ end
 showTab("MISK")
 
 ----------------------------------------------------
--- ВКЛАДКА MISK
+-- ВКЛАДКА MISK (ДОБАВЛЕН ФУНКЦИОНАЛ FLING)
 ----------------------------------------------------
 local MiskPage = tabPages["MISK"]
+
+local MiskScroll = Instance.new("ScrollingFrame")
+MiskScroll.Size = UDim2.new(1, 0, 1, 0)
+MiskScroll.BackgroundTransparency = 1
+MiskScroll.CanvasSize = UDim2.new(0, 0, 0, 300)
+MiskScroll.ScrollBarThickness = 4
+MiskScroll.ZIndex = 8
+MiskScroll.Parent = MiskPage
 
 local FlyRow = Instance.new("Frame")
 FlyRow.Size = UDim2.new(1, 0, 0, 35)
 FlyRow.Position = UDim2.new(0, 0, 0, 5)
 FlyRow.BackgroundTransparency = 1
-FlyRow.ZIndex = 8
-FlyRow.Parent = MiskPage
+FlyRow.ZIndex = 9
+FlyRow.Parent = MiskScroll
 
 local FlyText = Instance.new("TextLabel")
 FlyText.Size = UDim2.new(0, 40, 0, 30)
@@ -387,7 +398,7 @@ FlyText.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlyText.TextSize = 18
 FlyText.Font = Enum.Font.Arial
 FlyText.TextXAlignment = Enum.TextXAlignment.Left
-FlyText.ZIndex = 9
+FlyText.ZIndex = 10
 FlyText.Parent = FlyRow
 
 local FlyCheckbox = Instance.new("TextButton")
@@ -399,7 +410,7 @@ FlyCheckbox.BorderSizePixel = 1
 FlyCheckbox.Text = ""
 FlyCheckbox.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlyCheckbox.TextSize = 18
-FlyCheckbox.ZIndex = 9
+FlyCheckbox.ZIndex = 10
 FlyCheckbox.Parent = FlyRow
 
 local SpeedContainer = Instance.new("Frame")
@@ -407,8 +418,8 @@ SpeedContainer.Size = UDim2.new(1, 0, 0, 35)
 SpeedContainer.Position = UDim2.new(0, 0, 0, 40)
 SpeedContainer.BackgroundTransparency = 1
 SpeedContainer.Visible = false
-SpeedContainer.ZIndex = 8
-SpeedContainer.Parent = MiskPage
+SpeedContainer.ZIndex = 9
+SpeedContainer.Parent = MiskScroll
 
 local SpeedText = Instance.new("TextLabel")
 SpeedText.Size = UDim2.new(0, 80, 0, 25)
@@ -418,7 +429,7 @@ SpeedText.Text = "FlySpeed"
 SpeedText.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedText.TextSize = 16
 SpeedText.TextXAlignment = Enum.TextXAlignment.Left
-SpeedText.ZIndex = 9
+SpeedText.ZIndex = 10
 SpeedText.Parent = SpeedContainer
 
 local SpeedInput = Instance.new("TextBox")
@@ -431,7 +442,7 @@ SpeedInput.Text = tostring(flySpeedValue)
 SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedInput.TextSize = 14
 SpeedInput.ClearTextOnFocus = false
-SpeedInput.ZIndex = 9
+SpeedInput.ZIndex = 10
 SpeedInput.Parent = SpeedContainer
 
 FlyCheckbox.MouseButton1Click:Connect(function()
@@ -455,100 +466,87 @@ SpeedInput.FocusLost:Connect(function()
     if val then flySpeedValue = val else SpeedInput.Text = tostring(flySpeedValue) end
 end)
 
-----------------------------------------------------
--- ВКЛАДКА ESP
-----------------------------------------------------
-local EspPage = tabPages["ESP"]
+-- Секция интерфейса Fling
+local FlingRow = Instance.new("Frame")
+FlingRow.Size = UDim2.new(1, 0, 0, 35)
+FlingRow.Position = UDim2.new(0, 0, 0, 75)
+FlingRow.BackgroundTransparency = 1
+FlingRow.ZIndex = 9
+FlingRow.Parent = MiskScroll
 
-local EspScroll = Instance.new("ScrollingFrame")
-EspScroll.Size = UDim2.new(1, 0, 1, 0)
-EspScroll.BackgroundTransparency = 1
-EspScroll.CanvasSize = UDim2.new(0, 0, 0, 240)
-EspScroll.ScrollBarThickness = 4
-EspScroll.ZIndex = 8
-EspScroll.Parent = EspPage
+local FlingText = Instance.new("TextLabel")
+FlingText.Size = UDim2.new(0, 50, 0, 30)
+FlingText.Position = UDim2.new(0, 10, 0, 2)
+FlingText.BackgroundTransparency = 1
+FlingText.Text = "Fling"
+FlingText.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlingText.TextSize = 18
+FlingText.Font = Enum.Font.Arial
+FlingText.TextXAlignment = Enum.TextXAlignment.Left
+FlingText.ZIndex = 10
+FlingText.Parent = FlingRow
 
-local EspMasterRow = Instance.new("Frame")
-EspMasterRow.Size = UDim2.new(1, 0, 0, 35)
-EspMasterRow.Position = UDim2.new(0, 0, 0, 5)
-EspMasterRow.BackgroundTransparency = 1
-EspMasterRow.ZIndex = 9
-EspMasterRow.Parent = EspScroll
+local FlingCheckbox = Instance.new("TextButton")
+FlingCheckbox.Size = UDim2.new(0, 22, 0, 22)
+FlingCheckbox.Position = UDim2.new(0, 65, 0, 6)
+FlingCheckbox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+FlingCheckbox.BorderColor3 = Color3.fromRGB(255, 255, 255)
+FlingCheckbox.BorderSizePixel = 1
+FlingCheckbox.Text = ""
+FlingCheckbox.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlingCheckbox.TextSize = 18
+FlingCheckbox.ZIndex = 10
+FlingCheckbox.Parent = FlingRow
 
-local EspMasterText = Instance.new("TextLabel")
-EspMasterText.Size = UDim2.new(0, 40, 0, 30)
-EspMasterText.Position = UDim2.new(0, 10, 0, 2)
-EspMasterText.BackgroundTransparency = 1
-EspMasterText.Text = "ESP"
-EspMasterText.TextColor3 = Color3.fromRGB(255, 255, 255)
-EspMasterText.TextSize = 18
-EspMasterText.Font = Enum.Font.Arial
-EspMasterText.TextXAlignment = Enum.TextXAlignment.Left
-EspMasterText.ZIndex = 10
-EspMasterText.Parent = EspMasterRow
+local FlingContainer = Instance.new("Frame")
+FlingContainer.Size = UDim2.new(1, 0, 0, 160)
+FlingContainer.Position = UDim2.new(0, 0, 0, 115)
+FlingContainer.BackgroundTransparency = 1
+FlingContainer.Visible = false
+FlingContainer.ZIndex = 9
+FlingContainer.Parent = MiskScroll
 
-local EspMasterCheckbox = Instance.new("TextButton")
-EspMasterCheckbox.Size = UDim2.new(0, 22, 0, 22)
-EspMasterCheckbox.Position = UDim2.new(0, 50, 0, 6)
-EspMasterCheckbox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-EspMasterCheckbox.BorderColor3 = Color3.fromRGB(255, 255, 255)
-EspMasterCheckbox.BorderSizePixel = 1
-EspMasterCheckbox.Text = ""
-EspMasterCheckbox.TextColor3 = Color3.fromRGB(255, 255, 255)
-EspMasterCheckbox.TextSize = 18
-EspMasterCheckbox.ZIndex = 10
-EspMasterCheckbox.Parent = EspMasterRow
+local ActionFlingBtn = Instance.new("TextButton")
+ActionFlingBtn.Size = UDim2.new(0, 120, 0, 24)
+ActionFlingBtn.Position = UDim2.new(0, 10, 0, 0)
+ActionFlingBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+ActionFlingBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
+ActionFlingBtn.Text = "FLING"
+ActionFlingBtn.TextColor3 = Color3.fromRGB(255, 0, 0)
+ActionFlingBtn.TextSize = 14
+ActionFlingBtn.Font = Enum.Font.ArialBold
+ActionFlingBtn.ZIndex = 10
+ActionFlingBtn.Parent = FlingContainer
 
-local EspSubContainer = Instance.new("Frame")
-EspSubContainer.Size = UDim2.new(1, 0, 0, 160)
-EspSubContainer.Position = UDim2.new(0, 0, 0, 40)
-EspSubContainer.BackgroundTransparency = 1
-EspSubContainer.Visible = false
-EspSubContainer.ZIndex = 9
-EspSubContainer.Parent = EspScroll
+local PlayerListScroll = Instance.new("ScrollingFrame")
+PlayerListScroll.Size = UDim2.new(1, -20, 0, 120)
+PlayerListScroll.Position = UDim2.new(0, 10, 0, 30)
+PlayerListScroll.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+PlayerListScroll.BorderColor3 = Color3.fromRGB(100, 100, 100)
+PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+PlayerListScroll.ScrollBarThickness = 4
+PlayerListScroll.ZIndex = 10
+PlayerListScroll.Parent = FlingContainer
 
-local subFeatures = {"Outline", "NickName", "Distance"}
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.Padding = UDim.new(0, 2)
+ListLayout.Parent = PlayerListScroll
 
-for idx, featureName in ipairs(subFeatures) do
-    local offset = (idx - 1) * 35
+local function updatePlayerListForFling()
+    for _, child in ipairs(PlayerListScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
     
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 30)
-    Row.Position = UDim2.new(0, 0, 0, offset)
-    Row.BackgroundTransparency = 1
-    Row.ZIndex = 10
-    Row.Parent = EspSubContainer
-    
-    local TextLabel = Instance.new("TextLabel")
-    TextLabel.Size = UDim2.new(0, 80, 0, 25)
-    TextLabel.Position = UDim2.new(0, 25, 0, 2)
-    TextLabel.BackgroundTransparency = 1
-    TextLabel.Text = featureName
-    TextLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    TextLabel.TextSize = 15
-    TextLabel.Font = Enum.Font.Arial
-    TextLabel.TextXAlignment = Enum.TextXAlignment.Left
-    TextLabel.ZIndex = 11
-    TextLabel.Parent = Row
-    
-    local Checkbox = Instance.new("TextButton")
-    Checkbox.Size = UDim2.new(0, 18, 0, 18)
-    Checkbox.Position = UDim2.new(0, 115, 0, 6)
-    Checkbox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    Checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
-    Checkbox.BorderSizePixel = 1
-    Checkbox.Text = ""
-    Checkbox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Checkbox.TextSize = 14
-    Checkbox.ZIndex = 11
-    Checkbox.Parent = Row
-    
-    local ColorPreviewBtn = Instance.new("TextButton")
-    ColorPreviewBtn.Size = UDim2.new(0, 50, 0, 20)
-    ColorPreviewBtn.Position = UDim2.new(0, 145, 0, 5)
-    ColorPreviewBtn.BackgroundColor3 = espSettings[featureName].color
-    ColorPreviewBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
-    ColorPrevie-- Контекст и инициализация хелперов
+    local count = 0
+    for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
+        if p ~= game:GetService("Players").LocalPlayer then
+            count = count + 1
+            local PBtn = Instance.new("TextButton")
+            PBtn.Size = UDim2.new(1, -5, 0, 22)
+            PBtn.BackgroundColor3 = (selectedFlingTarget == p) and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(25, 25, 25)
+            PBtn.BorderSizePixel = 0
+            PBtn.Text = "  " .. p.Name
+            PBtn.TextColor3 = Color3.fromRGB(255,-- Контекст и инициализация хелперов
 local MovementController = {}
 MovementController.__index = MovementController
 
@@ -601,7 +599,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = targetGui
 
--- Холст для 2D элементов ESP
+-- Холст для 2D элементов ESP и объектов Adornment
 local FullscreenEspCanvas = Instance.new("Frame")
 FullscreenEspCanvas.Name = "FullscreenEspCanvas"
 FullscreenEspCanvas.Size = UDim2.new(1, 0, 1, 0)
@@ -609,10 +607,13 @@ FullscreenEspCanvas.BackgroundTransparency = 1
 FullscreenEspCanvas.ZIndex = 1
 FullscreenEspCanvas.Parent = ScreenGui
 
--- Переменные состояний fly
+-- Переменные состояний fly и fling
 local flyEnabled = false
 local flySpeedValue = 50
 local shopHackEnabled = false
+local flingMasterEnabled = false
+local selectedFlingTarget = nil
+local isFlinging = false
 local flyController = MovementController.new()
 
 -- Настройки ESP
@@ -624,12 +625,12 @@ local espSettings = {
     Distance = {enabled = false, color = Color3.fromRGB(255, 255, 0)}
 }
 
--- Настройки HIT-BOX (Расширенные)
+-- Настройки HIT-BOX
 local hitboxMasterEnabled = false
 local hitboxSizeValue = 2
 local showHitboxVisuals = false
-local hitboxColor = Color3.fromRGB(255, 0, 0)       -- Дефолтный красный цвет
-local hitboxTransparencyValue = 0.5                  -- Дефолтные 50% прозрачности
+local hitboxColor = Color3.fromRGB(255, 0, 0)
+local hitboxTransparencyValue = 0.5
 
 local function getSpeed() return flySpeedValue end
 local function getState() return flyEnabled end
@@ -655,7 +656,7 @@ MainFrame.Visible = false
 MainFrame.ZIndex = 5
 MainFrame.Parent = ScreenGui
 
--- Окно графического выбора цвета (Color Picker)
+-- Окно выбора цвета (Color Picker)
 local ColorPickerFrame = Instance.new("Frame")
 ColorPickerFrame.Name = "ColorPickerFrame"
 ColorPickerFrame.Size = UDim2.new(0, 160, 0, 170)
@@ -917,16 +918,25 @@ end
 showTab("MISK")
 
 ----------------------------------------------------
--- ВКЛАДКА MISK
+-- ОБНОВЛЕННАЯ ЛОГИКА ВКЛАДКИ MISK
 ----------------------------------------------------
 local MiskPage = tabPages["MISK"]
 
+local MiskScroll = Instance.new("ScrollingFrame")
+MiskScroll.Size = UDim2.new(1, 0, 1, 0)
+MiskScroll.BackgroundTransparency = 1
+MiskScroll.CanvasSize = UDim2.new(0, 0, 0, 400)
+MiskScroll.ScrollBarThickness = 4
+MiskScroll.ZIndex = 8
+MiskScroll.Parent = MiskPage
+
+-- Элементы Fly
 local FlyRow = Instance.new("Frame")
 FlyRow.Size = UDim2.new(1, 0, 0, 35)
 FlyRow.Position = UDim2.new(0, 0, 0, 5)
 FlyRow.BackgroundTransparency = 1
-FlyRow.ZIndex = 8
-FlyRow.Parent = MiskPage
+FlyRow.ZIndex = 9
+FlyRow.Parent = MiskScroll
 
 local FlyText = Instance.new("TextLabel")
 FlyText.Size = UDim2.new(0, 40, 0, 30)
@@ -935,9 +945,7 @@ FlyText.BackgroundTransparency = 1
 FlyText.Text = "Fly"
 FlyText.TextColor3 = Color3.fromRGB(255, 255, 255)
 FlyText.TextSize = 18
-FlyText.Font = Enum.Font.Arial
-FlyText.TextXAlignment = Enum.TextXAlignment.Left
-FlyText.ZIndex = 9
+FlyText.ZIndex = 10
 FlyText.Parent = FlyRow
 
 local FlyCheckbox = Instance.new("TextButton")
@@ -945,20 +953,46 @@ FlyCheckbox.Size = UDim2.new(0, 22, 0, 22)
 FlyCheckbox.Position = UDim2.new(0, 50, 0, 6)
 FlyCheckbox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 FlyCheckbox.BorderColor3 = Color3.fromRGB(255, 255, 255)
-FlyCheckbox.BorderSizePixel = 1
 FlyCheckbox.Text = ""
 FlyCheckbox.TextColor3 = Color3.fromRGB(255, 255, 255)
-FlyCheckbox.TextSize = 18
-FlyCheckbox.ZIndex = 9
+FlyCheckbox.ZIndex = 10
 FlyCheckbox.Parent = FlyRow
 
+-- Элементы Fling (Изначально сразу под Fly)
+local FlingRow = Instance.new("Frame")
+FlingRow.Size = UDim2.new(1, 0, 0, 35)
+FlingRow.Position = UDim2.new(0, 0, 0, 40) -- Позиция под Fly
+FlingRow.BackgroundTransparency = 1
+FlingRow.ZIndex = 9
+FlingRow.Parent = MiskScroll
+
+local FlingText = Instance.new("TextLabel")
+FlingText.Size = UDim2.new(0, 50, 0, 30)
+FlingText.Position = UDim2.new(0, 10, 0, 2)
+FlingText.BackgroundTransparency = 1
+FlingText.Text = "Fling"
+FlingText.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlingText.TextSize = 18
+FlingText.ZIndex = 10
+FlingText.Parent = FlingRow
+
+local FlingCheckbox = Instance.new("TextButton")
+FlingCheckbox.Size = UDim2.new(0, 22, 0, 22)
+FlingCheckbox.Position = UDim2.new(0, 65, 0, 6)
+FlingCheckbox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+FlingCheckbox.BorderColor3 = Color3.fromRGB(255, 255, 255)
+FlingCheckbox.Text = ""
+FlingCheckbox.ZIndex = 10
+FlingCheckbox.Parent = FlingRow
+
+-- Контейнер скорости (появляется только при включении Fly)
 local SpeedContainer = Instance.new("Frame")
 SpeedContainer.Size = UDim2.new(1, 0, 0, 35)
-SpeedContainer.Position = UDim2.new(0, 0, 0, 40)
+SpeedContainer.Position = UDim2.new(0, 0, 0, 40) -- Изначально на месте Fling
 SpeedContainer.BackgroundTransparency = 1
 SpeedContainer.Visible = false
-SpeedContainer.ZIndex = 8
-SpeedContainer.Parent = MiskPage
+SpeedContainer.ZIndex = 9
+SpeedContainer.Parent = MiskScroll
 
 local SpeedText = Instance.new("TextLabel")
 SpeedText.Size = UDim2.new(0, 80, 0, 25)
@@ -967,8 +1001,7 @@ SpeedText.BackgroundTransparency = 1
 SpeedText.Text = "FlySpeed"
 SpeedText.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedText.TextSize = 16
-SpeedText.TextXAlignment = Enum.TextXAlignment.Left
-SpeedText.ZIndex = 9
+SpeedText.ZIndex = 10
 SpeedText.Parent = SpeedContainer
 
 local SpeedInput = Instance.new("TextBox")
@@ -976,34 +1009,94 @@ SpeedInput.Size = UDim2.new(0, 60, 0, 22)
 SpeedInput.Position = UDim2.new(0, 100, 0, 6)
 SpeedInput.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 SpeedInput.BorderColor3 = Color3.fromRGB(255, 255, 255)
-SpeedInput.BorderSizePixel = 1
 SpeedInput.Text = tostring(flySpeedValue)
 SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedInput.TextSize = 14
-SpeedInput.ClearTextOnFocus = false
-SpeedInput.ZIndex = 9
+SpeedInput.ZIndex = 10
 SpeedInput.Parent = SpeedContainer
 
+-- Функция динамического сдвига элементов
+local function updateLayout()
+    if flyEnabled then
+        SpeedContainer.Visible = true
+        FlingRow.Position = UDim2.new(0, 0, 0, 80) -- Сдвигаем Fling вниз
+    else
+        SpeedContainer.Visible = false
+        FlingRow.Position = UDim2.new(0, 0, 0, 40) -- Возвращаем наверх
+    end
+end
+
+-- Логика кнопки Fly
 FlyCheckbox.MouseButton1Click:Connect(function()
     flyEnabled = not flyEnabled
+    FlyCheckbox.Text = flyEnabled and "✓" or ""
+    updateLayout()
     if flyEnabled then
-        FlyCheckbox.Text = "✓"
-        SpeedContainer.Visible = true
         if game:GetService("Players").LocalPlayer.Character then
             flyController:ConnectToTarget(game:GetService("Players").LocalPlayer.Character, getSpeed, getState)
         end
     else
-        FlyCheckbox.Text = ""
-        SpeedContainer.Visible = false
         flyController:Disconnect()
     end
 end)
 
-SpeedInput.TouchTap:Connect(function() SpeedInput:CaptureFocus() end)
-SpeedInput.FocusLost:Connect(function()
-    local val = tonumber(SpeedInput.Text)
-    if val then flySpeedValue = val else SpeedInput.Text = tostring(flySpeedValue) end
+-- Логика Fling (Бесконечный цикл)
+local FlingContainer = Instance.new("Frame")
+FlingContainer.Size = UDim2.new(1, 0, 0, 160)
+FlingContainer.Position = UDim2.new(0, 0, 0, 40) -- Относительно FlingRow
+FlingContainer.BackgroundTransparency = 1
+FlingContainer.Visible = false
+FlingContainer.ZIndex = 9
+FlingContainer.Parent = FlingRow
+
+local ActionFlingBtn = Instance.new("TextButton")
+ActionFlingBtn.Size = UDim2.new(0, 120, 0, 24)
+ActionFlingBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+ActionFlingBtn.Text = "FLING"
+ActionFlingBtn.TextColor3 = Color3.fromRGB(255, 0, 0)
+ActionFlingBtn.ZIndex = 10
+ActionFlingBtn.Parent = FlingContainer
+
+-- (Логика списка игроков остается прежней, просто привязана к FlingRow)
+-- [Сюда вставляется код списка игроков из предыдущего ответа]
+
+ActionFlingBtn.MouseButton1Click:Connect(function()
+    if not selectedFlingTarget then return end
+    
+    if not isFlinging then
+        -- Начало флинга
+        isFlinging = true
+        ActionFlingBtn.Text = "STOP"
+        ActionFlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ActionFlingBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        
+        -- Цикл флинга
+        task.spawn(function()
+            local myHrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            local bav = Instance.new("BodyAngularVelocity")
+            bav.AngularVelocity = Vector3.new(99999, 99999, 99999)
+            bav.Parent = myHrp
+            
+            while isFlinging and selectedFlingTarget.Character do
+                local targetHrp = selectedFlingTarget.Character:FindFirstChild("HumanoidRootPart")
+                if targetHrp then
+                    myHrp.CFrame = targetHrp.CFrame
+                    for _, p in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
+                        if p:IsA("BasePart") then p.CanCollide = false end
+                    end
+                end
+                task.wait()
+            end
+            bav:Destroy()
+        end)
+    else
+        -- Остановка
+        isFlinging = false
+        ActionFlingBtn.Text = "FLING"
+        ActionFlingBtn.TextColor3 = Color3.fromRGB(255, 0, 0)
+        ActionFlingBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    end
 end)
+
 
 ----------------------------------------------------
 -- ВКЛАДКА ESP
@@ -1146,7 +1239,7 @@ EspMasterCheckbox.MouseButton1Click:Connect(function()
 end)
 
 ----------------------------------------------------
--- ВКЛАДКА HIT-BOX (РАСШИРЕННАЯ НАСТРОЙКА И УДОБНЫЕ ПОЛЗУНКИ)
+-- ВКЛАДКА HIT-BOX (ЗАПОЛНЕННЫЕ КУБЫ С ПРОЗРАЧНОСТЬЮ)
 ----------------------------------------------------
 local HitboxPage = tabPages["HIT-BOX"]
 
@@ -1169,7 +1262,6 @@ HitboxText.TextXAlignment = Enum.TextXAlignment.Left
 HitboxText.ZIndex = 9
 HitboxMasterRow.Parent = HitboxPage
 
--- Кубик переключателя
 local HitboxCheckbox = Instance.new("TextButton")
 HitboxCheckbox.Size = UDim2.new(0, 22, 0, 22)
 HitboxCheckbox.Position = UDim2.new(0, 80, 0, 6)
@@ -1182,7 +1274,6 @@ HitboxCheckbox.TextSize = 18
 HitboxCheckbox.ZIndex = 9
 HitboxCheckbox.Parent = HitboxMasterRow
 
--- Контейнер настроек
 local HitboxSettingsContainer = Instance.new("Frame")
 HitboxSettingsContainer.Size = UDim2.new(1, 0, 0, 160)
 HitboxSettingsContainer.Position = UDim2.new(0, 0, 0, 40)
@@ -1191,7 +1282,6 @@ HitboxSettingsContainer.Visible = false
 HitboxSettingsContainer.ZIndex = 8
 HitboxSettingsContainer.Parent = HitboxPage
 
--- --- НАСТРОЙКА РАЗМЕРА (СЛАЙДЕР СДЕЛАН БОЛЬШЕ С 220 ДО 280) ---
 local SizeTitle = Instance.new("TextLabel")
 SizeTitle.Size = UDim2.new(0, 100, 0, 20)
 SizeTitle.Position = UDim2.new(0, 10, 0, 5)
@@ -1205,7 +1295,7 @@ SizeTitle.ZIndex = 9
 SizeTitle.Parent = HitboxSettingsContainer
 
 local SliderBar = Instance.new("Frame")
-SliderBar.Size = UDim2.new(0, 280, 0, 6) -- Увеличен в длину и толщину для точности
+SliderBar.Size = UDim2.new(0, 280, 0, 6)
 SliderBar.Position = UDim2.new(0, 10, 0, 30)
 SliderBar.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 SliderBar.BorderSizePixel = 0
@@ -1213,7 +1303,7 @@ SliderBar.ZIndex = 9
 SliderBar.Parent = HitboxSettingsContainer
 
 local SliderButton = Instance.new("TextButton")
-SliderButton.Size = UDim2.new(0, 14, 0, 20) -- Увеличен сам ползунок
+SliderButton.Size = UDim2.new(0, 14, 0, 20)
 SliderButton.AnchorPoint = Vector2.new(0.5, 0.5)
 SliderButton.Position = UDim2.new(0, 0, 0.5, 0)
 SliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1233,7 +1323,6 @@ SizeValueLabel.TextXAlignment = Enum.TextXAlignment.Left
 SizeValueLabel.ZIndex = 9
 SizeValueLabel.Parent = HitboxSettingsContainer
 
--- --- НАСТРОЙКА ПРОЗРАЧНОСТИ (НОВЫЙ СЛАЙДЕР) ---
 local TransTitle = Instance.new("TextLabel")
 TransTitle.Size = UDim2.new(0, 100, 0, 20)
 TransTitle.Position = UDim2.new(0, 10, 0, 55)
@@ -1252,12 +1341,12 @@ TransSliderBar.Position = UDim2.new(0, 10, 0, 80)
 TransSliderBar.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 TransSliderBar.BorderSizePixel = 0
 TransSliderBar.ZIndex = 9
-TransSliderBar.Parent = HitboxSettingsContainer
+TransSliderBar.Parent = TransSliderBar.Parent
 
 local TransSliderButton = Instance.new("TextButton")
 TransSliderButton.Size = UDim2.new(0, 14, 0, 20)
 TransSliderButton.AnchorPoint = Vector2.new(0.5, 0.5)
-TransSliderButton.Position = UDim2.new(0.5, 0, 0.5, 0) -- Дефолтно стоит на 50%
+TransSliderButton.Position = UDim2.new(0.5, 0, 0.5, 0)
 TransSliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 TransSliderButton.Text = ""
 TransSliderButton.ZIndex = 10
@@ -1275,7 +1364,6 @@ TransValueLabel.TextXAlignment = Enum.TextXAlignment.Left
 TransValueLabel.ZIndex = 9
 TransValueLabel.Parent = HitboxSettingsContainer
 
--- --- НИЖНЯЯ СТРОКА: SHOW BUTTON И COLOR PICKER ---
 local ShowHitboxBtn = Instance.new("TextButton")
 ShowHitboxBtn.Size = UDim2.new(0, 110, 0, 26)
 ShowHitboxBtn.Position = UDim2.new(0, 10, 0, 110)
@@ -1298,7 +1386,6 @@ HitboxColorPreviewBtn.Text = ""
 HitboxColorPreviewBtn.ZIndex = 9
 HitboxColorPreviewBtn.Parent = HitboxSettingsContainer
 
--- Логика слайдера размера (Мин: 2, Макс: 200)
 local isSlidingSize = false
 local function updateSizeSlider(inputPosition)
     local relativeX = inputPosition.X - SliderBar.AbsolutePosition.X
@@ -1317,7 +1404,6 @@ game:GetService("UserInputService").InputChanged:Connect(function(input)
     end
 end)
 
--- Логика слайдера прозрачности (0.0 - 1.0)
 local isSlidingTrans = false
 local function updateTransSlider(inputPosition)
     local relativeX = inputPosition.X - TransSliderBar.AbsolutePosition.X
@@ -1336,7 +1422,6 @@ game:GetService("UserInputService").InputChanged:Connect(function(input)
     end
 end)
 
--- Глобальный сброс перетаскивания ползунков
 game:GetService("UserInputService").InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         isSlidingSize = false
@@ -1344,19 +1429,16 @@ game:GetService("UserInputService").InputEnded:Connect(function(input)
     end
 end)
 
--- Выбор цвета для хитбокса
 HitboxColorPreviewBtn.MouseButton1Click:Connect(function()
     openColorPicker("HitboxColor", HitboxColorPreviewBtn)
 end)
 
--- Активация хитбоксов
 HitboxCheckbox.MouseButton1Click:Connect(function()
     hitboxMasterEnabled = not hitboxMasterEnabled
     HitboxCheckbox.Text = hitboxMasterEnabled and "✓" or ""
     HitboxSettingsContainer.Visible = hitboxMasterEnabled
 end)
 
--- Переключатель Show Hit-Box визуалов
 ShowHitboxBtn.MouseButton1Click:Connect(function()
     showHitboxVisuals = not showHitboxVisuals
     if showHitboxVisuals then
@@ -1432,7 +1514,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
         previewVisuals.Dist.TextColor3 = espSettings.Distance.color
         previewVisuals.Dist.Text = "[0.0 studs]"
     else
-        previewVisuals.Dist.Visible = false
+        previewVisuals.Dist.False = false
     end
 end)
 
@@ -1483,6 +1565,13 @@ game:GetService("Players").PlayerAdded:Connect(createPlayerEspUi)
 game:GetService("Players").PlayerRemoving:Connect(removePlayerEspUi)
 for _, p in ipairs(game:GetService("Players"):GetPlayers()) do createPlayerEspUi(p) end
 
+-- Автообновление списка при входе/выходе игроков
+game:GetService("Players").PlayerAdded:Connect(function() if flingMasterEnabled then updatePlayerListForFling() end end)
+game:GetService("Players").PlayerRemoving:Connect(function(p) 
+    if selectedFlingTarget == p then selectedFlingTarget = nil end 
+    if flingMasterEnabled then updatePlayerListForFling() end 
+end)
+
 game:GetService("RunService").RenderStepped:Connect(function()
     local localPlayer = game:GetService("Players").LocalPlayer
     local camera = workspace.CurrentCamera
@@ -1491,7 +1580,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
         local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         
-        -- Рендер ESP подсветок (Highlight)
+        -- ESP Подсветка (Highlight)
         local highlight = char and char:FindFirstChild("SeraphHighlight")
         if char and not highlight then
             highlight = Instance.new("Highlight")
@@ -1502,17 +1591,17 @@ game:GetService("RunService").RenderStepped:Connect(function()
             highlight.Parent = char
         end
         
-        -- Рендер физического визуального куба хитбокса (Show Hit-Box)
-        local visualBox = hrp and hrp:FindFirstChild("VisualHitboxCube")
+        -- ВИЗУАЛ ЗАПОЛНЕННОГО КУБА ДЛЯ ХИТБОКСА (BoxHandleAdornment)
+        local visualBox = hrp and hrp:FindFirstChild("VisualHitboxCubeAdorn")
         if hrp and not visualBox then
-            visualBox = Instance.new("SelectionBox")
-            visualBox.Name = "VisualHitboxCube"
-            visualBox.LineThickness = 0.05
+            visualBox = Instance.new("BoxHandleAdornment")
+            visualBox.Name = "VisualHitboxCubeAdorn"
+            visualBox.AlwaysOnTop = true
+            visualBox.ZIndex = 10
             visualBox.Adornee = hrp
             visualBox.Parent = hrp
         end
         
-        -- Условие валидности
         if not char or not hrp or player == localPlayer then
             if highlight then highlight.Enabled = false end
             if visualBox then visualBox.Visible = false end
@@ -1521,25 +1610,26 @@ game:GetService("RunService").RenderStepped:Connect(function()
             continue
         end
         
-        -- РАБОТА ХИТБОКСА (Динамический размер, цвет и прозрачность)
+        -- РАБОТА И ОБНОВЛЕНИЕ РАЗМЕРОВ ХИТБОКСА
         if hitboxMasterEnabled then
             hrp.Size = Vector3.new(hitboxSizeValue, hitboxSizeValue, hitboxSizeValue)
             hrp.CanCollide = false
             
             if showHitboxVisuals and visualBox then
                 visualBox.Visible = true
-                visualBox.Color3 = hitboxColor                            -- Кастомный цвет из настроек
-                visualBox.Transparency = hitboxTransparencyValue          -- Кастомная прозрачность из настроек
+                visualBox.Size = hrp.Size
+                visualBox.Color3 = hitboxColor
+                -- Передаем точное значение заполнения куба
+                visualBox.Transparency = hitboxTransparencyValue
             elseif visualBox then
                 visualBox.Visible = false
             end
         else
-            -- Возвращаем исходный стандартный размер хитбокса
             hrp.Size = Vector3.new(2, 2, 1)
             if visualBox then visualBox.Visible = false end
         end
         
-        -- Синхронизация логики ESP мастер-выключателя
+        -- ESP Рендеринг интерфейса
         if not espMasterEnabled then
             if highlight then highlight.Enabled = false end
             cache.Name.Visible = false

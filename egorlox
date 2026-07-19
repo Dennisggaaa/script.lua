@@ -3,7 +3,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local MarketplaceService = game:GetService("MarketplaceService")
+local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 
 local SeraphMenu = {
@@ -30,13 +30,18 @@ ScreenGui.Name = "SeraphCA_MilitaryTycoon"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- ===================== EFFECTS =====================
+-- ===================== ЭФФЕКТЫ =====================
 local BlurEffect = Instance.new("BlurEffect")
 BlurEffect.Size = 0
-BlurEffect.Parent = game:GetService("Lighting")
+BlurEffect.Parent = Lighting
+
+local ColorCorrection = Instance.new("ColorCorrectionEffect")
+ColorCorrection.Saturation = 0
+ColorCorrection.Parent = Lighting
 
 local function ToggleBlur(enabled)
-    TweenService:Create(BlurEffect, TweenInfo.new(0.4), {Size = enabled and 18 or 0}):Play()
+    TweenService:Create(BlurEffect, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = enabled and 25 or 0}):Play()
+    TweenService:Create(ColorCorrection, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Saturation = enabled and -0.5 or 0}):Play()
 end
 
 local function GetKyivTime()
@@ -54,7 +59,7 @@ local function GetKyivTime()
     return os.date("!%H:%M:%S", kyivTime)
 end
 
--- ===================== WATERMARK =====================
+-- ===================== ВАТЕРМАК =====================
 local WatermarkContainer = Instance.new("Frame")
 WatermarkContainer.Name = "Watermark"
 WatermarkContainer.Size = UDim2.new(0, 0, 0, 0)
@@ -65,7 +70,7 @@ WatermarkContainer.Parent = ScreenGui
 local WTopBar = Instance.new("Frame")
 WTopBar.Size = UDim2.new(0, 0, 0, 3)
 WTopBar.Position = UDim2.new(0, 0, 0, 0)
-WTopBar.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+WTopBar.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
 WTopBar.BackgroundTransparency = 0
 WTopBar.BorderSizePixel = 0
 WTopBar.Parent = WatermarkContainer
@@ -81,6 +86,18 @@ WMainBg.Parent = WatermarkContainer
 local WCorner = Instance.new("UICorner")
 WCorner.CornerRadius = UDim.new(0, 4)
 WCorner.Parent = WMainBg
+
+local WGlow = Instance.new("Frame")
+WGlow.Size = UDim2.new(1, 30, 1, 30)
+WGlow.Position = UDim2.new(0, -15, 0, -15)
+WGlow.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+WGlow.BackgroundTransparency = 0.9
+WGlow.BorderSizePixel = 0
+WGlow.ZIndex = -1
+WGlow.Parent = WatermarkContainer
+local WGlowCorner = Instance.new("UICorner")
+WGlowCorner.CornerRadius = UDim.new(0, 16)
+WGlowCorner.Parent = WGlow
 
 local WText = Instance.new("TextLabel")
 WText.Size = UDim2.new(0, 0, 0, 0)
@@ -119,6 +136,8 @@ local function UpdateWatermark()
     WTopBar.Size = UDim2.new(0, totalW, 0, 3)
     WMainBg.Size = UDim2.new(0, totalW, 0, totalH)
     WText.Size = UDim2.new(0, w, 0, 28)
+    WGlow.Size = UDim2.new(1, 30, 1, 30)
+    WGlow.Position = UDim2.new(0, -15, 0, -15)
 end
 UpdateWatermark()
 
@@ -129,13 +148,60 @@ task.spawn(function()
     end
 end)
 
--- ===================== MENU =====================
+-- ===================== ЧАСТИЦЫ ДЛЯ АНИМАЦИИ =====================
+local function CreateExplosionParticles(position, count, color)
+    local container = Instance.new("Folder")
+    container.Name = "ExplosionParticles"
+    container.Parent = ScreenGui
+    
+    for i = 1, count do
+        local p = Instance.new("Frame")
+        p.Size = UDim2.new(0, math.random(3, 8), 0, math.random(3, 8))
+        p.Position = position
+        p.BackgroundColor3 = color or Color3.fromRGB(255, 215, 0)
+        p.BackgroundTransparency = 0.3 + math.random() * 0.4
+        p.BorderSizePixel = 0
+        p.ZIndex = 10
+        p.Parent = container
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = p
+        
+        local angle = math.random() * 2 * math.pi
+        local dist = math.random(50, 200)
+        local targetPos = UDim2.new(
+            position.X.Scale + math.cos(angle) * dist / ScreenGui.AbsoluteSize.X,
+            position.X.Offset + math.cos(angle) * dist,
+            position.Y.Scale + math.sin(angle) * dist / ScreenGui.AbsoluteSize.Y,
+            position.Y.Offset + math.sin(angle) * dist
+        )
+        local duration = 0.5 + math.random() * 0.5
+        
+        TweenService:Create(p, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Position = targetPos,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(0, 0, 0, 0)
+        }):Play()
+        
+        task.spawn(function()
+            task.wait(duration + 0.1)
+            p:Destroy()
+        end)
+    end
+    
+    task.spawn(function()
+        task.wait(1.5)
+        container:Destroy()
+    end)
+end
+
+-- ===================== ОСНОВНОЕ МЕНЮ =====================
 local MenuFrame = Instance.new("Frame")
 MenuFrame.Name = "MenuFrame"
 MenuFrame.Size = UDim2.new(0, 850, 0, 680)
 MenuFrame.Position = UDim2.new(0.5, -425, 0.5, -340)
 MenuFrame.BackgroundColor3 = Color3.fromRGB(6, 6, 20)
-MenuFrame.BackgroundTransparency = 0.05
+MenuFrame.BackgroundTransparency = 1
 MenuFrame.BorderSizePixel = 0
 MenuFrame.Visible = false
 MenuFrame.ClipsDescendants = true
@@ -148,14 +214,26 @@ MenuCorner.Parent = MenuFrame
 local MenuBorder = Instance.new("Frame")
 MenuBorder.Size = UDim2.new(1, 4, 1, 4)
 MenuBorder.Position = UDim2.new(0, -2, 0, -2)
-MenuBorder.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-MenuBorder.BackgroundTransparency = 0.6
+MenuBorder.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+MenuBorder.BackgroundTransparency = 0.8
 MenuBorder.BorderSizePixel = 0
 MenuBorder.ZIndex = 0
 MenuBorder.Parent = MenuFrame
 local MenuBorderCorner = Instance.new("UICorner")
 MenuBorderCorner.CornerRadius = UDim.new(0, 22)
 MenuBorderCorner.Parent = MenuBorder
+
+local MenuGlow = Instance.new("Frame")
+MenuGlow.Size = UDim2.new(1, 60, 1, 60)
+MenuGlow.Position = UDim2.new(0, -30, 0, -30)
+MenuGlow.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+MenuGlow.BackgroundTransparency = 1
+MenuGlow.BorderSizePixel = 0
+MenuGlow.ZIndex = -1
+MenuGlow.Parent = MenuFrame
+local MenuGlowCorner = Instance.new("UICorner")
+MenuGlowCorner.CornerRadius = UDim.new(0, 40)
+MenuGlowCorner.Parent = MenuGlow
 
 local MenuGradient = Instance.new("UIGradient")
 MenuGradient.Color = ColorSequence.new({
@@ -188,8 +266,8 @@ TitleGrad.Parent = TitleBar
 local TitleGlow = Instance.new("Frame")
 TitleGlow.Size = UDim2.new(1, 0, 0, 2)
 TitleGlow.Position = UDim2.new(0, 0, 1, 0)
-TitleGlow.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-TitleGlow.BackgroundTransparency = 0.3
+TitleGlow.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+TitleGlow.BackgroundTransparency = 0.4
 TitleGlow.BorderSizePixel = 0
 TitleGlow.Parent = TitleBar
 
@@ -198,7 +276,7 @@ TitleText.Size = UDim2.new(0, 250, 1, 0)
 TitleText.Position = UDim2.new(0, 15, 0, 0)
 TitleText.BackgroundTransparency = 1
 TitleText.Text = "⚡ SeraphiCA • Military"
-TitleText.TextColor3 = Color3.fromRGB(255, 200, 50)
+TitleText.TextColor3 = Color3.fromRGB(255, 215, 0)
 TitleText.TextSize = 20
 TitleText.Font = Enum.Font.GothamBold
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
@@ -209,7 +287,7 @@ local VerText = Instance.new("TextLabel")
 VerText.Size = UDim2.new(0, 80, 1, 0)
 VerText.Position = UDim2.new(1, -90, 0, 0)
 VerText.BackgroundTransparency = 1
-VerText.Text = "v2.0"
+VerText.Text = "v3.0"
 VerText.TextColor3 = Color3.fromRGB(80, 80, 180)
 VerText.TextSize = 13
 VerText.Font = Enum.Font.Gotham
@@ -245,7 +323,7 @@ local function CreateTab(tabName, idx)
     local glow = Instance.new("Frame")
     glow.Size = UDim2.new(1, -10, 0, 2)
     glow.Position = UDim2.new(0, 5, 1, -2)
-    glow.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+    glow.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
     glow.BackgroundTransparency = idx == 1 and 0.3 or 1
     glow.BorderSizePixel = 0
     glow.Parent = btn
@@ -261,7 +339,7 @@ ContentFrame.BorderSizePixel = 0
 ContentFrame.ClipsDescendants = true
 ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 800)
 ContentFrame.ScrollBarThickness = 4
-ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 200, 50)
+ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 215, 0)
 ContentFrame.Parent = MenuFrame
 
 local ContentCorner = Instance.new("UICorner")
@@ -281,13 +359,14 @@ local ShopPanel = CreatePanel("SHOP-HACK")
 local FarmPanel = CreatePanel("FARM")
 local SettingsPanel = CreatePanel("SETTINGS")
 
--- ===================== SHOP-HACK PANEL =====================
+-- ===================== SHOP-HACK (сокращён для читаемости) =====================
+-- (оставляем только структуру, код из предыдущей версии, но для краткости я покажу основные элементы)
 local ShopTitle = Instance.new("TextLabel")
 ShopTitle.Size = UDim2.new(1, -20, 0, 35)
 ShopTitle.Position = UDim2.new(0, 10, 0, 5)
 ShopTitle.BackgroundTransparency = 1
 ShopTitle.Text = "🛒 SHOP HACK - GamePass Spoofer"
-ShopTitle.TextColor3 = Color3.fromRGB(255, 200, 50)
+ShopTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
 ShopTitle.TextSize = 18
 ShopTitle.Font = Enum.Font.GothamBold
 ShopTitle.TextXAlignment = Enum.TextXAlignment.Center
@@ -306,14 +385,14 @@ SubTitle.TextXAlignment = Enum.TextXAlignment.Center
 SubTitle.TextYAlignment = Enum.TextYAlignment.Center
 SubTitle.Parent = ShopPanel
 
--- GamePass List
+-- GamePass List (сокращённо, но функционал тот же)
 local GamePassFrame = Instance.new("Frame")
 GamePassFrame.Size = UDim2.new(1, -20, 0, 250)
 GamePassFrame.Position = UDim2.new(0, 10, 0, 75)
 GamePassFrame.BackgroundColor3 = Color3.fromRGB(15, 18, 45)
 GamePassFrame.BackgroundTransparency = 0.2
 GamePassFrame.BorderSizePixel = 1
-GamePassFrame.BorderColor3 = Color3.fromRGB(255, 200, 50)
+GamePassFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
 GamePassFrame.BorderTransparency = 0.6
 GamePassFrame.ClipsDescendants = true
 GamePassFrame.Parent = ShopPanel
@@ -328,10 +407,9 @@ GamePassList.BackgroundTransparency = 1
 GamePassList.ClipsDescendants = true
 GamePassList.CanvasSize = UDim2.new(0, 0, 0, 0)
 GamePassList.ScrollBarThickness = 3
-GamePassList.ScrollBarImageColor3 = Color3.fromRGB(255, 200, 50)
+GamePassList.ScrollBarImageColor3 = Color3.fromRGB(255, 215, 0)
 GamePassList.Parent = GamePassFrame
 
--- GamePass Database
 local GamePassDatabase = {
     {id = 1, name = "🔫 Elite Soldier Pack", price = "249"},
     {id = 2, name = "🚁 Apache Helicopter", price = "499"},
@@ -373,7 +451,7 @@ for i, gp in ipairs(GamePassDatabase) do
     
     local highlight = Instance.new("Frame")
     highlight.Size = UDim2.new(0, 3, 1, 0)
-    highlight.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+    highlight.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
     highlight.BackgroundTransparency = 1
     highlight.BorderSizePixel = 0
     highlight.Parent = btn
@@ -400,11 +478,10 @@ for i, gp in ipairs(GamePassDatabase) do
     GamePassList.CanvasSize = UDim2.new(0, 0, 0, i*35 + 10)
 end
 
--- Confirm Button
 local ConfirmBtn = Instance.new("TextButton")
 ConfirmBtn.Size = UDim2.new(0, 250, 0, 40)
 ConfirmBtn.Position = UDim2.new(0.5, -125, 0, 340)
-ConfirmBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+ConfirmBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
 ConfirmBtn.BackgroundTransparency = 0.15
 ConfirmBtn.BorderSizePixel = 0
 ConfirmBtn.Text = "⚠️ Select a GamePass first"
@@ -417,14 +494,13 @@ local ConfirmCorner = Instance.new("UICorner")
 ConfirmCorner.CornerRadius = UDim.new(0, 10)
 ConfirmCorner.Parent = ConfirmBtn
 
--- Log Frame
 local LogFrame = Instance.new("Frame")
 LogFrame.Size = UDim2.new(1, -20, 0, 180)
 LogFrame.Position = UDim2.new(0, 10, 0, 390)
 LogFrame.BackgroundColor3 = Color3.fromRGB(8, 10, 30)
 LogFrame.BackgroundTransparency = 0.3
 LogFrame.BorderSizePixel = 1
-LogFrame.BorderColor3 = Color3.fromRGB(255, 200, 50)
+LogFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
 LogFrame.BorderTransparency = 0.5
 LogFrame.ClipsDescendants = true
 LogFrame.Visible = false
@@ -438,7 +514,7 @@ LogTitle.Size = UDim2.new(1, 0, 0, 25)
 LogTitle.Position = UDim2.new(0, 10, 0, 5)
 LogTitle.BackgroundTransparency = 1
 LogTitle.Text = "📋 Purchase Log"
-LogTitle.TextColor3 = Color3.fromRGB(255, 200, 50)
+LogTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
 LogTitle.TextSize = 14
 LogTitle.Font = Enum.Font.GothamBold
 LogTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -458,7 +534,6 @@ LogText.TextYAlignment = Enum.TextYAlignment.Top
 LogText.TextWrapped = true
 LogText.Parent = LogFrame
 
--- Spoof Purchase Logic
 local function SpoofPurchase(gp)
     LogFrame.Visible = true
     LogText.Text = ""
@@ -477,63 +552,44 @@ local function SpoofPurchase(gp)
         task.wait(0.3)
     end
     
-    addLog("🔍 Scanning server security...", Color3.fromRGB(255, 200, 50))
+    addLog("🔍 Scanning server security...", Color3.fromRGB(255, 215, 0))
     task.wait(0.5)
-    
     addLog("📦 GamePass detected: " .. gp.name, Color3.fromRGB(100, 200, 255))
     task.wait(0.4)
-    
-    addLog("💰 Price: " .. gp.price .. " Robux", Color3.fromRGB(255, 200, 50))
+    addLog("💰 Price: " .. gp.price .. " Robux", Color3.fromRGB(255, 215, 0))
     task.wait(0.4)
-    
     addLog("🔄 Sending purchase request to Roblox servers...", Color3.fromRGB(200, 200, 220))
     task.wait(0.5)
-    
-    -- Симуляция проверки защиты
     local protectionLevel = math.random(1, 100)
     addLog("🛡️ Server protection level: " .. protectionLevel .. "%", Color3.fromRGB(150, 150, 200))
     task.wait(0.4)
-    
     local success = protectionLevel < 50
     local fakeRobux = math.random(100, 5000)
-    addLog("💳 Spoofed Robux balance: " .. fakeRobux .. " R$", Color3.fromRGB(255, 200, 50))
+    addLog("💳 Spoofed Robux balance: " .. fakeRobux .. " R$", Color3.fromRGB(255, 215, 0))
     task.wait(0.4)
-    
     if success then
         addLog("✅ Purchase validated! Access granted.", Color3.fromRGB(0, 255, 120))
         task.wait(0.3)
         addLog("🎁 " .. gp.name .. " added to inventory!", Color3.fromRGB(0, 255, 200))
         task.wait(0.3)
         addLog("📦 Item unlocked successfully!", Color3.fromRGB(100, 255, 100))
-        
-        -- Apply the gamepass effect (simulate)
         local success2, err = pcall(function()
             local events = ReplicatedStorage:FindFirstChild("Events")
             if events then
                 local purchaseEvent = events:FindFirstChild("PurchaseEvent")
-                if purchaseEvent then
-                    purchaseEvent:FireServer(gp.id, "spoofed")
-                end
+                if purchaseEvent then purchaseEvent:FireServer(gp.id, "spoofed") end
                 local unlockEvent = events:FindFirstChild("UnlockEvent")
-                if unlockEvent then
-                    unlockEvent:FireServer(gp.id)
-                end
+                if unlockEvent then unlockEvent:FireServer(gp.id) end
             end
-            -- Try direct remote
             local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
-            if remote then
-                remote:FireServer("PurchaseGamePass", gp.id)
-            end
+            if remote then remote:FireServer("PurchaseGamePass", gp.id) end
         end)
         if not success2 then
-            addLog("⚠️ Could not apply item (server-side)", Color3.fromRGB(255, 200, 50))
+            addLog("⚠️ Could not apply item (server-side)", Color3.fromRGB(255, 215, 0))
         end
-        
         ConfirmBtn.Text = "✅ ACCESS GRANTED!"
         ConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
         ConfirmBtn.BackgroundTransparency = 0.1
-        
-        -- Play success sound
         local sound = Instance.new("Sound")
         sound.SoundId = "rbxassetid://9120263686"
         sound.Volume = 0.3
@@ -541,14 +597,12 @@ local function SpoofPurchase(gp)
         sound:Play()
         task.wait(0.5)
         sound:Destroy()
-        
     else
         addLog("❌ Purchase rejected by server security!", Color3.fromRGB(255, 80, 80))
         task.wait(0.3)
         addLog("🔒 Reason: High protection level detected", Color3.fromRGB(255, 150, 80))
         task.wait(0.3)
-        addLog("💡 Try again with different GamePass or lower price", Color3.fromRGB(255, 200, 50))
-        
+        addLog("💡 Try again with different GamePass or lower price", Color3.fromRGB(255, 215, 0))
         ConfirmBtn.Text = "❌ PURCHASE FAILED"
         ConfirmBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         ConfirmBtn.BackgroundTransparency = 0.2
@@ -575,7 +629,7 @@ local function CreateCheckbox(parent, label, settingKey, yPos)
     box.BackgroundColor3 = Color3.fromRGB(25, 28, 60)
     box.BackgroundTransparency = 0
     box.BorderSizePixel = 2
-    box.BorderColor3 = Color3.fromRGB(255, 200, 50)
+    box.BorderColor3 = Color3.fromRGB(255, 215, 0)
     box.Parent = row
     local boxCorner = Instance.new("UICorner")
     boxCorner.CornerRadius = UDim.new(0, 5)
@@ -620,7 +674,7 @@ local function CreateCheckbox(parent, label, settingKey, yPos)
     local divider = Instance.new("Frame")
     divider.Size = UDim2.new(1, 0, 0, 1)
     divider.Position = UDim2.new(0, 0, 1, 0)
-    divider.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+    divider.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
     divider.BackgroundTransparency = 0.9
     divider.BorderSizePixel = 0
     divider.Parent = row
@@ -637,7 +691,7 @@ local function CreateCheckbox(parent, label, settingKey, yPos)
         mark.Visible = active
         status.Text = active and "ON" or "OFF"
         status.TextColor3 = active and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(255, 80, 80)
-        box.BorderColor3 = active and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(255, 200, 50)
+        box.BorderColor3 = active and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(255, 215, 0)
         TweenService:Create(box, TweenInfo.new(0.15), {
             BackgroundColor3 = active and Color3.fromRGB(20, 80, 50) or Color3.fromRGB(25, 28, 60)
         }):Play()
@@ -737,6 +791,102 @@ function ExecuteFarmFunction(key, active)
     end
 end
 
+local function CreateSlider(parent, label, settingKey, minVal, maxVal, yPos)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -20, 0, 55)
+    container.Position = UDim2.new(0, 10, 0, yPos)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+    
+    local labelFrame = Instance.new("Frame")
+    labelFrame.Size = UDim2.new(1, 0, 0, 25)
+    labelFrame.Position = UDim2.new(0, 0, 0, 0)
+    labelFrame.BackgroundTransparency = 1
+    labelFrame.Parent = container
+    
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.6, 0, 1, 0)
+    lbl.Position = UDim2.new(0, 0, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = label
+    lbl.TextColor3 = Color3.fromRGB(200, 200, 235)
+    lbl.TextSize = 14
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextYAlignment = Enum.TextYAlignment.Center
+    lbl.Parent = labelFrame
+    
+    local valueDisplay = Instance.new("TextLabel")
+    valueDisplay.Size = UDim2.new(0.3, 0, 1, 0)
+    valueDisplay.Position = UDim2.new(0.7, 0, 0, 0)
+    valueDisplay.BackgroundTransparency = 1
+    valueDisplay.Text = tostring(Settings[settingKey])
+    valueDisplay.TextColor3 = Color3.fromRGB(255, 215, 0)
+    valueDisplay.TextSize = 14
+    valueDisplay.Font = Enum.Font.GothamBold
+    valueDisplay.TextXAlignment = Enum.TextXAlignment.Right
+    valueDisplay.TextYAlignment = Enum.TextYAlignment.Center
+    valueDisplay.Parent = labelFrame
+    
+    local sliderBg = Instance.new("Frame")
+    sliderBg.Size = UDim2.new(1, 0, 0, 5)
+    sliderBg.Position = UDim2.new(0, 0, 0, 32)
+    sliderBg.BackgroundColor3 = Color3.fromRGB(25, 28, 60)
+    sliderBg.BorderSizePixel = 0
+    sliderBg.Parent = container
+    local sliderBgCorner = Instance.new("UICorner")
+    sliderBgCorner.CornerRadius = UDim.new(0, 3)
+    sliderBgCorner.Parent = sliderBg
+    
+    local initialX = (Settings[settingKey] - minVal) / (maxVal - minVal)
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(initialX, 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    fill.BorderSizePixel = 0
+    fill.Parent = sliderBg
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 3)
+    fillCorner.Parent = fill
+    
+    local handle = Instance.new("TextButton")
+    handle.Size = UDim2.new(0, 20, 0, 20)
+    handle.Position = UDim2.new(initialX, -10, 0.5, -10)
+    handle.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    handle.BorderSizePixel = 2
+    handle.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    handle.Text = ""
+    handle.Parent = container
+    local handleCorner = Instance.new("UICorner")
+    handleCorner.CornerRadius = UDim.new(1, 0)
+    handleCorner.Parent = handle
+    
+    local dragging = false
+    handle.MouseButton1Down:Connect(function() dragging = true end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+    
+    RunService.RenderStepped:Connect(function()
+        if dragging then
+            local mouse = LocalPlayer:GetMouse()
+            local x = math.clamp((mouse.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
+            local val = math.floor(minVal + x * (maxVal - minVal))
+            Settings[settingKey] = val
+            fill.Size = UDim2.new(x, 0, 1, 0)
+            handle.Position = UDim2.new(x, -10, 0.5, -10)
+            valueDisplay.Text = tostring(val)
+            if settingKey == "SpeedValue" then
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("Humanoid") and Settings.SpeedBypass then
+                    char.Humanoid.WalkSpeed = val
+                end
+            end
+        end
+    end)
+    
+    return container
+end
+
 local y = 5
 CreateCheckbox(FarmPanel, "💰 Auto Farm Cash", "AutoFarm", y)
 y = y + 40
@@ -748,7 +898,7 @@ CreateCheckbox(FarmPanel, "🎯 Auto Attack", "AutoAttack", y)
 y = y + 40
 CreateCheckbox(FarmPanel, "⚡ Speed Bypass", "SpeedBypass", y)
 y = y + 50
-local SpeedSlider = CreateSlider(FarmPanel, "Speed Value", "SpeedValue", 16, 100, y)
+CreateSlider(FarmPanel, "Speed Value", "SpeedValue", 16, 100, y)
 y = y + 55
 CreateCheckbox(FarmPanel, "👁️ ESP", "ESP", y)
 y = y + 40
@@ -760,7 +910,7 @@ SettingsTitle.Size = UDim2.new(1, -20, 0, 35)
 SettingsTitle.Position = UDim2.new(0, 10, 0, 5)
 SettingsTitle.BackgroundTransparency = 1
 SettingsTitle.Text = "⚙️ Settings"
-SettingsTitle.TextColor3 = Color3.fromRGB(255, 200, 50)
+SettingsTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
 SettingsTitle.TextSize = 18
 SettingsTitle.Font = Enum.Font.GothamBold
 SettingsTitle.TextXAlignment = Enum.TextXAlignment.Center
@@ -770,7 +920,7 @@ SettingsTitle.Parent = SettingsPanel
 local ResetBtn = Instance.new("TextButton")
 ResetBtn.Size = UDim2.new(0, 200, 0, 40)
 ResetBtn.Position = UDim2.new(0.5, -100, 0, 80)
-ResetBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+ResetBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
 ResetBtn.BackgroundTransparency = 0.15
 ResetBtn.BorderSizePixel = 0
 ResetBtn.Text = "🔄 Reset All Settings"
@@ -856,35 +1006,100 @@ local function SetupDrag()
 end
 SetupDrag()
 
--- ===================== MENU TOGGLE =====================
+-- ===================== ЭПИЧЕСКАЯ АНИМАЦИЯ ОТКРЫТИЯ =====================
 local menuOpenTween = nil
-WButton.MouseButton1Click:Connect(function()
-    SeraphMenu.Visible = not SeraphMenu.Visible
-    MenuFrame.Visible = SeraphMenu.Visible
-    ToggleBlur(SeraphMenu.Visible)
+local isOpening = false
 
-    if SeraphMenu.Visible then
-        MenuFrame.Position = UDim2.new(0.5, -425, 0.5, -340 + 50)
-        MenuFrame.Size = UDim2.new(0, 0, 0, 0)
-        MenuFrame.BackgroundTransparency = 1
-        if menuOpenTween then menuOpenTween:Cancel() end
-        menuOpenTween = TweenService:Create(MenuFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 850, 0, 680),
+local function EpicOpenAnimation()
+    if isOpening then return end
+    isOpening = true
+    
+    -- Подготовка: меню скрыто, но мы его показываем с нулевым размером
+    MenuFrame.Visible = true
+    MenuFrame.Size = UDim2.new(0, 0, 0, 0)
+    MenuFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    MenuFrame.BackgroundTransparency = 1
+    MenuFrame.Rotation = 0
+    
+    -- Взрыв частиц из центра экрана
+    local centerPos = UDim2.new(0.5, 0, 0.5, 0)
+    CreateExplosionParticles(centerPos, 80, Color3.fromRGB(255, 215, 0))
+    CreateExplosionParticles(centerPos, 50, Color3.fromRGB(255, 100, 50))
+    CreateExplosionParticles(centerPos, 30, Color3.fromRGB(255, 255, 255))
+    
+    -- Звук взрыва
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://9120263686"
+    sound.Volume = 0.5
+    sound.Parent = LocalPlayer.Character or LocalPlayer
+    sound:Play()
+    task.wait(0.1)
+    sound:Destroy()
+    
+    -- Затемнение и блюр
+    ToggleBlur(true)
+    
+    -- Первая фаза: быстрое масштабирование с вращением
+    local t1 = TweenService:Create(MenuFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 850, 0, 680),
+        Position = UDim2.new(0.5, -425, 0.5, -340),
+        BackgroundTransparency = 0.05,
+        Rotation = 5
+    })
+    t1:Play()
+    t1.Completed:Connect(function()
+        -- Вторая фаза: пружинящий эффект (overshoot)
+        local t2 = TweenService:Create(MenuFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
             Position = UDim2.new(0.5, -425, 0.5, -340),
+            Rotation = 0,
             BackgroundTransparency = 0.05
         })
-        menuOpenTween:Play()
+        t2:Play()
+        t2.Completed:Connect(function()
+            -- Третья фаза: свечение
+            TweenService:Create(MenuGlow, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BackgroundTransparency = 0.85
+            }):Play()
+            isOpening = false
+        end)
+    end)
+end
+
+local function EpicCloseAnimation()
+    if isOpening then return end
+    isOpening = true
+    
+    -- Свечение гаснет
+    TweenService:Create(MenuGlow, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+        BackgroundTransparency = 1
+    }):Play()
+    
+    -- Схлопывание с вращением
+    local t1 = TweenService:Create(MenuFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        BackgroundTransparency = 1,
+        Rotation = -10
+    })
+    t1:Play()
+    t1.Completed:Connect(function()
+        MenuFrame.Visible = false
+        ToggleBlur(false)
+        isOpening = false
+    end)
+end
+
+-- ===================== ТОГГЛ МЕНЮ =====================
+WButton.MouseButton1Click:Connect(function()
+    SeraphMenu.Visible = not SeraphMenu.Visible
+    if SeraphMenu.Visible then
+        EpicOpenAnimation()
     else
-        if menuOpenTween then menuOpenTween:Cancel() end
-        menuOpenTween = TweenService:Create(MenuFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(0.5, -425, 0.5, -340 + 50),
-            BackgroundTransparency = 1
-        })
-        menuOpenTween:Play()
+        EpicCloseAnimation()
     end
 end)
 
+-- ===================== KEEP ON TOP =====================
 local function KeepOnTop()
     RunService.RenderStepped:Connect(function()
         if MenuFrame and ScreenGui then
@@ -897,11 +1112,12 @@ local function KeepOnTop()
 end
 KeepOnTop()
 
-print("SeraphiCA Military Tycoon v2.0 Loaded")
+-- ===================== ЗАПУСК =====================
+print("SeraphiCA Military Tycoon v3.0 ULTRA Loaded")
 print("╔═══════════════════════════════════════════════════════╗")
-print("║  ⚡ SeraphiCA - Military Tycoon                       ║")
-print("║  🔥 SHOP-HACK: Spoof GamePass purchases               ║")
-print("║  📦 15+ GamePasses with fake purchase logs            ║")
+print("║  ⚡ SeraphiCA - Military Tycoon ULTRA                 ║")
+print("║  🔥 EPIC OPEN ANIMATION: Explosion + Particles        ║")
+print("║  📦 SHOP-HACK: Spoof GamePass purchases               ║")
 print("║  💰 Auto Farm | Auto Build | Auto Upgrade             ║")
-print("║  Нажми на ватермак для открытия/закрытия             ║")
+print("║  Нажми на ватермак для EPIC открытия/закрытия        ║")
 print("╚═══════════════════════════════════════════════════════╝")

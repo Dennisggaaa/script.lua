@@ -4,6 +4,8 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local ServerScriptService = game:GetService("ServerScriptService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local LocalPlayer = Players.LocalPlayer
 
 local SeraphMenu = {
@@ -45,77 +47,67 @@ local function GetKyivTime()
     return os.date("!%H:%M:%S", kyivTime)
 end
 
--- ===================== WATERMARK =====================
+-- ===================== WATERMARK (FIXED) =====================
 local WatermarkContainer = Instance.new("Frame")
 WatermarkContainer.Name = "Watermark"
-WatermarkContainer.Size = UDim2.new(0, 0, 0, 0)
+WatermarkContainer.Size = UDim2.new(0, 220, 0, 35)
 WatermarkContainer.Position = UDim2.new(0, 6, 0, 4)
 WatermarkContainer.BackgroundTransparency = 1
+WatermarkContainer.ZIndex = 100
 WatermarkContainer.Parent = ScreenGui
 
 local WTopBar = Instance.new("Frame")
-WTopBar.Size = UDim2.new(0, 0, 0, 3)
+WTopBar.Size = UDim2.new(1, 0, 0, 3)
 WTopBar.Position = UDim2.new(0, 0, 0, 0)
 WTopBar.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
 WTopBar.BackgroundTransparency = 0
 WTopBar.BorderSizePixel = 0
+WTopBar.ZIndex = 101
 WTopBar.Parent = WatermarkContainer
 
 local WMainBg = Instance.new("Frame")
-WMainBg.Size = UDim2.new(0, 0, 0, 0)
+WMainBg.Size = UDim2.new(1, 0, 1, -3)
 WMainBg.Position = UDim2.new(0, 0, 0, 3)
 WMainBg.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
 WMainBg.BackgroundTransparency = 0
 WMainBg.BorderSizePixel = 0
+WMainBg.ZIndex = 101
 WMainBg.Parent = WatermarkContainer
 local WCorner = Instance.new("UICorner")
 WCorner.CornerRadius = UDim.new(0, 4)
 WCorner.Parent = WMainBg
 
 local WText = Instance.new("TextLabel")
-WText.Size = UDim2.new(0, 0, 0, 0)
-WText.Position = UDim2.new(0, 12, 0, 8)
+WText.Size = UDim2.new(1, -16, 1, -6)
+WText.Position = UDim2.new(0, 12, 0, 6)
 WText.BackgroundTransparency = 1
-WText.Text = "✦ SeraphiCA  |  00:00:00"
+WText.Text = "✦ SeraphiCA  |  " .. GetKyivTime()
 WText.TextColor3 = Color3.fromRGB(255, 255, 255)
 WText.TextSize = 15
 WText.Font = Enum.Font.GothamBold
 WText.TextXAlignment = Enum.TextXAlignment.Left
 WText.TextYAlignment = Enum.TextYAlignment.Center
+WText.ZIndex = 102
 WText.Parent = WatermarkContainer
 
 local WButton = Instance.new("TextButton")
 WButton.Size = UDim2.new(1, 0, 1, 0)
+WButton.Position = UDim2.new(0, 0, 0, 0)
 WButton.BackgroundTransparency = 1
 WButton.Text = ""
+WButton.ZIndex = 200
+WButton.AutoButtonColor = false
 WButton.Parent = WatermarkContainer
 
-local function UpdateWatermark()
-    local fullText = "✦ SeraphiCA  |  " .. GetKyivTime()
-    WText.Text = fullText
-    local tb = Instance.new("TextLabel")
-    tb.Text = fullText
-    tb.TextSize = 15
-    tb.Font = Enum.Font.GothamBold
-    tb.Size = UDim2.new(0, 9999, 0, 30)
-    tb.Parent = ScreenGui
-    tb.Visible = false
-    task.wait()
-    local w = tb.TextBounds.X
-    tb:Destroy()
-    local totalW = 16 + w + 8
-    local totalH = 28 + 8
-    WatermarkContainer.Size = UDim2.new(0, totalW, 0, totalH + 3)
-    WTopBar.Size = UDim2.new(0, totalW, 0, 3)
-    WMainBg.Size = UDim2.new(0, totalW, 0, totalH)
-    WText.Size = UDim2.new(0, w, 0, 28)
+local function UpdateWatermarkTime()
+    WText.Text = "✦ SeraphiCA  |  " .. GetKyivTime()
 end
-UpdateWatermark()
+UpdateWatermarkTime()
 
 task.spawn(function()
     while true do
         task.wait(1)
-        WText.Text = "✦ SeraphiCA  |  " .. GetKyivTime()
+        UpdateWatermarkTime()
     end
 end)
 
@@ -199,7 +191,7 @@ local VerText = Instance.new("TextLabel")
 VerText.Size = UDim2.new(0, 80, 1, 0)
 VerText.Position = UDim2.new(1, -90, 0, 0)
 VerText.BackgroundTransparency = 1
-VerText.Text = "v3.0"
+VerText.Text = "v3.1"
 VerText.TextColor3 = Color3.fromRGB(80, 80, 180)
 VerText.TextSize = 13
 VerText.Font = Enum.Font.Gotham
@@ -269,6 +261,77 @@ local ShopPanel = CreatePanel("SHOP-HACK")
 local FarmPanel = CreatePanel("FARM")
 local SettingsPanel = CreatePanel("SETTINGS")
 
+-- ===================== ДИНАМИЧЕСКОЕ СКАНИРОВАНИЕ ГЕЙМПАССОВ =====================
+local function ScanGamePasses()
+    local found = {}
+    local containers = {ReplicatedStorage, Workspace, ServerScriptService}
+
+    for _, container in ipairs(containers) do
+        if container then
+            for _, child in ipairs(container:GetDescendants()) do
+                local name = child.Name
+                if name and (string.find(string.lower(name), "pass") or string.find(string.lower(name), "gamepass") or string.find(string.lower(name), "game pass")) then
+                    local id = nil
+                    if child:IsA("IntValue") or child:IsA("NumberValue") then
+                        id = child.Value
+                    elseif child:IsA("StringValue") then
+                        id = tonumber(child.Value)
+                    elseif child:IsA("ObjectValue") and child.Value and child.Value:IsA("IntValue") then
+                        id = child.Value.Value
+                    elseif child:IsA("Folder") then
+                        for _, sub in ipairs(child:GetChildren()) do
+                            if sub:IsA("IntValue") and sub.Name:find("ID") then
+                                id = sub.Value
+                                break
+                            end
+                        end
+                    end
+
+                    if id and type(id) == "number" and id > 0 then
+                        local nameDisplay = child.Name
+                        if child:IsA("IntValue") and child.Parent then
+                            nameDisplay = child.Parent.Name .. " (" .. child.Name .. ")"
+                        end
+                        table.insert(found, {id = id, name = nameDisplay})
+                    end
+                end
+            end
+        end
+    end
+
+    local unique = {}
+    local seen = {}
+    for _, item in ipairs(found) do
+        if not seen[item.id] then
+            seen[item.id] = true
+            table.insert(unique, item)
+        end
+    end
+    return unique
+end
+
+local function GetFallbackGamePasses()
+    return {
+        {id = 1234567, name = "🔫 Elite Soldier Pack"},
+        {id = 2345678, name = "🚁 Apache Helicopter"},
+        {id = 3456789, name = "🏰 Mega Base Kit"},
+        {id = 4567890, name = "💎 Premium Pass"},
+        {id = 5678901, name = "⭐ VIP Access"},
+        {id = 6789012, name = "⚡ Speed Boost"},
+        {id = 7890123, name = "🛡️ Shield Generator"},
+        {id = 8901234, name = "🚀 Rocket Launcher"},
+        {id = 9012345, name = "👑 Commander Pack"},
+        {id = 123456, name = "💀 Shadow Ops"},
+        {id = 234567, name = "🔥 Inferno Cannon"},
+        {id = 345678, name = "❄️ Cryo Blaster"},
+        {id = 456789, name = "⚔️ Berserker Set"},
+        {id = 567890, name = "🏆 Champion Pass"},
+        {id = 678901, name = "🎯 Sniper Elite"},
+    }
+end
+
+local gamePasses = nil
+
 -- ===================== SHOP-HACK PANEL =====================
 local ShopTitle = Instance.new("TextLabel")
 ShopTitle.Size = UDim2.new(1, -20, 0, 35)
@@ -286,7 +349,7 @@ local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(1, -20, 0, 25)
 SubTitle.Position = UDim2.new(0, 10, 0, 40)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "Select a GamePass and click Confirm to spoof purchase"
+SubTitle.Text = "Scanning for GamePasses..."
 SubTitle.TextColor3 = Color3.fromRGB(180, 180, 220)
 SubTitle.TextSize = 13
 SubTitle.Font = Enum.Font.Gotham
@@ -318,70 +381,98 @@ GamePassList.ScrollBarThickness = 3
 GamePassList.ScrollBarImageColor3 = Color3.fromRGB(255, 200, 50)
 GamePassList.Parent = GamePassFrame
 
-local GamePassDatabase = {
-    {id = 1, name = "🔫 Elite Soldier Pack", price = "249"},
-    {id = 2, name = "🚁 Apache Helicopter", price = "499"},
-    {id = 3, name = "🏰 Mega Base Kit", price = "799"},
-    {id = 4, name = "💎 Premium Pass", price = "999"},
-    {id = 5, name = "⭐ VIP Access", price = "1499"},
-    {id = 6, name = "⚡ Speed Boost", price = "199"},
-    {id = 7, name = "🛡️ Shield Generator", price = "349"},
-    {id = 8, name = "🚀 Rocket Launcher", price = "599"},
-    {id = 9, name = "👑 Commander Pack", price = "2499"},
-    {id = 10, name = "💀 Shadow Ops", price = "1299"},
-    {id = 11, name = "🔥 Inferno Cannon", price = "899"},
-    {id = 12, name = "❄️ Cryo Blaster", price = "799"},
-    {id = 13, name = "⚔️ Berserker Set", price = "1099"},
-    {id = 14, name = "🏆 Champion Pass", price = "1999"},
-    {id = 15, name = "🎯 Sniper Elite", price = "699"},
-}
-
 local selectedPass = nil
 local passButtons = {}
 
-for i, gp in ipairs(GamePassDatabase) do
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, 32)
-    btn.Position = UDim2.new(0, 5, 0, (i-1)*35 + 5)
-    btn.BackgroundColor3 = Color3.fromRGB(25, 28, 60)
-    btn.BackgroundTransparency = 0
-    btn.BorderSizePixel = 0
-    btn.Text = gp.name .. "  [" .. gp.price .. "R$]"
-    btn.TextColor3 = Color3.fromRGB(200, 200, 235)
-    btn.TextSize = 13
-    btn.Font = Enum.Font.Gotham
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.TextYAlignment = Enum.TextYAlignment.Center
-    btn.Parent = GamePassList
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 4)
-    btnCorner.Parent = btn
-    local highlight = Instance.new("Frame")
-    highlight.Size = UDim2.new(0, 3, 1, 0)
-    highlight.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-    highlight.BackgroundTransparency = 1
-    highlight.BorderSizePixel = 0
-    highlight.Parent = btn
-    btn.MouseButton1Click:Connect(function()
-        selectedPass = gp
-        for _, b in pairs(passButtons) do
-            b.BackgroundColor3 = Color3.fromRGB(25, 28, 60)
-            b.TextColor3 = Color3.fromRGB(200, 200, 235)
-            local h = b:FindFirstChildOfClass("Frame")
-            if h then h.BackgroundTransparency = 1 end
-        end
-        btn.BackgroundColor3 = Color3.fromRGB(35, 45, 100)
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        local h = btn:FindFirstChildOfClass("Frame")
-        if h then h.BackgroundTransparency = 0.2 end
-        ConfirmBtn.Visible = true
-        ConfirmBtn.Text = "✅ CONFIRM PURCHASE"
-        LogFrame.Visible = false
-        LogText.Text = ""
-    end)
-    table.insert(passButtons, btn)
-    GamePassList.CanvasSize = UDim2.new(0, 0, 0, i*35 + 10)
+local function BuildPassList(passes)
+    for _, btn in ipairs(passButtons) do
+        btn:Destroy()
+    end
+    passButtons = {}
+
+    if #passes == 0 then
+        local emptyLabel = Instance.new("TextLabel")
+        emptyLabel.Size = UDim2.new(1, 0, 0, 30)
+        emptyLabel.BackgroundTransparency = 1
+        emptyLabel.Text = "No GamePasses found. Using fallback list..."
+        emptyLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
+        emptyLabel.TextSize = 14
+        emptyLabel.Font = Enum.Font.Gotham
+        emptyLabel.TextXAlignment = Enum.TextXAlignment.Center
+        emptyLabel.TextYAlignment = Enum.TextYAlignment.Center
+        emptyLabel.Parent = GamePassList
+        table.insert(passButtons, emptyLabel)
+        GamePassList.CanvasSize = UDim2.new(0, 0, 0, 40)
+        return
+    end
+
+    for i, gp in ipairs(passes) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -10, 0, 32)
+        btn.Position = UDim2.new(0, 5, 0, (i-1)*35 + 5)
+        btn.BackgroundColor3 = Color3.fromRGB(25, 28, 60)
+        btn.BackgroundTransparency = 0
+        btn.BorderSizePixel = 0
+        btn.Text = gp.name .. "  [ID: " .. gp.id .. "]"
+        btn.TextColor3 = Color3.fromRGB(200, 200, 235)
+        btn.TextSize = 13
+        btn.Font = Enum.Font.Gotham
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.TextYAlignment = Enum.TextYAlignment.Center
+        btn.Parent = GamePassList
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 4)
+        btnCorner.Parent = btn
+        local highlight = Instance.new("Frame")
+        highlight.Size = UDim2.new(0, 3, 1, 0)
+        highlight.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+        highlight.BackgroundTransparency = 1
+        highlight.BorderSizePixel = 0
+        highlight.Parent = btn
+
+        btn.MouseButton1Click:Connect(function()
+            selectedPass = gp
+            for _, b in pairs(passButtons) do
+                if b:IsA("TextButton") then
+                    b.BackgroundColor3 = Color3.fromRGB(25, 28, 60)
+                    b.TextColor3 = Color3.fromRGB(200, 200, 235)
+                    local h = b:FindFirstChildOfClass("Frame")
+                    if h then h.BackgroundTransparency = 1 end
+                end
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(35, 45, 100)
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            local h = btn:FindFirstChildOfClass("Frame")
+            if h then h.BackgroundTransparency = 0.2 end
+            ConfirmBtn.Visible = true
+            ConfirmBtn.Text = "✅ CONFIRM PURCHASE"
+            LogFrame.Visible = false
+            LogText.Text = ""
+        end)
+
+        table.insert(passButtons, btn)
+        GamePassList.CanvasSize = UDim2.new(0, 0, 0, i*35 + 10)
+    end
 end
+
+local function RefreshGamePassList()
+    local scanned = ScanGamePasses()
+    if #scanned > 0 then
+        gamePasses = scanned
+        SubTitle.Text = "Found " .. #scanned .. " GamePass(es) in game!"
+        print("[SeraphCA] Found GamePasses:")
+        for _, gp in ipairs(scanned) do
+            print("  " .. gp.name .. " (ID: " .. gp.id .. ")")
+        end
+    else
+        gamePasses = GetFallbackGamePasses()
+        SubTitle.Text = "No GamePasses found in game. Using fallback list."
+        print("[SeraphCA] No GamePasses found. Using fallback list.")
+    end
+    BuildPassList(gamePasses)
+end
+
+RefreshGamePassList()
 
 local ConfirmBtn = Instance.new("TextButton")
 ConfirmBtn.Size = UDim2.new(0, 250, 0, 40)
@@ -457,11 +548,9 @@ local function SpoofPurchase(gp)
     end
     addLog("🔍 Scanning server security...", Color3.fromRGB(255, 200, 50))
     task.wait(0.5)
-    addLog("📦 GamePass detected: " .. gp.name, Color3.fromRGB(100, 200, 255))
+    addLog("📦 GamePass detected: " .. gp.name .. " (ID: " .. gp.id .. ")", Color3.fromRGB(100, 200, 255))
     task.wait(0.4)
-    addLog("💰 Price: " .. gp.price .. " Robux", Color3.fromRGB(255, 200, 50))
-    task.wait(0.4)
-    addLog("🔄 Sending purchase request to Roblox servers...", Color3.fromRGB(200, 200, 220))
+    addLog("🔄 Sending spoofed purchase request...", Color3.fromRGB(200, 200, 220))
     task.wait(0.5)
     local protectionLevel = math.random(1, 100)
     addLog("🛡️ Server protection level: " .. protectionLevel .. "%", Color3.fromRGB(150, 150, 200))
@@ -908,13 +997,12 @@ local function SetupDrag()
 end
 SetupDrag()
 
--- ===================== TOGGLE MENU (БЕЗ ЭФФЕКТОВ) =====================
+-- ===================== TOGGLE MENU =====================
 WButton.MouseButton1Click:Connect(function()
     SeraphMenu.Visible = not SeraphMenu.Visible
     MenuFrame.Visible = SeraphMenu.Visible
 end)
 
--- Доп. обработчик на случай, если кнопка не сработает (но она работает)
 WatermarkContainer.MouseButton1Click:Connect(function()
     SeraphMenu.Visible = not SeraphMenu.Visible
     MenuFrame.Visible = SeraphMenu.Visible
@@ -933,11 +1021,10 @@ local function KeepOnTop()
 end
 KeepOnTop()
 
-print("SeraphiCA Military Tycoon v3.0 (No Effects) Loaded")
+print("SeraphiCA Military Tycoon v3.1 (Fixed Watermark) Loaded")
 print("╔═══════════════════════════════════════════════════════╗")
-print("║  ⚡ SeraphiCA - Military Tycoon (No Effects)          ║")
-print("║  🔥 SHOP-HACK: Spoof GamePass purchases               ║")
-print("║  📦 15+ GamePasses with fake purchase logs            ║")
-print("║  💰 Auto Farm | Auto Build | Auto Upgrade             ║")
+print("║  ⚡ SeraphiCA - Military Tycoon (Fixed Watermark)     ║")
+print("║  🔥 SHOP-HACK: Dynamic GamePass Scanner               ║")
+print("║  📦 Ватермарк всегда видим и кликабелен              ║")
 print("║  Нажми на ватермак для открытия/закрытия             ║")
 print("╚═══════════════════════════════════════════════════════╝")

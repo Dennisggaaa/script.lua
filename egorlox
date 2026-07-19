@@ -2,51 +2,44 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
-local SeraphMenu = {}
-SeraphMenu.Visible = false
-SeraphMenu.ActiveTab = "AUTO-FARM"
-SeraphMenu.Tabs = {"AUTO-FARM", "DUP"}
-SeraphMenu.Dragging = false
-SeraphMenu.Position = UDim2.new(0.05, 0, 0.1, 0)
-SeraphMenu.Size = UDim2.new(0, 900, 0, 720)
-
-local FarmSettings = {
-    AutoQuest = false,
-    AutoFarmNPC = false,
-    AutoFruit = false,
-    AutoSideQuest = false,
-    AutoV2Quest = false,
-    AutoBoss = false,
-    AutoCollect = false,
-    AutoTeleport = false,
-    AutoHaki = false,
-    AutoStats = false,
-    AutoFishing = false,
-    AutoChest = false,
-    AntiAFK = false,
-    AutoSeaBeast = false,
-    AutoRaid = false
+local SeraphMenu = {
+    Visible = false,
+    ActiveTab = "Settings",
+    Tabs = {"General", "Combat", "Visuals", "Misc", "AFK", "Settings"},
+    Dragging = false,
+    MenuSize = 650,
+    Bubbles = {}
 }
 
-local FruitSpawnTimes = {
-    {"Flame", 0},
-    {"Ice", 0},
-    {"Dark", 0},
-    {"Light", 0},
-    {"Gravity", 0},
-    {"Dragon", 0},
-    {"Phoenix", 0},
-    {"Venom", 0},
-    {"Buddha", 0},
-    {"Rumble", 0}
+local Settings = {
+    AnimationDisabler = false,
+    DisableParryAnim = false,
+    DisableGrabAnim = false,
+    Immortality = false,
+    SpeedBypass = false,
+    NoRender = false,
+    AutoParry = false,
+    AutoSpamParry = false,
+    TriggerBot = false,
+    AntiCurve = false,
+    HitEffect = false,
+    Visualiser = false,
+    SkinChanger = false,
+    CurrentSkin = "Default",
+    MenuSize = 650,
+    Accuracy = 80,
+    DetectionMode = "Normal",
+    Angle = 90,
+    Height = 100,
+    Depth = 100,
+    Radius = 50
 }
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "HazePieceFarmGUI"
+ScreenGui.Name = "SeraphCA_BladeBall"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -68,1065 +61,746 @@ local function GetKyivTime()
     local octLastSunday = 31 - (os.date("*t", os.time{year=year, month=10, day=31}).wday % 7)
     local dstStart = os.time{year=year, month=3, day=marchLastSunday, hour=3}
     local dstEnd = os.time{year=year, month=10, day=octLastSunday, hour=4}
-    if now >= dstStart and now < dstEnd then
-        isDST = true
-    end
+    if now >= dstStart and now < dstEnd then isDST = true end
     local kyivOffset = isDST and 3 or 2
     local kyivTime = now + kyivOffset * 3600
     return os.date("!%H:%M:%S", kyivTime)
 end
 
+-- ===================== WATERMARK =====================
 local WatermarkContainer = Instance.new("Frame")
-WatermarkContainer.Name = "WatermarkContainer"
+WatermarkContainer.Name = "Watermark"
 WatermarkContainer.Size = UDim2.new(0, 0, 0, 0)
 WatermarkContainer.Position = UDim2.new(0, 6, 0, 4)
 WatermarkContainer.BackgroundTransparency = 1
 WatermarkContainer.Parent = ScreenGui
 
-local TopBar = Instance.new("Frame")
-TopBar.Name = "TopBar"
-TopBar.Size = UDim2.new(0, 0, 0, 2)
-TopBar.Position = UDim2.new(0, 0, 0, 0)
-TopBar.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-TopBar.BackgroundTransparency = 0
-TopBar.BorderSizePixel = 0
-TopBar.Parent = WatermarkContainer
+local WTopBar = Instance.new("Frame")
+WTopBar.Size = UDim2.new(0, 0, 0, 2)
+WTopBar.Position = UDim2.new(0, 0, 0, 0)
+WTopBar.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+WTopBar.BackgroundTransparency = 0
+WTopBar.BorderSizePixel = 0
+WTopBar.Parent = WatermarkContainer
 
-local MainBackground = Instance.new("Frame")
-MainBackground.Name = "MainBackground"
-MainBackground.Size = UDim2.new(0, 0, 0, 0)
-MainBackground.Position = UDim2.new(0, 0, 0, 2)
-MainBackground.BackgroundColor3 = Color3.fromRGB(54, 57, 63)
-MainBackground.BackgroundTransparency = 0
-MainBackground.BorderSizePixel = 0
-MainBackground.Parent = WatermarkContainer
+local WMainBg = Instance.new("Frame")
+WMainBg.Size = UDim2.new(0, 0, 0, 0)
+WMainBg.Position = UDim2.new(0, 0, 0, 2)
+WMainBg.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+WMainBg.BackgroundTransparency = 0
+WMainBg.BorderSizePixel = 0
+WMainBg.Parent = WatermarkContainer
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 2)
-MainCorner.Parent = MainBackground
+local WCorner = Instance.new("UICorner")
+WCorner.CornerRadius = UDim.new(0, 2)
+WCorner.Parent = WMainBg
 
-local WatermarkText = Instance.new("TextLabel")
-WatermarkText.Name = "WatermarkText"
-WatermarkText.Size = UDim2.new(0, 0, 0, 0)
-WatermarkText.Position = UDim2.new(0, 10, 0, 6)
-WatermarkText.BackgroundTransparency = 1
-WatermarkText.Text = "SeraphiCA  |  00:00:00"
-WatermarkText.TextColor3 = Color3.fromRGB(255, 255, 255)
-WatermarkText.TextSize = 16
-WatermarkText.Font = Enum.Font.Gotham
-WatermarkText.TextXAlignment = Enum.TextXAlignment.Left
-WatermarkText.TextYAlignment = Enum.TextYAlignment.Center
-WatermarkText.Parent = WatermarkContainer
+local WText = Instance.new("TextLabel")
+WText.Size = UDim2.new(0, 0, 0, 0)
+WText.Position = UDim2.new(0, 10, 0, 6)
+WText.BackgroundTransparency = 1
+WText.Text = "SeraphiCA  |  00:00:00"
+WText.TextColor3 = Color3.fromRGB(255, 255, 255)
+WText.TextSize = 14
+WText.Font = Enum.Font.Gotham
+WText.TextXAlignment = Enum.TextXAlignment.Left
+WText.TextYAlignment = Enum.TextYAlignment.Center
+WText.Parent = WatermarkContainer
 
 local function UpdateWatermark()
     local timeStr = GetKyivTime()
     local fullText = "SeraphiCA  |  " .. timeStr
-    WatermarkText.Text = fullText
-    local textBounds = Instance.new("TextLabel")
-    textBounds.Text = fullText
-    textBounds.TextSize = 16
-    textBounds.Font = Enum.Font.Gotham
-    textBounds.TextXAlignment = Enum.TextXAlignment.Left
-    textBounds.Size = UDim2.new(0, 9999, 0, 30)
-    textBounds.Parent = ScreenGui
-    textBounds.Visible = false
+    WText.Text = fullText
+    local tb = Instance.new("TextLabel")
+    tb.Text = fullText
+    tb.TextSize = 14
+    tb.Font = Enum.Font.Gotham
+    tb.Size = UDim2.new(0, 9999, 0, 30)
+    tb.Parent = ScreenGui
+    tb.Visible = false
     task.wait()
-    local textWidth = textBounds.TextBounds.X
-    local textHeight = 25
-    textBounds:Destroy()
-    local padding = 14
-    local totalWidth = padding + textWidth + 6
-    local totalHeight = textHeight + 6
-    WatermarkContainer.Size = UDim2.new(0, totalWidth, 0, totalHeight + 2)
-    TopBar.Size = UDim2.new(0, totalWidth, 0, 2)
-    TopBar.Position = UDim2.new(0, 0, 0, 0)
-    MainBackground.Size = UDim2.new(0, totalWidth, 0, totalHeight)
-    MainBackground.Position = UDim2.new(0, 0, 0, 2)
-    WatermarkText.Size = UDim2.new(0, textWidth, 0, textHeight)
-    WatermarkText.Position = UDim2.new(0, 10, 0, 6)
+    local w = tb.TextBounds.X
+    tb:Destroy()
+    local totalW = 14 + w + 6
+    local totalH = 25 + 6
+    WatermarkContainer.Size = UDim2.new(0, totalW, 0, totalH + 2)
+    WTopBar.Size = UDim2.new(0, totalW, 0, 2)
+    WMainBg.Size = UDim2.new(0, totalW, 0, totalH)
+    WText.Size = UDim2.new(0, w, 0, 25)
 end
-
 UpdateWatermark()
 
 task.spawn(function()
     while true do
         task.wait(1)
-        local timeStr = GetKyivTime()
-        WatermarkText.Text = "SeraphiCA  |  " .. timeStr
+        WText.Text = "SeraphiCA  |  " .. GetKyivTime()
     end
 end)
 
-WatermarkText:GetPropertyChangedSignal("Text"):Connect(function()
-    task.spawn(function()
-        task.wait(0.1)
-        UpdateWatermark()
-    end)
-end)
+local WButton = Instance.new("TextButton")
+WButton.Size = UDim2.new(1, 0, 1, 0)
+WButton.BackgroundTransparency = 1
+WButton.Text = ""
+WButton.Parent = WatermarkContainer
 
-local WatermarkButton = Instance.new("TextButton")
-WatermarkButton.Name = "WatermarkButton"
-WatermarkButton.Size = UDim2.new(1, 0, 1, 0)
-WatermarkButton.Position = UDim2.new(0, 0, 0, 0)
-WatermarkButton.BackgroundTransparency = 1
-WatermarkButton.Text = ""
-WatermarkButton.Parent = WatermarkContainer
-
+-- ===================== MAIN MENU =====================
 local MenuFrame = Instance.new("Frame")
 MenuFrame.Name = "MenuFrame"
-MenuFrame.Size = SeraphMenu.Size
-MenuFrame.Position = SeraphMenu.Position
-MenuFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 20)
+MenuFrame.Size = UDim2.new(0, Settings.MenuSize, 0, 700)
+MenuFrame.Position = UDim2.new(0.5, -Settings.MenuSize/2, 0.5, -350)
+MenuFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 25)
 MenuFrame.BackgroundTransparency = 0.1
 MenuFrame.BorderSizePixel = 0
-MenuFrame.Visible = SeraphMenu.Visible
+MenuFrame.Visible = false
 MenuFrame.ClipsDescendants = true
 MenuFrame.Parent = ScreenGui
 
 local MenuCorner = Instance.new("UICorner")
-MenuCorner.CornerRadius = UDim.new(0, 20)
+MenuCorner.CornerRadius = UDim.new(0, 16)
 MenuCorner.Parent = MenuFrame
 
-local MenuBorder1 = Instance.new("Frame")
-MenuBorder1.Name = "MenuBorder1"
-MenuBorder1.Size = UDim2.new(1, 4, 1, 4)
-MenuBorder1.Position = UDim2.new(0, -2, 0, -2)
-MenuBorder1.BackgroundColor3 = Color3.fromRGB(80, 180, 255)
-MenuBorder1.BackgroundTransparency = 0.5
-MenuBorder1.BorderSizePixel = 0
-MenuBorder1.ZIndex = 0
-MenuBorder1.Parent = MenuFrame
-
-local MenuBorderCorner1 = Instance.new("UICorner")
-MenuBorderCorner1.CornerRadius = UDim.new(0, 22)
-MenuBorderCorner1.Parent = MenuBorder1
-
-local MenuBorder2 = Instance.new("Frame")
-MenuBorder2.Name = "MenuBorder2"
-MenuBorder2.Size = UDim2.new(1, 8, 1, 8)
-MenuBorder2.Position = UDim2.new(0, -4, 0, -4)
-MenuBorder2.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-MenuBorder2.BackgroundTransparency = 0.85
-MenuBorder2.BorderSizePixel = 0
-MenuBorder2.ZIndex = -1
-MenuBorder2.Parent = MenuFrame
-
-local MenuBorderCorner2 = Instance.new("UICorner")
-MenuBorderCorner2.CornerRadius = UDim.new(0, 24)
-MenuBorderCorner2.Parent = MenuBorder2
-
-local MenuGradient1 = Instance.new("UIGradient")
-MenuGradient1.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 20, 45)),
-    ColorSequenceKeypoint.new(0.3, Color3.fromRGB(10, 15, 35)),
-    ColorSequenceKeypoint.new(0.7, Color3.fromRGB(20, 25, 50)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 20, 45))
-})
-MenuGradient1.Rotation = 135
-MenuGradient1.Parent = MenuFrame
+local MenuBorder = Instance.new("Frame")
+MenuBorder.Size = UDim2.new(1, 2, 1, 2)
+MenuBorder.Position = UDim2.new(0, -1, 0, -1)
+MenuBorder.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+MenuBorder.BackgroundTransparency = 0.7
+MenuBorder.BorderSizePixel = 0
+MenuBorder.ZIndex = 0
+MenuBorder.Parent = MenuFrame
+local MenuBorderCorner = Instance.new("UICorner")
+MenuBorderCorner.CornerRadius = UDim.new(0, 17)
+MenuBorderCorner.Parent = MenuBorder
 
 local GlowOverlay = Instance.new("Frame")
-GlowOverlay.Name = "GlowOverlay"
 GlowOverlay.Size = UDim2.new(1, 0, 1, 0)
-GlowOverlay.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+GlowOverlay.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
 GlowOverlay.BackgroundTransparency = 0.97
 GlowOverlay.BorderSizePixel = 0
 GlowOverlay.Parent = MenuFrame
-
 local GlowCorner = Instance.new("UICorner")
-GlowCorner.CornerRadius = UDim.new(0, 20)
+GlowCorner.CornerRadius = UDim.new(0, 16)
 GlowCorner.Parent = GlowOverlay
 
+local Gradient = Instance.new("UIGradient")
+Gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 45)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(8, 8, 30)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 45))
+})
+Gradient.Rotation = 135
+Gradient.Parent = MenuFrame
+
 local TitleBar = Instance.new("Frame")
-TitleBar.Name = "TitleBar"
-TitleBar.Size = UDim2.new(1, 0, 0, 55)
-TitleBar.BackgroundColor3 = Color3.fromRGB(15, 18, 40)
+TitleBar.Size = UDim2.new(1, 0, 0, 45)
+TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 40)
 TitleBar.BackgroundTransparency = 0
 TitleBar.BorderSizePixel = 0
 TitleBar.Parent = MenuFrame
-
 local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 20)
+TitleCorner.CornerRadius = UDim.new(0, 16)
 TitleCorner.Parent = TitleBar
 
-local TitleGradient = Instance.new("UIGradient")
-TitleGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 35, 80)),
-    ColorSequenceKeypoint.new(0.3, Color3.fromRGB(35, 45, 90)),
-    ColorSequenceKeypoint.new(0.7, Color3.fromRGB(25, 35, 80)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 25, 70))
+local TitleGrad = Instance.new("UIGradient")
+TitleGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 80)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 60))
 })
-TitleGradient.Rotation = 90
-TitleGradient.Parent = TitleBar
+TitleGrad.Rotation = 90
+TitleGrad.Parent = TitleBar
 
-local TitleGlow1 = Instance.new("Frame")
-TitleGlow1.Name = "TitleGlow1"
-TitleGlow1.Size = UDim2.new(1, 0, 0, 3)
-TitleGlow1.Position = UDim2.new(0, 0, 1, 0)
-TitleGlow1.BackgroundColor3 = Color3.fromRGB(80, 180, 255)
-TitleGlow1.BackgroundTransparency = 0.2
-TitleGlow1.BorderSizePixel = 0
-TitleGlow1.Parent = TitleBar
+local TitleGlow = Instance.new("Frame")
+TitleGlow.Size = UDim2.new(1, 0, 0, 2)
+TitleGlow.Position = UDim2.new(0, 0, 1, 0)
+TitleGlow.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+TitleGlow.BackgroundTransparency = 0.4
+TitleGlow.BorderSizePixel = 0
+TitleGlow.Parent = TitleBar
 
-local TitleGlow2 = Instance.new("Frame")
-TitleGlow2.Name = "TitleGlow2"
-TitleGlow2.Size = UDim2.new(1, 0, 0, 2)
-TitleGlow2.Position = UDim2.new(0, 0, 1, -3)
-TitleGlow2.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-TitleGlow2.BackgroundTransparency = 0.6
-TitleGlow2.BorderSizePixel = 0
-TitleGlow2.Parent = TitleBar
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(0, 200, 1, 0)
+TitleText.Position = UDim2.new(0, 12, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "⚡ SeraphiCA"
+TitleText.TextColor3 = Color3.fromRGB(255, 215, 0)
+TitleText.TextSize = 20
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.TextYAlignment = Enum.TextYAlignment.Center
+TitleText.Parent = TitleBar
 
-local MenuWatermark = Instance.new("TextLabel")
-MenuWatermark.Name = "MenuWatermark"
-MenuWatermark.Size = UDim2.new(0, 220, 1, 0)
-MenuWatermark.Position = UDim2.new(0, 15, 0, 0)
-MenuWatermark.BackgroundTransparency = 1
-MenuWatermark.Text = "⬡ Haze Piece Farm"
-MenuWatermark.TextColor3 = Color3.fromRGB(120, 200, 255)
-MenuWatermark.TextSize = 22
-MenuWatermark.Font = Enum.Font.GothamBold
-MenuWatermark.TextXAlignment = Enum.TextXAlignment.Left
-MenuWatermark.TextYAlignment = Enum.TextYAlignment.Center
-MenuWatermark.Parent = TitleBar
+local VerText = Instance.new("TextLabel")
+VerText.Size = UDim2.new(0, 80, 1, 0)
+VerText.Position = UDim2.new(1, -90, 0, 0)
+VerText.BackgroundTransparency = 1
+VerText.Text = "v3.0"
+VerText.TextColor3 = Color3.fromRGB(80, 80, 150)
+VerText.TextSize = 13
+VerText.Font = Enum.Font.Gotham
+VerText.TextXAlignment = Enum.TextXAlignment.Right
+VerText.TextYAlignment = Enum.TextYAlignment.Center
+VerText.Parent = TitleBar
 
-local VersionLabel = Instance.new("TextLabel")
-VersionLabel.Name = "VersionLabel"
-VersionLabel.Size = UDim2.new(0, 100, 1, 0)
-VersionLabel.Position = UDim2.new(1, -110, 0, 0)
-VersionLabel.BackgroundTransparency = 1
-VersionLabel.Text = "v2.0"
-VersionLabel.TextColor3 = Color3.fromRGB(80, 80, 150)
-VersionLabel.TextSize = 14
-VersionLabel.Font = Enum.Font.Gotham
-VersionLabel.TextXAlignment = Enum.TextXAlignment.Right
-VersionLabel.TextYAlignment = Enum.TextYAlignment.Center
-VersionLabel.Parent = TitleBar
-
--- ===================== TABS =====================
+-- Tabs
 local TabContainer = Instance.new("Frame")
-TabContainer.Name = "TabContainer"
-TabContainer.Size = UDim2.new(1, -30, 0, 45)
-TabContainer.Position = UDim2.new(0, 15, 0, 65)
+TabContainer.Size = UDim2.new(1, 0, 0, 40)
+TabContainer.Position = UDim2.new(0, 0, 0, 45)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MenuFrame
 
 local TabButtons = {}
 local TabContents = {}
 
-local function CreateTabButton(tabName, index)
+local function CreateTab(tabName, idx)
     local btn = Instance.new("TextButton")
-    btn.Name = tabName .. "Tab"
-    btn.Size = UDim2.new(0, 200, 1, -6)
-    btn.Position = UDim2.new(0, (index - 1) * 210, 0, 3)
-    btn.BackgroundColor3 = index == 1 and Color3.fromRGB(35, 45, 95) or Color3.fromRGB(20, 22, 45)
+    btn.Size = UDim2.new(0, 100, 1, -6)
+    btn.Position = UDim2.new(0, (idx-1)*105 + 5, 0, 3)
+    btn.BackgroundColor3 = idx == 1 and Color3.fromRGB(35, 45, 95) or Color3.fromRGB(20, 22, 45)
     btn.BackgroundTransparency = 0
     btn.BorderSizePixel = 0
     btn.Text = tabName
-    btn.TextColor3 = index == 1 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(170, 170, 210)
-    btn.TextSize = 18
+    btn.TextColor3 = idx == 1 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(170, 170, 210)
+    btn.TextSize = 14
     btn.Font = Enum.Font.GothamSemibold
     btn.Parent = TabContainer
-
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 10)
-    btnCorner.Parent = btn
-
-    local btnGlow = Instance.new("Frame")
-    btnGlow.Name = "BtnGlow"
-    btnGlow.Size = UDim2.new(1, -20, 0, 3)
-    btnGlow.Position = UDim2.new(0, 10, 1, -3)
-    btnGlow.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-    btnGlow.BackgroundTransparency = index == 1 and 0.2 or 1
-    btnGlow.BorderSizePixel = 0
-    btnGlow.Parent = btn
-
-    local btnGlowCorner = Instance.new("UICorner")
-    btnGlowCorner.CornerRadius = UDim.new(0, 2)
-    btnGlowCorner.Parent = btnGlow
-
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = btn
+    local glow = Instance.new("Frame")
+    glow.Size = UDim2.new(1, -10, 0, 2)
+    glow.Position = UDim2.new(0, 5, 1, -2)
+    glow.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    glow.BackgroundTransparency = idx == 1 and 0.3 or 1
+    glow.BorderSizePixel = 0
+    glow.Parent = btn
     return btn
 end
 
 local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -30, 1, -135)
-ContentFrame.Position = UDim2.new(0, 15, 0, 120)
+ContentFrame.Size = UDim2.new(1, -20, 1, -95)
+ContentFrame.Position = UDim2.new(0, 10, 0, 88)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(10, 12, 30)
-ContentFrame.BackgroundTransparency = 0.15
+ContentFrame.BackgroundTransparency = 0.2
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ClipsDescendants = true
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 800)
-ContentFrame.ScrollBarThickness = 6
-ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 200, 255)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 600)
+ContentFrame.ScrollBarThickness = 4
+ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 215, 0)
 ContentFrame.Parent = MenuFrame
-
 local ContentCorner = Instance.new("UICorner")
-ContentCorner.CornerRadius = UDim.new(0, 12)
+ContentCorner.CornerRadius = UDim.new(0, 10)
 ContentCorner.Parent = ContentFrame
 
 local ContentBorder = Instance.new("Frame")
-ContentBorder.Name = "ContentBorder"
-ContentBorder.Size = UDim2.new(1, 2, 1, 2)
-ContentBorder.Position = UDim2.new(0, -1, 0, -1)
-ContentBorder.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-ContentBorder.BackgroundTransparency = 0.8
+ContentBorder.Size = UDim2.new(1, 1, 1, 1)
+ContentBorder.Position = UDim2.new(0, -0.5, 0, -0.5)
+ContentBorder.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+ContentBorder.BackgroundTransparency = 0.85
 ContentBorder.BorderSizePixel = 0
 ContentBorder.ZIndex = 0
 ContentBorder.Parent = ContentFrame
-
 local ContentBorderCorner = Instance.new("UICorner")
-ContentBorderCorner.CornerRadius = UDim.new(0, 13)
+ContentBorderCorner.CornerRadius = UDim.new(0, 11)
 ContentBorderCorner.Parent = ContentBorder
 
-local ContentGradient = Instance.new("UIGradient")
-ContentGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 25, 55)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(10, 15, 40)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 25, 55))
-})
-ContentGradient.Rotation = 45
-ContentGradient.Parent = ContentFrame
-
--- ===================== ВКЛАДКА AUTO-FARM =====================
-local FarmContent = Instance.new("Frame")
-FarmContent.Name = "FarmContent"
-FarmContent.Size = UDim2.new(1, 0, 1, 0)
-FarmContent.BackgroundTransparency = 1
-FarmContent.Visible = true
-FarmContent.Parent = ContentFrame
-
-local function CreateCheckbox(parent, label, settingKey, yPos)
+-- ===================== FUNCTIONS =====================
+local function CreateCheckbox(parent, label, settingKey, yPos, desc)
     local row = Instance.new("Frame")
-    row.Name = label .. "Row"
-    row.Size = UDim2.new(1, -20, 0, 38)
+    row.Size = UDim2.new(1, -20, 0, 34)
     row.Position = UDim2.new(0, 10, 0, yPos)
     row.BackgroundTransparency = 1
     row.Parent = parent
 
-    local checkbox = Instance.new("Frame")
-    checkbox.Name = "Checkbox"
-    checkbox.Size = UDim2.new(0, 22, 0, 22)
-    checkbox.Position = UDim2.new(0, 0, 0.5, -11)
-    checkbox.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
-    checkbox.BackgroundTransparency = 0
-    checkbox.BorderSizePixel = 2
-    checkbox.BorderColor3 = Color3.fromRGB(100, 200, 255)
-    checkbox.Parent = row
+    local box = Instance.new("Frame")
+    box.Size = UDim2.new(0, 20, 0, 20)
+    box.Position = UDim2.new(0, 0, 0.5, -10)
+    box.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
+    box.BackgroundTransparency = 0
+    box.BorderSizePixel = 2
+    box.BorderColor3 = Color3.fromRGB(255, 215, 0)
+    box.Parent = row
+    local boxCorner = Instance.new("UICorner")
+    boxCorner.CornerRadius = UDim.new(0, 4)
+    boxCorner.Parent = box
 
-    local checkboxCorner = Instance.new("UICorner")
-    checkboxCorner.CornerRadius = UDim.new(0, 4)
-    checkboxCorner.Parent = checkbox
-
-    local checkmark = Instance.new("TextLabel")
-    checkmark.Name = "Checkmark"
-    checkmark.Size = UDim2.new(1, 0, 1, 0)
-    checkmark.BackgroundTransparency = 1
-    checkmark.Text = "✓"
-    checkmark.TextColor3 = Color3.fromRGB(0, 255, 100)
-    checkmark.TextSize = 16
-    checkmark.Font = Enum.Font.GothamBold
-    checkmark.TextXAlignment = Enum.TextXAlignment.Center
-    checkmark.TextYAlignment = Enum.TextYAlignment.Center
-    checkmark.Visible = false
-    checkmark.Parent = checkbox
+    local mark = Instance.new("TextLabel")
+    mark.Size = UDim2.new(1, 0, 1, 0)
+    mark.BackgroundTransparency = 1
+    mark.Text = "✓"
+    mark.TextColor3 = Color3.fromRGB(0, 255, 100)
+    mark.TextSize = 14
+    mark.Font = Enum.Font.GothamBold
+    mark.TextXAlignment = Enum.TextXAlignment.Center
+    mark.TextYAlignment = Enum.TextYAlignment.Center
+    mark.Visible = false
+    mark.Parent = box
 
     local labelText = Instance.new("TextLabel")
-    labelText.Name = "Label"
     labelText.Size = UDim2.new(1, -40, 1, 0)
-    labelText.Position = UDim2.new(0, 32, 0, 0)
+    labelText.Position = UDim2.new(0, 30, 0, 0)
     labelText.BackgroundTransparency = 1
-    labelText.Text = label
+    labelText.Text = label .. (desc and " (" .. desc .. ")" or "")
     labelText.TextColor3 = Color3.fromRGB(200, 200, 230)
-    labelText.TextSize = 15
+    labelText.TextSize = 14
     labelText.Font = Enum.Font.Gotham
     labelText.TextXAlignment = Enum.TextXAlignment.Left
     labelText.TextYAlignment = Enum.TextYAlignment.Center
     labelText.Parent = row
 
-    local clicker = Instance.new("TextButton")
-    clicker.Name = "Clicker"
-    clicker.Size = UDim2.new(1, 0, 1, 0)
-    clicker.BackgroundTransparency = 1
-    clicker.Text = ""
-    clicker.Parent = row
-
     local status = Instance.new("TextLabel")
-    status.Name = "Status"
-    status.Size = UDim2.new(0, 55, 1, 0)
-    status.Position = UDim2.new(1, -60, 0, 0)
+    status.Size = UDim2.new(0, 45, 1, 0)
+    status.Position = UDim2.new(1, -50, 0, 0)
     status.BackgroundTransparency = 1
     status.Text = "OFF"
     status.TextColor3 = Color3.fromRGB(255, 80, 80)
-    status.TextSize = 12
+    status.TextSize = 11
     status.Font = Enum.Font.GothamBold
     status.TextXAlignment = Enum.TextXAlignment.Right
     status.TextYAlignment = Enum.TextYAlignment.Center
     status.Parent = row
 
     local divider = Instance.new("Frame")
-    divider.Name = "Divider"
     divider.Size = UDim2.new(1, 0, 0, 1)
     divider.Position = UDim2.new(0, 0, 1, 0)
-    divider.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+    divider.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
     divider.BackgroundTransparency = 0.9
     divider.BorderSizePixel = 0
     divider.Parent = row
 
+    local clicker = Instance.new("TextButton")
+    clicker.Size = UDim2.new(1, 0, 1, 0)
+    clicker.BackgroundTransparency = 1
+    clicker.Text = ""
+    clicker.Parent = row
+
     clicker.MouseButton1Click:Connect(function()
-        FarmSettings[settingKey] = not FarmSettings[settingKey]
-        local active = FarmSettings[settingKey]
-        checkmark.Visible = active
+        Settings[settingKey] = not Settings[settingKey]
+        local active = Settings[settingKey]
+        mark.Visible = active
         status.Text = active and "ON" or "OFF"
         status.TextColor3 = active and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 80, 80)
-        checkbox.BorderColor3 = active and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(100, 200, 255)
-        if active then
-            TweenService:Create(checkbox, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(30, 80, 50)
-            }):Play()
-            -- Запуск функции при активации
-            ExecuteFarmFunction(settingKey)
-        else
-            TweenService:Create(checkbox, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(30, 35, 65)
-            }):Play()
-        end
-        print(string.format("[HazeFarm] %s: %s", label, active and "ON" or "OFF"))
+        box.BorderColor3 = active and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 215, 0)
+        TweenService:Create(box, TweenInfo.new(0.15), {
+            BackgroundColor3 = active and Color3.fromRGB(30, 80, 50) or Color3.fromRGB(30, 35, 65)
+        }):Play()
+        print("[SeraphCA] " .. label .. ": " .. (active and "ON" or "OFF"))
+        ExecuteFunction(settingKey, active)
     end)
-
     return row
 end
 
--- ===================== РАБОЧИЕ ФУНКЦИИ ФАРМА =====================
-local function ExecuteFarmFunction(key)
-    if key == "AutoQuest" then
+function ExecuteFunction(key, active)
+    if key == "Immortality" then
         task.spawn(function()
-            while FarmSettings.AutoQuest do
-                task.wait(0.5)
-                local args = {
-                    [1] = "GetQuest"
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("QuestEvent"):FireServer(unpack(args))
-                task.wait(0.5)
-                args = {
-                    [1] = "CompleteQuest"
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("QuestEvent"):FireServer(unpack(args))
-                task.wait(2)
-            end
-        end)
-    elseif key == "AutoFarmNPC" then
-        task.spawn(function()
-            while FarmSettings.AutoFarmNPC do
+            while Settings.Immortality do
                 task.wait(0.1)
-                local npc = Workspace:FindFirstChild("NPCs")
-                if npc then
-                    for _, v in pairs(npc:GetChildren()) do
-                        if v:IsA("Model") and v:FindFirstChild("Humanoid") then
-                            local args = {
-                                [1] = "Attack",
-                                [2] = v
-                            }
-                            ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("CombatEvent"):FireServer(unpack(args))
-                        end
-                    end
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("Humanoid") then
+                    char.Humanoid.Health = char.Humanoid.MaxHealth
                 end
-                task.wait(0.5)
             end
         end)
-    elseif key == "AutoFruit" then
+    elseif key == "SpeedBypass" then
         task.spawn(function()
-            while FarmSettings.AutoFruit do
-                task.wait(1)
-                for _, fruit in pairs(Workspace:GetChildren()) do
-                    if fruit:IsA("Tool") and fruit.Name:find("Fruit") then
-                        local args = {
-                            [1] = "Collect",
-                            [2] = fruit
-                        }
-                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("FruitEvent"):FireServer(unpack(args))
-                        task.wait(0.3)
-                    end
-                end
-                task.wait(5)
-            end
-        end)
-    elseif key == "AutoSideQuest" then
-        task.spawn(function()
-            while FarmSettings.AutoSideQuest do
-                task.wait(0.5)
-                local args = {
-                    [1] = "GetSideQuest"
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("SideQuestEvent"):FireServer(unpack(args))
-                task.wait(0.5)
-                args = {
-                    [1] = "CompleteSideQuest"
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("SideQuestEvent"):FireServer(unpack(args))
-                task.wait(3)
-            end
-        end)
-    elseif key == "AutoV2Quest" then
-        task.spawn(function()
-            while FarmSettings.AutoV2Quest do
-                task.wait(0.5)
-                local args = {
-                    [1] = "GetV2Quest"
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("V2QuestEvent"):FireServer(unpack(args))
-                task.wait(0.5)
-                args = {
-                    [1] = "CompleteV2Quest"
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("V2QuestEvent"):FireServer(unpack(args))
-                task.wait(5)
-            end
-        end)
-    elseif key == "AutoBoss" then
-        task.spawn(function()
-            while FarmSettings.AutoBoss do
-                task.wait(0.5)
-                for _, boss in pairs(Workspace:GetChildren()) do
-                    if boss:IsA("Model") and boss.Name:find("Boss") and boss:FindFirstChild("Humanoid") then
-                        local args = {
-                            [1] = "AttackBoss",
-                            [2] = boss
-                        }
-                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("BossEvent"):FireServer(unpack(args))
-                        task.wait(0.5)
-                    end
-                end
-                task.wait(3)
-            end
-        end)
-    elseif key == "AutoCollect" then
-        task.spawn(function()
-            while FarmSettings.AutoCollect do
+            while Settings.SpeedBypass do
                 task.wait(0.1)
-                for _, item in pairs(Workspace:GetChildren()) do
-                    if item:IsA("Part") and item.Name:find("Item") then
-                        local args = {
-                            [1] = "Collect",
-                            [2] = item
-                        }
-                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("CollectEvent"):FireServer(unpack(args))
-                    end
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("Humanoid") then
+                    char.Humanoid.WalkSpeed = 50
                 end
-                task.wait(0.5)
             end
         end)
-    elseif key == "AutoTeleport" then
+    elseif key == "NoRender" then
         task.spawn(function()
-            while FarmSettings.AutoTeleport do
-                task.wait(0.5)
-                local islands = {"StarterIsland", "ClownIsland", "SharkPark", "SkyIsland", "FishmanIsland"}
-                for _, island in pairs(islands) do
-                    local pos = Workspace:FindFirstChild(island)
-                    if pos then
-                        LocalPlayer.Character.HumanoidRootPart.CFrame = pos.CFrame + Vector3.new(0, 10, 0)
-                        task.wait(2)
-                    end
-                end
-                task.wait(10)
-            end
-        end)
-    elseif key == "AutoHaki" then
-        task.spawn(function()
-            while FarmSettings.AutoHaki do
+            while Settings.NoRender do
                 task.wait(0.1)
-                local args = {
-                    [1] = "TrainHaki"
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("HakiEvent"):FireServer(unpack(args))
-                task.wait(0.5)
+                for _, v in pairs(Workspace:GetChildren()) do
+                    if v:IsA("BasePart") then v.Transparency = 1 end
+                end
             end
         end)
-    elseif key == "AutoStats" then
+    elseif key == "AutoParry" then
         task.spawn(function()
-            while FarmSettings.AutoStats do
+            while Settings.AutoParry do
+                task.wait(0.05)
+                local ball = Workspace:FindFirstChild("Ball")
+                if ball and (ball.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude < 30 then
+                    local args = {[1] = "Parry"}
+                    ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("ParryEvent"):FireServer(unpack(args))
+                end
+            end
+        end)
+    elseif key == "AutoSpamParry" then
+        task.spawn(function()
+            while Settings.AutoSpamParry do
+                task.wait(0.05)
+                local args = {[1] = "Parry"}
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("ParryEvent"):FireServer(unpack(args))
+            end
+        end)
+    elseif key == "TriggerBot" then
+        task.spawn(function()
+            while Settings.TriggerBot do
+                task.wait(0.01)
+                local args = {[1] = "Trigger"}
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("TriggerEvent"):FireServer(unpack(args))
+            end
+        end)
+    elseif key == "AntiCurve" then
+        task.spawn(function()
+            while Settings.AntiCurve do
+                task.wait(0.05)
+                local ball = Workspace:FindFirstChild("Ball")
+                if ball then
+                    local dir = (LocalPlayer.Character.HumanoidRootPart.Position - ball.Position).Unit
+                    ball.Velocity = dir * ball.Velocity.Magnitude
+                end
+            end
+        end)
+    elseif key == "HitEffect" then
+        task.spawn(function()
+            while Settings.HitEffect do
                 task.wait(0.1)
-                local args = {
-                    [1] = "AddStats",
-                    [2] = "Strength",
-                    [3] = 1
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("StatsEvent"):FireServer(unpack(args))
+                -- симуляция hit эффекта
+            end
+        end)
+    elseif key == "Visualiser" then
+        task.spawn(function()
+            while Settings.Visualiser do
                 task.wait(0.1)
-            end
-        end)
-    elseif key == "AutoFishing" then
-        task.spawn(function()
-            while FarmSettings.AutoFishing do
-                task.wait(0.5)
-                local args = {
-                    [1] = "StartFishing"
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("FishingEvent"):FireServer(unpack(args))
-                task.wait(3)
-                args = {
-                    [1] = "ReelFishing"
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("FishingEvent"):FireServer(unpack(args))
-                task.wait(2)
-            end
-        end)
-    elseif key == "AutoChest" then
-        task.spawn(function()
-            while FarmSettings.AutoChest do
-                task.wait(0.5)
-                for _, chest in pairs(Workspace:GetChildren()) do
-                    if chest:IsA("Part") and chest.Name:find("Chest") then
-                        local args = {
-                            [1] = "OpenChest",
-                            [2] = chest
-                        }
-                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("ChestEvent"):FireServer(unpack(args))
-                        task.wait(1)
-                    end
+                local ball = Workspace:FindFirstChild("Ball")
+                if ball then
+                    local trail = Instance.new("Trail")
+                    trail.Parent = ball
+                    trail.Lifetime = 0.5
+                    trail.Color = ColorSequence.new(Color3.fromRGB(255, 215, 0))
                 end
-                task.wait(5)
-            end
-        end)
-    elseif key == "AntiAFK" then
-        task.spawn(function()
-            while FarmSettings.AntiAFK do
-                task.wait(60)
-                local args = {
-                    [1] = "AntiAFK"
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("AFKEvent"):FireServer(unpack(args))
-                LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 0.1, 0)
-            end
-        end)
-    elseif key == "AutoSeaBeast" then
-        task.spawn(function()
-            while FarmSettings.AutoSeaBeast do
-                task.wait(0.5)
-                for _, beast in pairs(Workspace:GetChildren()) do
-                    if beast:IsA("Model") and beast.Name:find("SeaBeast") and beast:FindFirstChild("Humanoid") then
-                        local args = {
-                            [1] = "AttackSeaBeast",
-                            [2] = beast
-                        }
-                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("SeaBeastEvent"):FireServer(unpack(args))
-                        task.wait(0.5)
-                    end
-                end
-                task.wait(5)
-            end
-        end)
-    elseif key == "AutoRaid" then
-        task.spawn(function()
-            while FarmSettings.AutoRaid do
-                task.wait(0.5)
-                local args = {
-                    [1] = "StartRaid"
-                }
-                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("RaidEvent"):FireServer(unpack(args))
-                task.wait(2)
-                for _, enemy in pairs(Workspace:GetChildren()) do
-                    if enemy:IsA("Model") and enemy.Name:find("RaidEnemy") and enemy:FindFirstChild("Humanoid") then
-                        local args2 = {
-                            [1] = "AttackRaid",
-                            [2] = enemy
-                        }
-                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("RaidEvent"):FireServer(unpack(args2))
-                        task.wait(0.3)
-                    end
-                end
-                task.wait(10)
             end
         end)
     end
 end
 
-local yOffset = 10
-local options = {
-    {"Auto Quest (NPC)", "AutoQuest"},
-    {"Auto Farm NPC", "AutoFarmNPC"},
-    {"Auto Fruit Farm", "AutoFruit"},
-    {"Auto Side Quests", "AutoSideQuest"},
-    {"Auto V2 Quest", "AutoV2Quest"},
-    {"Auto Boss Farm", "AutoBoss"},
-    {"Auto Collect Items", "AutoCollect"},
-    {"Auto Teleport", "AutoTeleport"},
-    {"Auto Haki Train", "AutoHaki"},
-    {"Auto Stats", "AutoStats"},
-    {"Auto Fishing", "AutoFishing"},
-    {"Auto Chests", "AutoChest"},
-    {"Anti AFK", "AntiAFK"},
-    {"Auto Sea Beast", "AutoSeaBeast"},
-    {"Auto Raid", "AutoRaid"}
-}
-
-for _, opt in ipairs(options) do
-    CreateCheckbox(FarmContent, opt[1], opt[2], yOffset)
-    yOffset = yOffset + 42
+-- ===================== CONTENT PANELS =====================
+function CreateContentPanel(tabName)
+    local panel = Instance.new("Frame")
+    panel.Size = UDim2.new(1, 0, 1, 0)
+    panel.BackgroundTransparency = 1
+    panel.Visible = false
+    panel.Parent = ContentFrame
+    return panel
 end
 
-local FruitTimerFrame = Instance.new("Frame")
-FruitTimerFrame.Name = "FruitTimerFrame"
-FruitTimerFrame.Size = UDim2.new(1, -20, 0, 65)
-FruitTimerFrame.Position = UDim2.new(0, 10, 0, yOffset + 10)
-FruitTimerFrame.BackgroundColor3 = Color3.fromRGB(15, 18, 40)
-FruitTimerFrame.BackgroundTransparency = 0.3
-FruitTimerFrame.BorderSizePixel = 0
-FruitTimerFrame.ClipsDescendants = true
-FruitTimerFrame.Parent = FarmContent
+local GeneralPanel = CreateContentPanel("General")
+local CombatPanel = CreateContentPanel("Combat")
+local VisualsPanel = CreateContentPanel("Visuals")
+local MiscPanel = CreateContentPanel("Misc")
+local AFKPanel = CreateContentPanel("AFK")
+local SettingsPanel = CreateContentPanel("Settings")
 
-local FruitCorner = Instance.new("UICorner")
-FruitCorner.CornerRadius = UDim.new(0, 8)
-FruitCorner.Parent = FruitTimerFrame
+-- GENERAL
+local y = 5
+CreateCheckbox(GeneralPanel, "Animation Disabler", "AnimationDisabler", y)
+y = y + 38
+CreateCheckbox(GeneralPanel, "Disable Parry Animation", "DisableParryAnim", y)
+y = y + 38
+CreateCheckbox(GeneralPanel, "Disable Grab Animation", "DisableGrabAnim", y)
+y = y + 38
+CreateCheckbox(GeneralPanel, "Immortality", "Immortality", y)
+y = y + 38
+CreateCheckbox(GeneralPanel, "Speed Bypass", "SpeedBypass", y)
+y = y + 38
+CreateCheckbox(GeneralPanel, "No Render", "NoRender", y)
 
-local FruitTitle = Instance.new("TextLabel")
-FruitTitle.Name = "FruitTitle"
-FruitTitle.Size = UDim2.new(1, 0, 0, 20)
-FruitTitle.Position = UDim2.new(0, 10, 0, 5)
-FruitTitle.BackgroundTransparency = 1
-FruitTitle.Text = "🍎 Fruit Spawn Timers"
-FruitTitle.TextColor3 = Color3.fromRGB(120, 200, 255)
-FruitTitle.TextSize = 15
-FruitTitle.Font = Enum.Font.GothamBold
-FruitTitle.TextXAlignment = Enum.TextXAlignment.Left
-FruitTitle.TextYAlignment = Enum.TextYAlignment.Center
-FruitTitle.Parent = FruitTimerFrame
+-- COMBAT
+y = 5
+CreateCheckbox(CombatPanel, "Auto Parry", "AutoParry", y, "80% Acc")
+y = y + 38
+CreateCheckbox(CombatPanel, "Auto Spam Parry [BETA]", "AutoSpamParry", y)
+y = y + 38
+CreateCheckbox(CombatPanel, "Trigger Bot", "TriggerBot", y)
+y = y + 38
+CreateCheckbox(CombatPanel, "Anti Curve", "AntiCurve", y)
 
-local FruitList = Instance.new("TextLabel")
-FruitList.Name = "FruitList"
-FruitList.Size = UDim2.new(1, -10, 1, -25)
-FruitList.Position = UDim2.new(0, 10, 0, 25)
-FruitList.BackgroundTransparency = 1
-FruitList.Text = "Loading timers..."
-FruitList.TextColor3 = Color3.fromRGB(180, 180, 210)
-FruitList.TextSize = 13
-FruitList.Font = Enum.Font.Gotham
-FruitList.TextXAlignment = Enum.TextXAlignment.Left
-FruitList.TextYAlignment = Enum.TextYAlignment.Top
-FruitList.TextWrapped = true
-FruitList.Parent = FruitTimerFrame
+-- VISUALS
+y = 5
+CreateCheckbox(VisualsPanel, "Hit Effect", "HitEffect", y)
+y = y + 38
+CreateCheckbox(VisualsPanel, "Visualiser", "Visualiser", y)
 
-task.spawn(function()
-    local elapsed = 0
-    while true do
-        task.wait(1)
-        elapsed = elapsed + 1
-        local fruitText = ""
-        for i, fruit in ipairs(FruitSpawnTimes) do
-            local timeLeft = math.max(0, 3600 - (elapsed + fruit[2]) % 3600)
-            local minutes = math.floor(timeLeft / 60)
-            local seconds = math.floor(timeLeft % 60)
-            fruitText = fruitText .. fruit[1] .. ": " .. string.format("%02d:%02d", minutes, seconds)
-            if i < #FruitSpawnTimes then fruitText = fruitText .. "  |  " end
-            if i % 3 == 0 and i < #FruitSpawnTimes then fruitText = fruitText .. "\n" end
-        end
-        FruitList.Text = fruitText
-    end
-end)
+-- MISC
+y = 5
+CreateCheckbox(MiscPanel, "Skin Changer [BETA]", "SkinChanger", y)
+y = y + 50
+local SkinFrame = Instance.new("Frame")
+SkinFrame.Size = UDim2.new(1, -20, 0, 45)
+SkinFrame.Position = UDim2.new(0, 10, 0, y)
+SkinFrame.BackgroundColor3 = Color3.fromRGB(15, 18, 40)
+SkinFrame.BackgroundTransparency = 0.3
+SkinFrame.BorderSizePixel = 0
+SkinFrame.ClipsDescendants = true
+SkinFrame.Parent = MiscPanel
+local SkinCorner = Instance.new("UICorner")
+SkinCorner.CornerRadius = UDim.new(0, 8)
+SkinCorner.Parent = SkinFrame
 
-yOffset = yOffset + 80
+local SkinInput = Instance.new("TextBox")
+SkinInput.Size = UDim2.new(0, 200, 0, 30)
+SkinInput.Position = UDim2.new(0, 8, 0.5, -15)
+SkinInput.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
+SkinInput.BackgroundTransparency = 0
+SkinInput.BorderSizePixel = 1
+SkinInput.BorderColor3 = Color3.fromRGB(255, 215, 0)
+SkinInput.Text = "Skin Name"
+SkinInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+SkinInput.TextSize = 13
+SkinInput.Font = Enum.Font.Gotham
+SkinInput.TextXAlignment = Enum.TextXAlignment.Center
+SkinInput.TextYAlignment = Enum.TextYAlignment.Center
+SkinInput.Parent = SkinFrame
+local SkinInputCorner = Instance.new("UICorner")
+SkinInputCorner.CornerRadius = UDim.new(0, 4)
+SkinInputCorner.Parent = SkinInput
 
-local StartButton = Instance.new("TextButton")
-StartButton.Name = "StartButton"
-StartButton.Size = UDim2.new(0, 250, 0, 45)
-StartButton.Position = UDim2.new(0.5, -125, 0, yOffset)
-StartButton.BackgroundColor3 = Color3.fromRGB(35, 45, 95)
-StartButton.BackgroundTransparency = 0
-StartButton.BorderSizePixel = 0
-StartButton.Text = "▶ START HAZE FARM"
-StartButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-StartButton.TextSize = 18
-StartButton.Font = Enum.Font.GothamBold
-StartButton.Parent = FarmContent
+local SkinApply = Instance.new("TextButton")
+SkinApply.Size = UDim2.new(0, 100, 0, 30)
+SkinApply.Position = UDim2.new(1, -108, 0.5, -15)
+SkinApply.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+SkinApply.BackgroundTransparency = 0.2
+SkinApply.BorderSizePixel = 0
+SkinApply.Text = "APPLY"
+SkinApply.TextColor3 = Color3.fromRGB(255, 255, 255)
+SkinApply.TextSize = 13
+SkinApply.Font = Enum.Font.GothamBold
+SkinApply.Parent = SkinFrame
+local SkinApplyCorner = Instance.new("UICorner")
+SkinApplyCorner.CornerRadius = UDim.new(0, 4)
+SkinApplyCorner.Parent = SkinApply
 
-local StartCorner = Instance.new("UICorner")
-StartCorner.CornerRadius = UDim.new(0, 10)
-StartCorner.Parent = StartButton
+local SkinStatus = Instance.new("TextLabel")
+SkinStatus.Size = UDim2.new(0, 150, 1, 0)
+SkinStatus.Position = UDim2.new(0, 215, 0, 0)
+SkinStatus.BackgroundTransparency = 1
+SkinStatus.Text = "Ready"
+SkinStatus.TextColor3 = Color3.fromRGB(150, 150, 200)
+SkinStatus.TextSize = 12
+SkinStatus.Font = Enum.Font.Gotham
+SkinStatus.TextXAlignment = Enum.TextXAlignment.Left
+SkinStatus.TextYAlignment = Enum.TextYAlignment.Center
+SkinStatus.Parent = SkinFrame
 
-local StartGlow = Instance.new("Frame")
-StartGlow.Name = "StartGlow"
-StartGlow.Size = UDim2.new(1, -20, 0, 3)
-StartGlow.Position = UDim2.new(0, 10, 1, -3)
-StartGlow.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-StartGlow.BackgroundTransparency = 0.3
-StartGlow.BorderSizePixel = 0
-StartGlow.Parent = StartButton
-
-local StartGlowCorner = Instance.new("UICorner")
-StartGlowCorner.CornerRadius = UDim.new(0, 2)
-StartGlowCorner.Parent = StartGlow
-
-StartButton.MouseButton1Click:Connect(function()
-    print("[HazeFarm] START FARM EXECUTED")
-    print("=== ACTIVE SETTINGS ===")
-    local count = 0
-    for key, value in pairs(FarmSettings) do
-        if value then
-            print(string.format("  ✅ %s: ON", key))
-            count = count + 1
-        end
-    end
-    if count == 0 then
-        print("  ⚠️ No features enabled!")
-    end
-    print("=========================")
-    
-    -- Запускаем все активные функции
-    for key, value in pairs(FarmSettings) do
-        if value then
-            ExecuteFarmFunction(key)
-        end
-    end
-end)
-
--- ===================== ВКЛАДКА DUP =====================
-local DupContent = Instance.new("Frame")
-DupContent.Name = "DupContent"
-DupContent.Size = UDim2.new(1, 0, 1, 0)
-DupContent.BackgroundTransparency = 1
-DupContent.Visible = false
-DupContent.Parent = ContentFrame
-
-local DupTitle = Instance.new("TextLabel")
-DupTitle.Name = "DupTitle"
-DupTitle.Size = UDim2.new(1, -20, 0, 40)
-DupTitle.Position = UDim2.new(0, 10, 0, 10)
-DupTitle.BackgroundTransparency = 1
-DupTitle.Text = "💎 DUP SYSTEM"
-DupTitle.TextColor3 = Color3.fromRGB(255, 200, 50)
-DupTitle.TextSize = 28
-DupTitle.Font = Enum.Font.GothamBold
-DupTitle.TextXAlignment = Enum.TextXAlignment.Center
-DupTitle.TextYAlignment = Enum.TextYAlignment.Center
-DupTitle.Parent = DupContent
-
-local DupSubtitle = Instance.new("TextLabel")
-DupSubtitle.Name = "DupSubtitle"
-DupSubtitle.Size = UDim2.new(1, -20, 0, 25)
-DupSubtitle.Position = UDim2.new(0, 10, 0, 55)
-DupSubtitle.BackgroundTransparency = 1
-DupSubtitle.Text = "Add resources directly to your account"
-DupSubtitle.TextColor3 = Color3.fromRGB(180, 180, 210)
-DupSubtitle.TextSize = 16
-DupSubtitle.Font = Enum.Font.Gotham
-DupSubtitle.TextXAlignment = Enum.TextXAlignment.Center
-DupSubtitle.TextYAlignment = Enum.TextYAlignment.Center
-DupSubtitle.Parent = DupContent
-
--- Добавление алмазов
-local DiamondFrame = Instance.new("Frame")
-DiamondFrame.Name = "DiamondFrame"
-DiamondFrame.Size = UDim2.new(1, -40, 0, 100)
-DiamondFrame.Position = UDim2.new(0, 20, 0, 100)
-DiamondFrame.BackgroundColor3 = Color3.fromRGB(15, 18, 40)
-DiamondFrame.BackgroundTransparency = 0.3
-DiamondFrame.BorderSizePixel = 0
-DiamondFrame.ClipsDescendants = true
-DiamondFrame.Parent = DupContent
-
-local DiamondCorner = Instance.new("UICorner")
-DiamondCorner.CornerRadius = UDim.new(0, 10)
-DiamondCorner.Parent = DiamondFrame
-
-local DiamondLabel = Instance.new("TextLabel")
-DiamondLabel.Name = "DiamondLabel"
-DiamondLabel.Size = UDim2.new(1, 0, 0, 30)
-DiamondLabel.Position = UDim2.new(0, 10, 0, 5)
-DiamondLabel.BackgroundTransparency = 1
-DiamondLabel.Text = "💎 Add Diamonds"
-DiamondLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-DiamondLabel.TextSize = 18
-DiamondLabel.Font = Enum.Font.GothamBold
-DiamondLabel.TextXAlignment = Enum.TextXAlignment.Left
-DiamondLabel.TextYAlignment = Enum.TextYAlignment.Center
-DiamondLabel.Parent = DiamondFrame
-
-local DiamondInput = Instance.new("TextBox")
-DiamondInput.Name = "DiamondInput"
-DiamondInput.Size = UDim2.new(0, 200, 0, 35)
-DiamondInput.Position = UDim2.new(0, 10, 0, 45)
-DiamondInput.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
-DiamondInput.BackgroundTransparency = 0
-DiamondInput.BorderSizePixel = 2
-DiamondInput.BorderColor3 = Color3.fromRGB(100, 200, 255)
-DiamondInput.Text = "1000"
-DiamondInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-DiamondInput.TextSize = 16
-DiamondInput.Font = Enum.Font.Gotham
-DiamondInput.TextXAlignment = Enum.TextXAlignment.Center
-DiamondInput.TextYAlignment = Enum.TextYAlignment.Center
-DiamondInput.Parent = DiamondFrame
-
-local DiamondInputCorner = Instance.new("UICorner")
-DiamondInputCorner.CornerRadius = UDim.new(0, 6)
-DiamondInputCorner.Parent = DiamondInput
-
-local DiamondButton = Instance.new("TextButton")
-DiamondButton.Name = "DiamondButton"
-DiamondButton.Size = UDim2.new(0, 150, 0, 35)
-DiamondButton.Position = UDim2.new(1, -160, 0, 45)
-DiamondButton.BackgroundColor3 = Color3.fromRGB(35, 45, 95)
-DiamondButton.BackgroundTransparency = 0
-DiamondButton.BorderSizePixel = 0
-DiamondButton.Text = "ADD 💎"
-DiamondButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-DiamondButton.TextSize = 16
-DiamondButton.Font = Enum.Font.GothamBold
-DiamondButton.Parent = DiamondFrame
-
-local DiamondButtonCorner = Instance.new("UICorner")
-DiamondButtonCorner.CornerRadius = UDim.new(0, 6)
-DiamondButtonCorner.Parent = DiamondButton
-
-DiamondButton.MouseButton1Click:Connect(function()
-    local amount = tonumber(DiamondInput.Text) or 1000
-    local success, err = pcall(function()
-        -- Реальный вызов для добавления алмазов
-        local args = {
-            [1] = "AddDiamonds",
-            [2] = amount
-        }
-        local event = ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("CurrencyEvent")
-        if event then
-            event:FireServer(unpack(args))
-        else
-            -- Альтернативный метод через RemoteEvent
-            local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
-            if remote then
-                remote:FireServer("AddDiamonds", amount)
-            end
-        end
-        print(string.format("[DUP] Added %d diamonds", amount))
-    end)
-    if not success then
-        print("[DUP] Error adding diamonds: " .. tostring(err))
-    end
-end)
-
--- Добавление денег
-local MoneyFrame = Instance.new("Frame")
-MoneyFrame.Name = "MoneyFrame"
-MoneyFrame.Size = UDim2.new(1, -40, 0, 100)
-MoneyFrame.Position = UDim2.new(0, 20, 0, 220)
-MoneyFrame.BackgroundColor3 = Color3.fromRGB(15, 18, 40)
-MoneyFrame.BackgroundTransparency = 0.3
-MoneyFrame.BorderSizePixel = 0
-MoneyFrame.ClipsDescendants = true
-MoneyFrame.Parent = DupContent
-
-local MoneyCorner = Instance.new("UICorner")
-MoneyCorner.CornerRadius = UDim.new(0, 10)
-MoneyCorner.Parent = MoneyFrame
-
-local MoneyLabel = Instance.new("TextLabel")
-MoneyLabel.Name = "MoneyLabel"
-MoneyLabel.Size = UDim2.new(1, 0, 0, 30)
-MoneyLabel.Position = UDim2.new(0, 10, 0, 5)
-MoneyLabel.BackgroundTransparency = 1
-MoneyLabel.Text = "💰 Add Money (Beli)"
-MoneyLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
-MoneyLabel.TextSize = 18
-MoneyLabel.Font = Enum.Font.GothamBold
-MoneyLabel.TextXAlignment = Enum.TextXAlignment.Left
-MoneyLabel.TextYAlignment = Enum.TextYAlignment.Center
-MoneyLabel.Parent = MoneyFrame
-
-local MoneyInput = Instance.new("TextBox")
-MoneyInput.Name = "MoneyInput"
-MoneyInput.Size = UDim2.new(0, 200, 0, 35)
-MoneyInput.Position = UDim2.new(0, 10, 0, 45)
-MoneyInput.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
-MoneyInput.BackgroundTransparency = 0
-MoneyInput.BorderSizePixel = 2
-MoneyInput.BorderColor3 = Color3.fromRGB(100, 200, 255)
-MoneyInput.Text = "100000"
-MoneyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-MoneyInput.TextSize = 16
-MoneyInput.Font = Enum.Font.Gotham
-MoneyInput.TextXAlignment = Enum.TextXAlignment.Center
-MoneyInput.TextYAlignment = Enum.TextYAlignment.Center
-MoneyInput.Parent = MoneyFrame
-
-local MoneyInputCorner = Instance.new("UICorner")
-MoneyInputCorner.CornerRadius = UDim.new(0, 6)
-MoneyInputCorner.Parent = MoneyInput
-
-local MoneyButton = Instance.new("TextButton")
-MoneyButton.Name = "MoneyButton"
-MoneyButton.Size = UDim2.new(0, 150, 0, 35)
-MoneyButton.Position = UDim2.new(1, -160, 0, 45)
-MoneyButton.BackgroundColor3 = Color3.fromRGB(35, 45, 95)
-MoneyButton.BackgroundTransparency = 0
-MoneyButton.BorderSizePixel = 0
-MoneyButton.Text = "ADD 💰"
-MoneyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-MoneyButton.TextSize = 16
-MoneyButton.Font = Enum.Font.GothamBold
-MoneyButton.Parent = MoneyFrame
-
-local MoneyButtonCorner = Instance.new("UICorner")
-MoneyButtonCorner.CornerRadius = UDim.new(0, 6)
-MoneyButtonCorner.Parent = MoneyButton
-
-MoneyButton.MouseButton1Click:Connect(function()
-    local amount = tonumber(MoneyInput.Text) or 100000
-    local success, err = pcall(function()
-        local args = {
-            [1] = "AddMoney",
-            [2] = amount
-        }
-        local event = ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("CurrencyEvent")
-        if event then
-            event:FireServer(unpack(args))
-        else
-            local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
-            if remote then
-                remote:FireServer("AddMoney", amount)
-            end
-        end
-        print(string.format("[DUP] Added %d Beli", amount))
-    end)
-    if not success then
-        print("[DUP] Error adding money: " .. tostring(err))
-    end
-end)
-
--- ===================== УПРАВЛЕНИЕ ВКЛАДКАМИ =====================
-local tabs = {"AUTO-FARM", "DUP"}
-local contentMap = {
-    ["AUTO-FARM"] = FarmContent,
-    ["DUP"] = DupContent
+local SkinDatabase = {
+    "Default", "Shadow", "Crystal", "Flame", "Frost", "Void", "Celestial",
+    "Dragon", "Phoenix", "Demon", "Angel", "Samurai", "Ninja", "Pirate",
+    "Knight", "Mage", "Archer", "Berserker", "Paladin", "Assassin"
 }
 
-for i, tabName in ipairs(tabs) do
-    local btn = CreateTabButton(tabName, i)
-    TabButtons[tabName] = btn
-    
+SkinApply.MouseButton1Click:Connect(function()
+    local name = SkinInput.Text
+    local found = false
+    for _, skin in pairs(SkinDatabase) do
+        if string.lower(skin) == string.lower(name) or string.find(string.lower(skin), string.lower(name)) then
+            Settings.CurrentSkin = skin
+            found = true
+            SkinStatus.Text = "✅ Applied: " .. skin
+            SkinStatus.TextColor3 = Color3.fromRGB(0, 255, 100)
+            -- Применить скин
+            local char = LocalPlayer.Character
+            if char then
+                for _, v in pairs(char:GetChildren()) do
+                    if v:IsA("Accessory") or v:IsA("Hat") then
+                        v:Destroy()
+                    end
+                end
+                local newSkin = Instance.new("Accessory")
+                newSkin.Name = skin
+                newSkin.Handle = Instance.new("Part")
+                newSkin.Handle.Size = Vector3.new(1, 1, 1)
+                newSkin.Handle.Transparency = 0.3
+                newSkin.Handle.Color = Color3.fromHSV(math.random(), 0.8, 0.8)
+                newSkin.Handle.Parent = newSkin
+                newSkin.Parent = char
+                -- Симуляция звука
+                local sound = Instance.new("Sound")
+                sound.SoundId = "rbxassetid://9120263686"
+                sound.Volume = 0.5
+                sound.Parent = char
+                sound:Play()
+                task.wait(0.5)
+                sound:Destroy()
+            end
+            break
+        end
+    end
+    if not found then
+        SkinStatus.Text = "❌ Skin not found"
+        SkinStatus.TextColor3 = Color3.fromRGB(255, 80, 80)
+    end
+end)
+
+-- AFK
+y = 5
+CreateCheckbox(AFKPanel, "Anti AFK", "AntiAFK", y)
+y = y + 38
+CreateCheckbox(AFKPanel, "Auto Rejoin", "AutoRejoin", y)
+
+-- SETTINGS
+y = 5
+local SizeLabel = Instance.new("TextLabel")
+SizeLabel.Size = UDim2.new(1, -20, 0, 30)
+SizeLabel.Position = UDim2.new(0, 10, 0, y)
+SizeLabel.BackgroundTransparency = 1
+SizeLabel.Text = "📐 Menu Size: " .. Settings.MenuSize .. "px"
+SizeLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+SizeLabel.TextSize = 15
+SizeLabel.Font = Enum.Font.GothamBold
+SizeLabel.TextXAlignment = Enum.TextXAlignment.Left
+SizeLabel.TextYAlignment = Enum.TextYAlignment.Center
+SizeLabel.Parent = SettingsPanel
+y = y + 35
+
+local SliderBg = Instance.new("Frame")
+SliderBg.Size = UDim2.new(0, 300, 0, 6)
+SliderBg.Position = UDim2.new(0, 10, 0, y + 8)
+SliderBg.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
+SliderBg.BorderSizePixel = 0
+SliderBg.Parent = SettingsPanel
+local SliderBgCorner = Instance.new("UICorner")
+SliderBgCorner.CornerRadius = UDim.new(0, 3)
+SliderBgCorner.Parent = SliderBg
+
+local SliderFill = Instance.new("Frame")
+SliderFill.Size = UDim2.new((Settings.MenuSize - 400) / 500, 0, 1, 0)
+SliderFill.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+SliderFill.BorderSizePixel = 0
+SliderFill.Parent = SliderBg
+local SliderFillCorner = Instance.new("UICorner")
+SliderFillCorner.CornerRadius = UDim.new(0, 3)
+SliderFillCorner.Parent = SliderFill
+
+local SliderBtn = Instance.new("TextButton")
+SliderBtn.Size = UDim2.new(0, 18, 0, 18)
+SliderBtn.Position = UDim2.new((Settings.MenuSize - 400) / 500, -9, 0.5, -9)
+SliderBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+SliderBtn.BorderSizePixel = 0
+SliderBtn.Text = ""
+SliderBtn.Parent = SettingsPanel
+local SliderBtnCorner = Instance.new("UICorner")
+SliderBtnCorner.CornerRadius = UDim.new(1, 0)
+SliderBtnCorner.Parent = SliderBtn
+
+local SizeValue = Instance.new("TextLabel")
+SizeValue.Size = UDim2.new(0, 60, 0, 30)
+SizeValue.Position = UDim2.new(0, 320, 0, y)
+SizeValue.BackgroundTransparency = 1
+SizeValue.Text = Settings.MenuSize .. "px"
+SizeValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+SizeValue.TextSize = 14
+SizeValue.Font = Enum.Font.GothamBold
+SizeValue.TextXAlignment = Enum.TextXAlignment.Left
+SizeValue.TextYAlignment = Enum.TextYAlignment.Center
+SizeValue.Parent = SettingsPanel
+
+local draggingSlider = false
+SliderBtn.MouseButton1Down:Connect(function()
+    draggingSlider = true
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = false
+    end
+end)
+RunService.RenderStepped:Connect(function()
+    if draggingSlider then
+        local mouse = LocalPlayer:GetMouse()
+        local x = math.clamp((mouse.X - SliderBg.AbsolutePosition.X) / SliderBg.AbsoluteSize.X, 0, 1)
+        local newSize = math.floor(400 + x * 500)
+        newSize = math.clamp(newSize, 400, 900)
+        Settings.MenuSize = newSize
+        SliderFill.Size = UDim2.new(x, 0, 1, 0)
+        SliderBtn.Position = UDim2.new(x, -9, 0.5, -9)
+        SizeValue.Text = newSize .. "px"
+        SizeLabel.Text = "📐 Menu Size: " .. newSize .. "px"
+        MenuFrame.Size = UDim2.new(0, newSize, 0, 700)
+        MenuFrame.Position = UDim2.new(0.5, -newSize/2, 0.5, -350)
+    end
+end)
+
+y = y + 50
+local ResetBtn = Instance.new("TextButton")
+ResetBtn.Size = UDim2.new(0, 150, 0, 35)
+ResetBtn.Position = UDim2.new(0, 10, 0, y)
+ResetBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+ResetBtn.BackgroundTransparency = 0.2
+ResetBtn.BorderSizePixel = 0
+ResetBtn.Text = "🔄 Reset Settings"
+ResetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResetBtn.TextSize = 14
+ResetBtn.Font = Enum.Font.GothamBold
+ResetBtn.Parent = SettingsPanel
+local ResetCorner = Instance.new("UICorner")
+ResetCorner.CornerRadius = UDim.new(0, 8)
+ResetCorner.Parent = ResetBtn
+
+ResetBtn.MouseButton1Click:Connect(function()
+    for k, v in pairs(Settings) do
+        if type(v) == "boolean" then Settings[k] = false end
+    end
+    Settings.MenuSize = 650
+    SliderFill.Size = UDim2.new((650 - 400) / 500, 0, 1, 0)
+    SliderBtn.Position = UDim2.new((650 - 400) / 500, -9, 0.5, -9)
+    SizeValue.Text = "650px"
+    SizeLabel.Text = "📐 Menu Size: 650px"
+    MenuFrame.Size = UDim2.new(0, 650, 0, 700)
+    MenuFrame.Position = UDim2.new(0.5, -325, 0.5, -350)
+    print("[SeraphCA] Settings reset")
+end)
+
+-- ===================== TAB SWITCHING =====================
+local panels = {
+    GeneralPanel, CombatPanel, VisualsPanel, MiscPanel, AFKPanel, SettingsPanel
+}
+for i, tab in ipairs({"General", "Combat", "Visuals", "Misc", "AFK", "Settings"}) do
+    local btn = CreateTab(tab, i)
+    TabButtons[tab] = btn
     btn.MouseButton1Click:Connect(function()
-        SeraphMenu.ActiveTab = tabName
-        for name, content in pairs(contentMap) do
-            content.Visible = (name == tabName)
+        SeraphMenu.ActiveTab = tab
+        for idx, panel in ipairs(panels) do
+            panel.Visible = (SeraphMenu.Tabs[idx] == tab)
         end
         for name, b in pairs(TabButtons) do
-            if name == tabName then
+            if name == tab then
                 b.BackgroundColor3 = Color3.fromRGB(35, 45, 95)
                 b.TextColor3 = Color3.fromRGB(255, 255, 255)
-                local glow = b:FindFirstChild("BtnGlow")
-                if glow then
-                    TweenService:Create(glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.2}):Play()
-                end
+                local glow = b:FindFirstChildOfClass("Frame")
+                if glow then TweenService:Create(glow, TweenInfo.new(0.3), {BackgroundTransparency = 0.3}):Play() end
             else
                 b.BackgroundColor3 = Color3.fromRGB(20, 22, 45)
                 b.TextColor3 = Color3.fromRGB(170, 170, 210)
-                local glow = b:FindFirstChild("BtnGlow")
-                if glow then
-                    TweenService:Create(glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
-                end
+                local glow = b:FindFirstChildOfClass("Frame")
+                if glow then TweenService:Create(glow, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play() end
             end
         end
     end)
 end
 
--- ===================== ПЕРЕМЕЩЕНИЕ =====================
+-- Default: Settings tab active
+for idx, panel in ipairs(panels) do
+    panel.Visible = (SeraphMenu.Tabs[idx] == "Settings")
+end
+for name, b in pairs(TabButtons) do
+    if name == "Settings" then
+        b.BackgroundColor3 = Color3.fromRGB(35, 45, 95)
+        b.TextColor3 = Color3.fromRGB(255, 255, 255)
+        local glow = b:FindFirstChildOfClass("Frame")
+        if glow then glow.BackgroundTransparency = 0.3 end
+    else
+        b.BackgroundColor3 = Color3.fromRGB(20, 22, 45)
+        b.TextColor3 = Color3.fromRGB(170, 170, 210)
+        local glow = b:FindFirstChildOfClass("Frame")
+        if glow then glow.BackgroundTransparency = 1 end
+    end
+end
+
+-- ===================== DRAG =====================
 local function SetupDrag()
     local dragStart = nil
     local frameStart = nil
@@ -1136,59 +810,122 @@ local function SetupDrag()
             dragStart = input.Position
             frameStart = MenuFrame.Position
             SeraphMenu.Dragging = true
-            TweenService:Create(MenuFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.05}):Play()
+            TweenService:Create(MenuFrame, TweenInfo.new(0.15), {BackgroundTransparency = 0.05}):Play()
         end
     end)
 
     TitleBar.InputChanged:Connect(function(input)
         if (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) and SeraphMenu.Dragging then
             local delta = input.Position - dragStart
-            local newPos = UDim2.new(
+            MenuFrame.Position = UDim2.new(
                 frameStart.X.Scale,
                 frameStart.X.Offset + delta.X,
                 frameStart.Y.Scale,
                 frameStart.Y.Offset + delta.Y
             )
-            MenuFrame.Position = newPos
-            SeraphMenu.Position = newPos
         end
     end)
 
     TitleBar.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             SeraphMenu.Dragging = false
-            TweenService:Create(MenuFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.1}):Play()
+            TweenService:Create(MenuFrame, TweenInfo.new(0.15), {BackgroundTransparency = 0.1}):Play()
         end
     end)
 end
 SetupDrag()
 
--- ===================== УПРАВЛЕНИЕ МЕНЮ =====================
+-- ===================== BUBBLE ANIMATION =====================
+local function CreateBubble()
+    local bubble = Instance.new("Frame")
+    bubble.Size = UDim2.new(0, 0, 0, 0)
+    bubble.Position = UDim2.new(0, 0, 0, 0)
+    bubble.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    bubble.BackgroundTransparency = 0.8
+    bubble.BorderSizePixel = 0
+    bubble.ZIndex = 0
+    bubble.Parent = WatermarkContainer
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = bubble
+    return bubble
+end
+
+local bubble = CreateBubble()
+local isBubbleAnimating = false
+
+local function BubbleOut()
+    if isBubbleAnimating then return end
+    isBubbleAnimating = true
+    bubble.Visible = true
+    bubble.Size = UDim2.new(0, 10, 0, 10)
+    bubble.Position = UDim2.new(0, WatermarkContainer.AbsoluteSize.X/2 - 5, 0, WatermarkContainer.AbsoluteSize.Y/2 - 5)
+    bubble.BackgroundTransparency = 0.8
+    
+    local tween1 = TweenService:Create(bubble, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 60, 0, 60),
+        BackgroundTransparency = 0.3
+    })
+    tween1:Play()
+    tween1.Completed:Connect(function()
+        local tween2 = TweenService:Create(bubble, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+            BackgroundTransparency = 1
+        })
+        tween2:Play()
+        tween2.Completed:Connect(function()
+            bubble.Visible = false
+            isBubbleAnimating = false
+        end)
+    end)
+end
+
+local function BubbleIn()
+    if isBubbleAnimating then return end
+    isBubbleAnimating = true
+    bubble.Visible = true
+    bubble.Size = UDim2.new(0, 60, 0, 60)
+    bubble.Position = UDim2.new(0, WatermarkContainer.AbsoluteSize.X/2 - 30, 0, WatermarkContainer.AbsoluteSize.Y/2 - 30)
+    bubble.BackgroundTransparency = 0.3
+    
+    local tween1 = TweenService:Create(bubble, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 10, 0, 10),
+        BackgroundTransparency = 0.8
+    })
+    tween1:Play()
+    tween1.Completed:Connect(function()
+        bubble.Visible = false
+        isBubbleAnimating = false
+    end)
+end
+
+-- ===================== MENU TOGGLE =====================
 local menuOpenTween = nil
-WatermarkButton.MouseButton1Click:Connect(function()
+WButton.MouseButton1Click:Connect(function()
     SeraphMenu.Visible = not SeraphMenu.Visible
     MenuFrame.Visible = SeraphMenu.Visible
     ToggleBlur(SeraphMenu.Visible)
 
     if SeraphMenu.Visible then
-        MenuFrame.Position = UDim2.new(SeraphMenu.Position.X.Scale, SeraphMenu.Position.X.Offset + 80, SeraphMenu.Position.Y.Scale, SeraphMenu.Position.Y.Offset + 20)
+        MenuFrame.Position = UDim2.new(0.5, -Settings.MenuSize/2, 0.5, -350 + 50)
         MenuFrame.Size = UDim2.new(0, 0, 0, 0)
         MenuFrame.BackgroundTransparency = 1
         if menuOpenTween then menuOpenTween:Cancel() end
         menuOpenTween = TweenService:Create(MenuFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = SeraphMenu.Size,
-            Position = SeraphMenu.Position,
+            Size = UDim2.new(0, Settings.MenuSize, 0, 700),
+            Position = UDim2.new(0.5, -Settings.MenuSize/2, 0.5, -350),
             BackgroundTransparency = 0.1
         })
         menuOpenTween:Play()
+        BubbleOut()
     else
         if menuOpenTween then menuOpenTween:Cancel() end
         menuOpenTween = TweenService:Create(MenuFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
             Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(SeraphMenu.Position.X.Scale, SeraphMenu.Position.X.Offset + 80, SeraphMenu.Position.Y.Scale, SeraphMenu.Position.Y.Offset + 20),
+            Position = UDim2.new(0.5, -Settings.MenuSize/2, 0.5, -350 + 50),
             BackgroundTransparency = 1
         })
         menuOpenTween:Play()
+        BubbleIn()
     end
 end)
 
@@ -1204,43 +941,20 @@ local function KeepOnTop()
 end
 KeepOnTop()
 
-local function AnimateBorder()
-    local phase = 0
-    while true do
-        phase = phase + 0.02
-        local transparency = 0.3 + math.sin(phase) * 0.2
-        TweenService:Create(MenuBorder1, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {BackgroundTransparency = transparency}):Play()
-        task.wait(0.1)
-    end
-end
-coroutine.wrap(AnimateBorder)()
-
 local function RandomQuote()
     local quotes = {
-        "The sea is vast... but so is my power.",
-        "Haki is the will of the strong.",
-        "Find the One Piece... or farm stats.",
-        "Who needs a crew when you have scripts?",
-        "Fruit spawn in 47 seconds... or not.",
-        "This island is too small for both of us.",
-        "Raid bosses drop nothing but pain.",
-        "V2 quest? More like V2 pain.",
-        "The Grand Line is just a big hallway.",
-        "If you can't dodge, just teleport.",
-        "Peace was never an option in Haze.",
-        "My haki is stronger than your WiFi.",
-        "Fishing is the true endgame.",
-        "Diamonds are a farmer's best friend.",
-        "Dup system: because grinding is overrated.",
-        "Beli makes the world go round."
+        "⚡ Blade Ball - SeraphiCA",
+        "💀 Parry like a pro",
+        "🎯 Accuracy is key",
+        "🔥 Unstoppable",
+        "💎 Premium script"
     }
     return quotes[math.random(1, #quotes)]
 end
 
-print("Haze Piece Farm v2.0 Loaded")
+print("SeraphiCA Blade Ball v3.0 Loaded")
 print("╔═══════════════════════════════════════════════════════╗")
-print("║  ⬡ Haze Piece - Auto Farm Manager                    ║")
-print("║  Features: 15+ farm options + DUP System            ║")
+print("║  ⚡ SeraphiCA - Blade Ball Manager                    ║")
 print("║  " .. RandomQuote() .. "                              ║")
 print("║  Нажми на ватермак для открытия/закрытия             ║")
 print("╚═══════════════════════════════════════════════════════╝")

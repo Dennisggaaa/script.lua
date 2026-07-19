@@ -518,6 +518,49 @@ ActionFlingBtn.Font = Enum.Font.ArialBold
 ActionFlingBtn.ZIndex = 10
 ActionFlingBtn.Parent = FlingContainer
 
+-- Список игроков внутри FlingContainer
+local PlayerListScroll = Instance.new("ScrollingFrame")
+PlayerListScroll.Size = UDim2.new(1, -20, 0, 100)
+PlayerListScroll.Position = UDim2.new(0, 10, 0, 35)
+PlayerListScroll.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+PlayerListScroll.BorderColor3 = Color3.fromRGB(255, 255, 255)
+PlayerListScroll.ScrollBarThickness = 4
+PlayerListScroll.ZIndex = 11
+PlayerListScroll.Parent = FlingContainer
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = PlayerListScroll
+
+local function updatePlayerListForFling()
+    for _, child in pairs(PlayerListScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    for _, player in pairs(game:GetService("Players"):GetPlayers()) do
+        if player ~= game:GetService("Players").LocalPlayer then
+            local pBtn = Instance.new("TextButton")
+            pBtn.Size = UDim2.new(1, 0, 0, 25)
+            pBtn.Text = player.Name
+            pBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            pBtn.BackgroundColor3 = (selectedFlingTarget == player) and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(20, 20, 20)
+            pBtn.ZIndex = 12
+            pBtn.Parent = PlayerListScroll
+            
+            pBtn.MouseButton1Click:Connect(function()
+                selectedFlingTarget = player
+                updatePlayerListForFling()
+            end)
+        end
+    end
+end
+
+-- Обновление списка при открытии вкладки или изменении состава игроков
+FlingCheckbox.MouseButton1Click:Connect(function()
+    if not FlingContainer.Visible then updatePlayerListForFling() end
+    FlingContainer.Visible = not FlingContainer.Visible
+end)
+
+
 local PlayerListScroll = Instance.new("ScrollingFrame")
 PlayerListScroll.Size = UDim2.new(1, -20, 0, 120)
 PlayerListScroll.Position = UDim2.new(0, 10, 0, 30)

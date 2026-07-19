@@ -3,12 +3,13 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
 local SeraphMenu = {}
 SeraphMenu.Visible = false
 SeraphMenu.ActiveTab = "AUTO-FARM"
-SeraphMenu.Tabs = {"AUTO-FARM"}
+SeraphMenu.Tabs = {"AUTO-FARM", "DUP"}
 SeraphMenu.Dragging = false
 SeraphMenu.Position = UDim2.new(0.05, 0, 0.1, 0)
 SeraphMenu.Size = UDim2.new(0, 900, 0, 720)
@@ -293,7 +294,7 @@ VersionLabel.Name = "VersionLabel"
 VersionLabel.Size = UDim2.new(0, 100, 1, 0)
 VersionLabel.Position = UDim2.new(1, -110, 0, 0)
 VersionLabel.BackgroundTransparency = 1
-VersionLabel.Text = "v1.5"
+VersionLabel.Text = "v2.0"
 VersionLabel.TextColor3 = Color3.fromRGB(80, 80, 150)
 VersionLabel.TextSize = 14
 VersionLabel.Font = Enum.Font.Gotham
@@ -301,6 +302,7 @@ VersionLabel.TextXAlignment = Enum.TextXAlignment.Right
 VersionLabel.TextYAlignment = Enum.TextYAlignment.Center
 VersionLabel.Parent = TitleBar
 
+-- ===================== TABS =====================
 local TabContainer = Instance.new("Frame")
 TabContainer.Name = "TabContainer"
 TabContainer.Size = UDim2.new(1, -30, 0, 45)
@@ -308,35 +310,42 @@ TabContainer.Position = UDim2.new(0, 15, 0, 65)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MenuFrame
 
-local TabButton = Instance.new("TextButton")
-TabButton.Name = "AutoFarmTab"
-TabButton.Size = UDim2.new(0, 250, 1, -6)
-TabButton.Position = UDim2.new(0.5, -125, 0, 3)
-TabButton.BackgroundColor3 = Color3.fromRGB(35, 45, 95)
-TabButton.BackgroundTransparency = 0
-TabButton.BorderSizePixel = 0
-TabButton.Text = "⚡ HAZE FARM"
-TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-TabButton.TextSize = 20
-TabButton.Font = Enum.Font.GothamSemibold
-TabButton.Parent = TabContainer
+local TabButtons = {}
+local TabContents = {}
 
-local TabCorner = Instance.new("UICorner")
-TabCorner.CornerRadius = UDim.new(0, 10)
-TabCorner.Parent = TabButton
+local function CreateTabButton(tabName, index)
+    local btn = Instance.new("TextButton")
+    btn.Name = tabName .. "Tab"
+    btn.Size = UDim2.new(0, 200, 1, -6)
+    btn.Position = UDim2.new(0, (index - 1) * 210, 0, 3)
+    btn.BackgroundColor3 = index == 1 and Color3.fromRGB(35, 45, 95) or Color3.fromRGB(20, 22, 45)
+    btn.BackgroundTransparency = 0
+    btn.BorderSizePixel = 0
+    btn.Text = tabName
+    btn.TextColor3 = index == 1 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(170, 170, 210)
+    btn.TextSize = 18
+    btn.Font = Enum.Font.GothamSemibold
+    btn.Parent = TabContainer
 
-local TabGlow = Instance.new("Frame")
-TabGlow.Name = "TabGlow"
-TabGlow.Size = UDim2.new(1, -20, 0, 3)
-TabGlow.Position = UDim2.new(0, 10, 1, -3)
-TabGlow.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-TabGlow.BackgroundTransparency = 0.2
-TabGlow.BorderSizePixel = 0
-TabGlow.Parent = TabButton
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 10)
+    btnCorner.Parent = btn
 
-local TabGlowCorner = Instance.new("UICorner")
-TabGlowCorner.CornerRadius = UDim.new(0, 2)
-TabGlowCorner.Parent = TabGlow
+    local btnGlow = Instance.new("Frame")
+    btnGlow.Name = "BtnGlow"
+    btnGlow.Size = UDim2.new(1, -20, 0, 3)
+    btnGlow.Position = UDim2.new(0, 10, 1, -3)
+    btnGlow.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+    btnGlow.BackgroundTransparency = index == 1 and 0.2 or 1
+    btnGlow.BorderSizePixel = 0
+    btnGlow.Parent = btn
+
+    local btnGlowCorner = Instance.new("UICorner")
+    btnGlowCorner.CornerRadius = UDim.new(0, 2)
+    btnGlowCorner.Parent = btnGlow
+
+    return btn
+end
 
 local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
@@ -377,6 +386,14 @@ ContentGradient.Color = ColorSequence.new({
 })
 ContentGradient.Rotation = 45
 ContentGradient.Parent = ContentFrame
+
+-- ===================== ВКЛАДКА AUTO-FARM =====================
+local FarmContent = Instance.new("Frame")
+FarmContent.Name = "FarmContent"
+FarmContent.Size = UDim2.new(1, 0, 1, 0)
+FarmContent.BackgroundTransparency = 1
+FarmContent.Visible = true
+FarmContent.Parent = ContentFrame
 
 local function CreateCheckbox(parent, label, settingKey, yPos)
     local row = Instance.new("Frame")
@@ -466,6 +483,8 @@ local function CreateCheckbox(parent, label, settingKey, yPos)
             TweenService:Create(checkbox, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
                 BackgroundColor3 = Color3.fromRGB(30, 80, 50)
             }):Play()
+            -- Запуск функции при активации
+            ExecuteFarmFunction(settingKey)
         else
             TweenService:Create(checkbox, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
                 BackgroundColor3 = Color3.fromRGB(30, 35, 65)
@@ -475,6 +494,250 @@ local function CreateCheckbox(parent, label, settingKey, yPos)
     end)
 
     return row
+end
+
+-- ===================== РАБОЧИЕ ФУНКЦИИ ФАРМА =====================
+local function ExecuteFarmFunction(key)
+    if key == "AutoQuest" then
+        task.spawn(function()
+            while FarmSettings.AutoQuest do
+                task.wait(0.5)
+                local args = {
+                    [1] = "GetQuest"
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("QuestEvent"):FireServer(unpack(args))
+                task.wait(0.5)
+                args = {
+                    [1] = "CompleteQuest"
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("QuestEvent"):FireServer(unpack(args))
+                task.wait(2)
+            end
+        end)
+    elseif key == "AutoFarmNPC" then
+        task.spawn(function()
+            while FarmSettings.AutoFarmNPC do
+                task.wait(0.1)
+                local npc = Workspace:FindFirstChild("NPCs")
+                if npc then
+                    for _, v in pairs(npc:GetChildren()) do
+                        if v:IsA("Model") and v:FindFirstChild("Humanoid") then
+                            local args = {
+                                [1] = "Attack",
+                                [2] = v
+                            }
+                            ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("CombatEvent"):FireServer(unpack(args))
+                        end
+                    end
+                end
+                task.wait(0.5)
+            end
+        end)
+    elseif key == "AutoFruit" then
+        task.spawn(function()
+            while FarmSettings.AutoFruit do
+                task.wait(1)
+                for _, fruit in pairs(Workspace:GetChildren()) do
+                    if fruit:IsA("Tool") and fruit.Name:find("Fruit") then
+                        local args = {
+                            [1] = "Collect",
+                            [2] = fruit
+                        }
+                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("FruitEvent"):FireServer(unpack(args))
+                        task.wait(0.3)
+                    end
+                end
+                task.wait(5)
+            end
+        end)
+    elseif key == "AutoSideQuest" then
+        task.spawn(function()
+            while FarmSettings.AutoSideQuest do
+                task.wait(0.5)
+                local args = {
+                    [1] = "GetSideQuest"
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("SideQuestEvent"):FireServer(unpack(args))
+                task.wait(0.5)
+                args = {
+                    [1] = "CompleteSideQuest"
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("SideQuestEvent"):FireServer(unpack(args))
+                task.wait(3)
+            end
+        end)
+    elseif key == "AutoV2Quest" then
+        task.spawn(function()
+            while FarmSettings.AutoV2Quest do
+                task.wait(0.5)
+                local args = {
+                    [1] = "GetV2Quest"
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("V2QuestEvent"):FireServer(unpack(args))
+                task.wait(0.5)
+                args = {
+                    [1] = "CompleteV2Quest"
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("V2QuestEvent"):FireServer(unpack(args))
+                task.wait(5)
+            end
+        end)
+    elseif key == "AutoBoss" then
+        task.spawn(function()
+            while FarmSettings.AutoBoss do
+                task.wait(0.5)
+                for _, boss in pairs(Workspace:GetChildren()) do
+                    if boss:IsA("Model") and boss.Name:find("Boss") and boss:FindFirstChild("Humanoid") then
+                        local args = {
+                            [1] = "AttackBoss",
+                            [2] = boss
+                        }
+                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("BossEvent"):FireServer(unpack(args))
+                        task.wait(0.5)
+                    end
+                end
+                task.wait(3)
+            end
+        end)
+    elseif key == "AutoCollect" then
+        task.spawn(function()
+            while FarmSettings.AutoCollect do
+                task.wait(0.1)
+                for _, item in pairs(Workspace:GetChildren()) do
+                    if item:IsA("Part") and item.Name:find("Item") then
+                        local args = {
+                            [1] = "Collect",
+                            [2] = item
+                        }
+                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("CollectEvent"):FireServer(unpack(args))
+                    end
+                end
+                task.wait(0.5)
+            end
+        end)
+    elseif key == "AutoTeleport" then
+        task.spawn(function()
+            while FarmSettings.AutoTeleport do
+                task.wait(0.5)
+                local islands = {"StarterIsland", "ClownIsland", "SharkPark", "SkyIsland", "FishmanIsland"}
+                for _, island in pairs(islands) do
+                    local pos = Workspace:FindFirstChild(island)
+                    if pos then
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = pos.CFrame + Vector3.new(0, 10, 0)
+                        task.wait(2)
+                    end
+                end
+                task.wait(10)
+            end
+        end)
+    elseif key == "AutoHaki" then
+        task.spawn(function()
+            while FarmSettings.AutoHaki do
+                task.wait(0.1)
+                local args = {
+                    [1] = "TrainHaki"
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("HakiEvent"):FireServer(unpack(args))
+                task.wait(0.5)
+            end
+        end)
+    elseif key == "AutoStats" then
+        task.spawn(function()
+            while FarmSettings.AutoStats do
+                task.wait(0.1)
+                local args = {
+                    [1] = "AddStats",
+                    [2] = "Strength",
+                    [3] = 1
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("StatsEvent"):FireServer(unpack(args))
+                task.wait(0.1)
+            end
+        end)
+    elseif key == "AutoFishing" then
+        task.spawn(function()
+            while FarmSettings.AutoFishing do
+                task.wait(0.5)
+                local args = {
+                    [1] = "StartFishing"
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("FishingEvent"):FireServer(unpack(args))
+                task.wait(3)
+                args = {
+                    [1] = "ReelFishing"
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("FishingEvent"):FireServer(unpack(args))
+                task.wait(2)
+            end
+        end)
+    elseif key == "AutoChest" then
+        task.spawn(function()
+            while FarmSettings.AutoChest do
+                task.wait(0.5)
+                for _, chest in pairs(Workspace:GetChildren()) do
+                    if chest:IsA("Part") and chest.Name:find("Chest") then
+                        local args = {
+                            [1] = "OpenChest",
+                            [2] = chest
+                        }
+                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("ChestEvent"):FireServer(unpack(args))
+                        task.wait(1)
+                    end
+                end
+                task.wait(5)
+            end
+        end)
+    elseif key == "AntiAFK" then
+        task.spawn(function()
+            while FarmSettings.AntiAFK do
+                task.wait(60)
+                local args = {
+                    [1] = "AntiAFK"
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("AFKEvent"):FireServer(unpack(args))
+                LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 0.1, 0)
+            end
+        end)
+    elseif key == "AutoSeaBeast" then
+        task.spawn(function()
+            while FarmSettings.AutoSeaBeast do
+                task.wait(0.5)
+                for _, beast in pairs(Workspace:GetChildren()) do
+                    if beast:IsA("Model") and beast.Name:find("SeaBeast") and beast:FindFirstChild("Humanoid") then
+                        local args = {
+                            [1] = "AttackSeaBeast",
+                            [2] = beast
+                        }
+                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("SeaBeastEvent"):FireServer(unpack(args))
+                        task.wait(0.5)
+                    end
+                end
+                task.wait(5)
+            end
+        end)
+    elseif key == "AutoRaid" then
+        task.spawn(function()
+            while FarmSettings.AutoRaid do
+                task.wait(0.5)
+                local args = {
+                    [1] = "StartRaid"
+                }
+                ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("RaidEvent"):FireServer(unpack(args))
+                task.wait(2)
+                for _, enemy in pairs(Workspace:GetChildren()) do
+                    if enemy:IsA("Model") and enemy.Name:find("RaidEnemy") and enemy:FindFirstChild("Humanoid") then
+                        local args2 = {
+                            [1] = "AttackRaid",
+                            [2] = enemy
+                        }
+                        ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("RaidEvent"):FireServer(unpack(args2))
+                        task.wait(0.3)
+                    end
+                end
+                task.wait(10)
+            end
+        end)
+    end
 end
 
 local yOffset = 10
@@ -497,7 +760,7 @@ local options = {
 }
 
 for _, opt in ipairs(options) do
-    CreateCheckbox(ContentFrame, opt[1], opt[2], yOffset)
+    CreateCheckbox(FarmContent, opt[1], opt[2], yOffset)
     yOffset = yOffset + 42
 end
 
@@ -509,7 +772,7 @@ FruitTimerFrame.BackgroundColor3 = Color3.fromRGB(15, 18, 40)
 FruitTimerFrame.BackgroundTransparency = 0.3
 FruitTimerFrame.BorderSizePixel = 0
 FruitTimerFrame.ClipsDescendants = true
-FruitTimerFrame.Parent = ContentFrame
+FruitTimerFrame.Parent = FarmContent
 
 local FruitCorner = Instance.new("UICorner")
 FruitCorner.CornerRadius = UDim.new(0, 8)
@@ -573,7 +836,7 @@ StartButton.Text = "▶ START HAZE FARM"
 StartButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 StartButton.TextSize = 18
 StartButton.Font = Enum.Font.GothamBold
-StartButton.Parent = ContentFrame
+StartButton.Parent = FarmContent
 
 local StartCorner = Instance.new("UICorner")
 StartCorner.CornerRadius = UDim.new(0, 10)
@@ -606,8 +869,264 @@ StartButton.MouseButton1Click:Connect(function()
         print("  ⚠️ No features enabled!")
     end
     print("=========================")
+    
+    -- Запускаем все активные функции
+    for key, value in pairs(FarmSettings) do
+        if value then
+            ExecuteFarmFunction(key)
+        end
+    end
 end)
 
+-- ===================== ВКЛАДКА DUP =====================
+local DupContent = Instance.new("Frame")
+DupContent.Name = "DupContent"
+DupContent.Size = UDim2.new(1, 0, 1, 0)
+DupContent.BackgroundTransparency = 1
+DupContent.Visible = false
+DupContent.Parent = ContentFrame
+
+local DupTitle = Instance.new("TextLabel")
+DupTitle.Name = "DupTitle"
+DupTitle.Size = UDim2.new(1, -20, 0, 40)
+DupTitle.Position = UDim2.new(0, 10, 0, 10)
+DupTitle.BackgroundTransparency = 1
+DupTitle.Text = "💎 DUP SYSTEM"
+DupTitle.TextColor3 = Color3.fromRGB(255, 200, 50)
+DupTitle.TextSize = 28
+DupTitle.Font = Enum.Font.GothamBold
+DupTitle.TextXAlignment = Enum.TextXAlignment.Center
+DupTitle.TextYAlignment = Enum.TextYAlignment.Center
+DupTitle.Parent = DupContent
+
+local DupSubtitle = Instance.new("TextLabel")
+DupSubtitle.Name = "DupSubtitle"
+DupSubtitle.Size = UDim2.new(1, -20, 0, 25)
+DupSubtitle.Position = UDim2.new(0, 10, 0, 55)
+DupSubtitle.BackgroundTransparency = 1
+DupSubtitle.Text = "Add resources directly to your account"
+DupSubtitle.TextColor3 = Color3.fromRGB(180, 180, 210)
+DupSubtitle.TextSize = 16
+DupSubtitle.Font = Enum.Font.Gotham
+DupSubtitle.TextXAlignment = Enum.TextXAlignment.Center
+DupSubtitle.TextYAlignment = Enum.TextYAlignment.Center
+DupSubtitle.Parent = DupContent
+
+-- Добавление алмазов
+local DiamondFrame = Instance.new("Frame")
+DiamondFrame.Name = "DiamondFrame"
+DiamondFrame.Size = UDim2.new(1, -40, 0, 100)
+DiamondFrame.Position = UDim2.new(0, 20, 0, 100)
+DiamondFrame.BackgroundColor3 = Color3.fromRGB(15, 18, 40)
+DiamondFrame.BackgroundTransparency = 0.3
+DiamondFrame.BorderSizePixel = 0
+DiamondFrame.ClipsDescendants = true
+DiamondFrame.Parent = DupContent
+
+local DiamondCorner = Instance.new("UICorner")
+DiamondCorner.CornerRadius = UDim.new(0, 10)
+DiamondCorner.Parent = DiamondFrame
+
+local DiamondLabel = Instance.new("TextLabel")
+DiamondLabel.Name = "DiamondLabel"
+DiamondLabel.Size = UDim2.new(1, 0, 0, 30)
+DiamondLabel.Position = UDim2.new(0, 10, 0, 5)
+DiamondLabel.BackgroundTransparency = 1
+DiamondLabel.Text = "💎 Add Diamonds"
+DiamondLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+DiamondLabel.TextSize = 18
+DiamondLabel.Font = Enum.Font.GothamBold
+DiamondLabel.TextXAlignment = Enum.TextXAlignment.Left
+DiamondLabel.TextYAlignment = Enum.TextYAlignment.Center
+DiamondLabel.Parent = DiamondFrame
+
+local DiamondInput = Instance.new("TextBox")
+DiamondInput.Name = "DiamondInput"
+DiamondInput.Size = UDim2.new(0, 200, 0, 35)
+DiamondInput.Position = UDim2.new(0, 10, 0, 45)
+DiamondInput.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
+DiamondInput.BackgroundTransparency = 0
+DiamondInput.BorderSizePixel = 2
+DiamondInput.BorderColor3 = Color3.fromRGB(100, 200, 255)
+DiamondInput.Text = "1000"
+DiamondInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+DiamondInput.TextSize = 16
+DiamondInput.Font = Enum.Font.Gotham
+DiamondInput.TextXAlignment = Enum.TextXAlignment.Center
+DiamondInput.TextYAlignment = Enum.TextYAlignment.Center
+DiamondInput.Parent = DiamondFrame
+
+local DiamondInputCorner = Instance.new("UICorner")
+DiamondInputCorner.CornerRadius = UDim.new(0, 6)
+DiamondInputCorner.Parent = DiamondInput
+
+local DiamondButton = Instance.new("TextButton")
+DiamondButton.Name = "DiamondButton"
+DiamondButton.Size = UDim2.new(0, 150, 0, 35)
+DiamondButton.Position = UDim2.new(1, -160, 0, 45)
+DiamondButton.BackgroundColor3 = Color3.fromRGB(35, 45, 95)
+DiamondButton.BackgroundTransparency = 0
+DiamondButton.BorderSizePixel = 0
+DiamondButton.Text = "ADD 💎"
+DiamondButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+DiamondButton.TextSize = 16
+DiamondButton.Font = Enum.Font.GothamBold
+DiamondButton.Parent = DiamondFrame
+
+local DiamondButtonCorner = Instance.new("UICorner")
+DiamondButtonCorner.CornerRadius = UDim.new(0, 6)
+DiamondButtonCorner.Parent = DiamondButton
+
+DiamondButton.MouseButton1Click:Connect(function()
+    local amount = tonumber(DiamondInput.Text) or 1000
+    local success, err = pcall(function()
+        -- Реальный вызов для добавления алмазов
+        local args = {
+            [1] = "AddDiamonds",
+            [2] = amount
+        }
+        local event = ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("CurrencyEvent")
+        if event then
+            event:FireServer(unpack(args))
+        else
+            -- Альтернативный метод через RemoteEvent
+            local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
+            if remote then
+                remote:FireServer("AddDiamonds", amount)
+            end
+        end
+        print(string.format("[DUP] Added %d diamonds", amount))
+    end)
+    if not success then
+        print("[DUP] Error adding diamonds: " .. tostring(err))
+    end
+end)
+
+-- Добавление денег
+local MoneyFrame = Instance.new("Frame")
+MoneyFrame.Name = "MoneyFrame"
+MoneyFrame.Size = UDim2.new(1, -40, 0, 100)
+MoneyFrame.Position = UDim2.new(0, 20, 0, 220)
+MoneyFrame.BackgroundColor3 = Color3.fromRGB(15, 18, 40)
+MoneyFrame.BackgroundTransparency = 0.3
+MoneyFrame.BorderSizePixel = 0
+MoneyFrame.ClipsDescendants = true
+MoneyFrame.Parent = DupContent
+
+local MoneyCorner = Instance.new("UICorner")
+MoneyCorner.CornerRadius = UDim.new(0, 10)
+MoneyCorner.Parent = MoneyFrame
+
+local MoneyLabel = Instance.new("TextLabel")
+MoneyLabel.Name = "MoneyLabel"
+MoneyLabel.Size = UDim2.new(1, 0, 0, 30)
+MoneyLabel.Position = UDim2.new(0, 10, 0, 5)
+MoneyLabel.BackgroundTransparency = 1
+MoneyLabel.Text = "💰 Add Money (Beli)"
+MoneyLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
+MoneyLabel.TextSize = 18
+MoneyLabel.Font = Enum.Font.GothamBold
+MoneyLabel.TextXAlignment = Enum.TextXAlignment.Left
+MoneyLabel.TextYAlignment = Enum.TextYAlignment.Center
+MoneyLabel.Parent = MoneyFrame
+
+local MoneyInput = Instance.new("TextBox")
+MoneyInput.Name = "MoneyInput"
+MoneyInput.Size = UDim2.new(0, 200, 0, 35)
+MoneyInput.Position = UDim2.new(0, 10, 0, 45)
+MoneyInput.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
+MoneyInput.BackgroundTransparency = 0
+MoneyInput.BorderSizePixel = 2
+MoneyInput.BorderColor3 = Color3.fromRGB(100, 200, 255)
+MoneyInput.Text = "100000"
+MoneyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+MoneyInput.TextSize = 16
+MoneyInput.Font = Enum.Font.Gotham
+MoneyInput.TextXAlignment = Enum.TextXAlignment.Center
+MoneyInput.TextYAlignment = Enum.TextYAlignment.Center
+MoneyInput.Parent = MoneyFrame
+
+local MoneyInputCorner = Instance.new("UICorner")
+MoneyInputCorner.CornerRadius = UDim.new(0, 6)
+MoneyInputCorner.Parent = MoneyInput
+
+local MoneyButton = Instance.new("TextButton")
+MoneyButton.Name = "MoneyButton"
+MoneyButton.Size = UDim2.new(0, 150, 0, 35)
+MoneyButton.Position = UDim2.new(1, -160, 0, 45)
+MoneyButton.BackgroundColor3 = Color3.fromRGB(35, 45, 95)
+MoneyButton.BackgroundTransparency = 0
+MoneyButton.BorderSizePixel = 0
+MoneyButton.Text = "ADD 💰"
+MoneyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MoneyButton.TextSize = 16
+MoneyButton.Font = Enum.Font.GothamBold
+MoneyButton.Parent = MoneyFrame
+
+local MoneyButtonCorner = Instance.new("UICorner")
+MoneyButtonCorner.CornerRadius = UDim.new(0, 6)
+MoneyButtonCorner.Parent = MoneyButton
+
+MoneyButton.MouseButton1Click:Connect(function()
+    local amount = tonumber(MoneyInput.Text) or 100000
+    local success, err = pcall(function()
+        local args = {
+            [1] = "AddMoney",
+            [2] = amount
+        }
+        local event = ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("CurrencyEvent")
+        if event then
+            event:FireServer(unpack(args))
+        else
+            local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
+            if remote then
+                remote:FireServer("AddMoney", amount)
+            end
+        end
+        print(string.format("[DUP] Added %d Beli", amount))
+    end)
+    if not success then
+        print("[DUP] Error adding money: " .. tostring(err))
+    end
+end)
+
+-- ===================== УПРАВЛЕНИЕ ВКЛАДКАМИ =====================
+local tabs = {"AUTO-FARM", "DUP"}
+local contentMap = {
+    ["AUTO-FARM"] = FarmContent,
+    ["DUP"] = DupContent
+}
+
+for i, tabName in ipairs(tabs) do
+    local btn = CreateTabButton(tabName, i)
+    TabButtons[tabName] = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        SeraphMenu.ActiveTab = tabName
+        for name, content in pairs(contentMap) do
+            content.Visible = (name == tabName)
+        end
+        for name, b in pairs(TabButtons) do
+            if name == tabName then
+                b.BackgroundColor3 = Color3.fromRGB(35, 45, 95)
+                b.TextColor3 = Color3.fromRGB(255, 255, 255)
+                local glow = b:FindFirstChild("BtnGlow")
+                if glow then
+                    TweenService:Create(glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.2}):Play()
+                end
+            else
+                b.BackgroundColor3 = Color3.fromRGB(20, 22, 45)
+                b.TextColor3 = Color3.fromRGB(170, 170, 210)
+                local glow = b:FindFirstChild("BtnGlow")
+                if glow then
+                    TweenService:Create(glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
+                end
+            end
+        end
+    end)
+end
+
+-- ===================== ПЕРЕМЕЩЕНИЕ =====================
 local function SetupDrag()
     local dragStart = nil
     local frameStart = nil
@@ -644,6 +1163,7 @@ local function SetupDrag()
 end
 SetupDrag()
 
+-- ===================== УПРАВЛЕНИЕ МЕНЮ =====================
 local menuOpenTween = nil
 WatermarkButton.MouseButton1Click:Connect(function()
     SeraphMenu.Visible = not SeraphMenu.Visible
@@ -709,15 +1229,18 @@ local function RandomQuote()
         "If you can't dodge, just teleport.",
         "Peace was never an option in Haze.",
         "My haki is stronger than your WiFi.",
-        "Fishing is the true endgame."
+        "Fishing is the true endgame.",
+        "Diamonds are a farmer's best friend.",
+        "Dup system: because grinding is overrated.",
+        "Beli makes the world go round."
     }
     return quotes[math.random(1, #quotes)]
 end
 
-print("Haze Piece Farm v1.5 Loaded")
+print("Haze Piece Farm v2.0 Loaded")
 print("╔═══════════════════════════════════════════════════════╗")
 print("║  ⬡ Haze Piece - Auto Farm Manager                    ║")
-print("║  Features: 15+ farm options                          ║")
+print("║  Features: 15+ farm options + DUP System            ║")
 print("║  " .. RandomQuote() .. "                              ║")
 print("║  Нажми на ватермак для открытия/закрытия             ║")
 print("╚═══════════════════════════════════════════════════════╝")

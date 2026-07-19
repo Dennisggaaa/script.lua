@@ -522,31 +522,7 @@ local PlayerListScroll = Instance.new("ScrollingFrame")
 PlayerListScroll.Size = UDim2.new(1, -20, 0, 120)
 PlayerListScroll.Position = UDim2.new(0, 10, 0, 30)
 PlayerListScroll.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-PlayerListScroll.BorderColor3 = Color3.fromRGB(100, 100, 100)
-PlayerListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-PlayerListScroll.ScrollBarThickness = 4
-PlayerListScroll.ZIndex = 10
-PlayerListScroll.Parent = FlingContainer
-
-local ListLayout = Instance.new("UIListLayout")
-ListLayout.Padding = UDim.new(0, 2)
-ListLayout.Parent = PlayerListScroll
-
-local function updatePlayerListForFling()
-    for _, child in ipairs(PlayerListScroll:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-    
-    local count = 0
-    for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
-        if p ~= game:GetService("Players").LocalPlayer then
-            count = count + 1
-            local PBtn = Instance.new("TextButton")
-            PBtn.Size = UDim2.new(1, -5, 0, 22)
-            PBtn.BackgroundColor3 = (selectedFlingTarget == p) and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(25, 25, 25)
-            PBtn.BorderSizePixel = 0
-            PBtn.Text = "  " .. p.Name
-            PBtn.TextColor3 = Color3.fromRGB(255,-- Контекст и инициализация хелперов
+-- Контекст и инициализация хелперов
 local MovementController = {}
 MovementController.__index = MovementController
 

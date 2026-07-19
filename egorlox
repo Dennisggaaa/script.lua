@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 local SeraphMenu = {}
@@ -10,19 +11,41 @@ SeraphMenu.ActiveTab = "AUTO-FARM"
 SeraphMenu.Tabs = {"AUTO-FARM"}
 SeraphMenu.Dragging = false
 SeraphMenu.Position = UDim2.new(0.05, 0, 0.1, 0)
-SeraphMenu.Size = UDim2.new(0, 500, 0, 550)
+SeraphMenu.Size = UDim2.new(0, 900, 0, 720)
 
 local FarmSettings = {
-    AutoBattle = false,
-    AutoRaid = false,
-    AutoRepeat = false,
-    AutoUpgrade = false,
-    AutoPlacement = false,
-    AutoSkipWaves = false
+    AutoQuest = false,
+    AutoFarmNPC = false,
+    AutoFruit = false,
+    AutoSideQuest = false,
+    AutoV2Quest = false,
+    AutoBoss = false,
+    AutoCollect = false,
+    AutoTeleport = false,
+    AutoHaki = false,
+    AutoStats = false,
+    AutoFishing = false,
+    AutoChest = false,
+    AntiAFK = false,
+    AutoSeaBeast = false,
+    AutoRaid = false
+}
+
+local FruitSpawnTimes = {
+    {"Flame", 0},
+    {"Ice", 0},
+    {"Dark", 0},
+    {"Light", 0},
+    {"Gravity", 0},
+    {"Dragon", 0},
+    {"Phoenix", 0},
+    {"Venom", 0},
+    {"Buddha", 0},
+    {"Rumble", 0}
 }
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphMenuGUI"
+ScreenGui.Name = "HazePieceFarmGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -214,7 +237,7 @@ GlowCorner.Parent = GlowOverlay
 
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
-TitleBar.Size = UDim2.new(1, 0, 0, 50)
+TitleBar.Size = UDim2.new(1, 0, 0, 55)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 18, 40)
 TitleBar.BackgroundTransparency = 0
 TitleBar.BorderSizePixel = 0
@@ -254,10 +277,10 @@ TitleGlow2.Parent = TitleBar
 
 local MenuWatermark = Instance.new("TextLabel")
 MenuWatermark.Name = "MenuWatermark"
-MenuWatermark.Size = UDim2.new(0, 200, 1, 0)
+MenuWatermark.Size = UDim2.new(0, 220, 1, 0)
 MenuWatermark.Position = UDim2.new(0, 15, 0, 0)
 MenuWatermark.BackgroundTransparency = 1
-MenuWatermark.Text = "⬡ SeraphiCA"
+MenuWatermark.Text = "⬡ Haze Piece Farm"
 MenuWatermark.TextColor3 = Color3.fromRGB(120, 200, 255)
 MenuWatermark.TextSize = 22
 MenuWatermark.Font = Enum.Font.GothamBold
@@ -270,7 +293,7 @@ VersionLabel.Name = "VersionLabel"
 VersionLabel.Size = UDim2.new(0, 100, 1, 0)
 VersionLabel.Position = UDim2.new(1, -110, 0, 0)
 VersionLabel.BackgroundTransparency = 1
-VersionLabel.Text = "v5.0"
+VersionLabel.Text = "v1.5"
 VersionLabel.TextColor3 = Color3.fromRGB(80, 80, 150)
 VersionLabel.TextSize = 14
 VersionLabel.Font = Enum.Font.Gotham
@@ -281,20 +304,20 @@ VersionLabel.Parent = TitleBar
 local TabContainer = Instance.new("Frame")
 TabContainer.Name = "TabContainer"
 TabContainer.Size = UDim2.new(1, -30, 0, 45)
-TabContainer.Position = UDim2.new(0, 15, 0, 60)
+TabContainer.Position = UDim2.new(0, 15, 0, 65)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MenuFrame
 
 local TabButton = Instance.new("TextButton")
 TabButton.Name = "AutoFarmTab"
-TabButton.Size = UDim2.new(0, 200, 1, -6)
-TabButton.Position = UDim2.new(0.5, -100, 0, 3)
+TabButton.Size = UDim2.new(0, 250, 1, -6)
+TabButton.Position = UDim2.new(0.5, -125, 0, 3)
 TabButton.BackgroundColor3 = Color3.fromRGB(35, 45, 95)
 TabButton.BackgroundTransparency = 0
 TabButton.BorderSizePixel = 0
-TabButton.Text = "⚡ AUTO-FARM"
+TabButton.Text = "⚡ HAZE FARM"
 TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-TabButton.TextSize = 18
+TabButton.TextSize = 20
 TabButton.Font = Enum.Font.GothamSemibold
 TabButton.Parent = TabContainer
 
@@ -315,14 +338,17 @@ local TabGlowCorner = Instance.new("UICorner")
 TabGlowCorner.CornerRadius = UDim.new(0, 2)
 TabGlowCorner.Parent = TabGlow
 
-local ContentFrame = Instance.new("Frame")
+local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -30, 1, -130)
-ContentFrame.Position = UDim2.new(0, 15, 0, 115)
+ContentFrame.Size = UDim2.new(1, -30, 1, -135)
+ContentFrame.Position = UDim2.new(0, 15, 0, 120)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(10, 12, 30)
 ContentFrame.BackgroundTransparency = 0.15
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ClipsDescendants = true
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 800)
+ContentFrame.ScrollBarThickness = 6
+ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 200, 255)
 ContentFrame.Parent = MenuFrame
 
 local ContentCorner = Instance.new("UICorner")
@@ -355,15 +381,15 @@ ContentGradient.Parent = ContentFrame
 local function CreateCheckbox(parent, label, settingKey, yPos)
     local row = Instance.new("Frame")
     row.Name = label .. "Row"
-    row.Size = UDim2.new(1, -20, 0, 40)
+    row.Size = UDim2.new(1, -20, 0, 38)
     row.Position = UDim2.new(0, 10, 0, yPos)
     row.BackgroundTransparency = 1
     row.Parent = parent
 
     local checkbox = Instance.new("Frame")
     checkbox.Name = "Checkbox"
-    checkbox.Size = UDim2.new(0, 24, 0, 24)
-    checkbox.Position = UDim2.new(0, 0, 0.5, -12)
+    checkbox.Size = UDim2.new(0, 22, 0, 22)
+    checkbox.Position = UDim2.new(0, 0, 0.5, -11)
     checkbox.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
     checkbox.BackgroundTransparency = 0
     checkbox.BorderSizePixel = 2
@@ -380,7 +406,7 @@ local function CreateCheckbox(parent, label, settingKey, yPos)
     checkmark.BackgroundTransparency = 1
     checkmark.Text = "✓"
     checkmark.TextColor3 = Color3.fromRGB(0, 255, 100)
-    checkmark.TextSize = 18
+    checkmark.TextSize = 16
     checkmark.Font = Enum.Font.GothamBold
     checkmark.TextXAlignment = Enum.TextXAlignment.Center
     checkmark.TextYAlignment = Enum.TextYAlignment.Center
@@ -390,11 +416,11 @@ local function CreateCheckbox(parent, label, settingKey, yPos)
     local labelText = Instance.new("TextLabel")
     labelText.Name = "Label"
     labelText.Size = UDim2.new(1, -40, 1, 0)
-    labelText.Position = UDim2.new(0, 35, 0, 0)
+    labelText.Position = UDim2.new(0, 32, 0, 0)
     labelText.BackgroundTransparency = 1
     labelText.Text = label
     labelText.TextColor3 = Color3.fromRGB(200, 200, 230)
-    labelText.TextSize = 16
+    labelText.TextSize = 15
     labelText.Font = Enum.Font.Gotham
     labelText.TextXAlignment = Enum.TextXAlignment.Left
     labelText.TextYAlignment = Enum.TextYAlignment.Center
@@ -409,12 +435,12 @@ local function CreateCheckbox(parent, label, settingKey, yPos)
 
     local status = Instance.new("TextLabel")
     status.Name = "Status"
-    status.Size = UDim2.new(0, 60, 1, 0)
-    status.Position = UDim2.new(1, -65, 0, 0)
+    status.Size = UDim2.new(0, 55, 1, 0)
+    status.Position = UDim2.new(1, -60, 0, 0)
     status.BackgroundTransparency = 1
     status.Text = "OFF"
     status.TextColor3 = Color3.fromRGB(255, 80, 80)
-    status.TextSize = 13
+    status.TextSize = 12
     status.Font = Enum.Font.GothamBold
     status.TextXAlignment = Enum.TextXAlignment.Right
     status.TextYAlignment = Enum.TextYAlignment.Center
@@ -425,7 +451,7 @@ local function CreateCheckbox(parent, label, settingKey, yPos)
     divider.Size = UDim2.new(1, 0, 0, 1)
     divider.Position = UDim2.new(0, 0, 1, 0)
     divider.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-    divider.BackgroundTransparency = 0.85
+    divider.BackgroundTransparency = 0.9
     divider.BorderSizePixel = 0
     divider.Parent = row
 
@@ -445,7 +471,7 @@ local function CreateCheckbox(parent, label, settingKey, yPos)
                 BackgroundColor3 = Color3.fromRGB(30, 35, 65)
             }):Play()
         end
-        print(string.format("[SeraphCA] %s: %s", label, active and "ON" or "OFF"))
+        print(string.format("[HazeFarm] %s: %s", label, active and "ON" or "OFF"))
     end)
 
     return row
@@ -453,27 +479,97 @@ end
 
 local yOffset = 10
 local options = {
-    {"Auto Battle", "AutoBattle"},
-    {"Auto Raid", "AutoRaid"},
-    {"Auto Repeat", "AutoRepeat"},
-    {"Auto Upgrade", "AutoUpgrade"},
-    {"Auto Placement", "AutoPlacement"},
-    {"Auto Skip Waves", "AutoSkipWaves"}
+    {"Auto Quest (NPC)", "AutoQuest"},
+    {"Auto Farm NPC", "AutoFarmNPC"},
+    {"Auto Fruit Farm", "AutoFruit"},
+    {"Auto Side Quests", "AutoSideQuest"},
+    {"Auto V2 Quest", "AutoV2Quest"},
+    {"Auto Boss Farm", "AutoBoss"},
+    {"Auto Collect Items", "AutoCollect"},
+    {"Auto Teleport", "AutoTeleport"},
+    {"Auto Haki Train", "AutoHaki"},
+    {"Auto Stats", "AutoStats"},
+    {"Auto Fishing", "AutoFishing"},
+    {"Auto Chests", "AutoChest"},
+    {"Anti AFK", "AntiAFK"},
+    {"Auto Sea Beast", "AutoSeaBeast"},
+    {"Auto Raid", "AutoRaid"}
 }
 
 for _, opt in ipairs(options) do
     CreateCheckbox(ContentFrame, opt[1], opt[2], yOffset)
-    yOffset = yOffset + 45
+    yOffset = yOffset + 42
 end
+
+local FruitTimerFrame = Instance.new("Frame")
+FruitTimerFrame.Name = "FruitTimerFrame"
+FruitTimerFrame.Size = UDim2.new(1, -20, 0, 65)
+FruitTimerFrame.Position = UDim2.new(0, 10, 0, yOffset + 10)
+FruitTimerFrame.BackgroundColor3 = Color3.fromRGB(15, 18, 40)
+FruitTimerFrame.BackgroundTransparency = 0.3
+FruitTimerFrame.BorderSizePixel = 0
+FruitTimerFrame.ClipsDescendants = true
+FruitTimerFrame.Parent = ContentFrame
+
+local FruitCorner = Instance.new("UICorner")
+FruitCorner.CornerRadius = UDim.new(0, 8)
+FruitCorner.Parent = FruitTimerFrame
+
+local FruitTitle = Instance.new("TextLabel")
+FruitTitle.Name = "FruitTitle"
+FruitTitle.Size = UDim2.new(1, 0, 0, 20)
+FruitTitle.Position = UDim2.new(0, 10, 0, 5)
+FruitTitle.BackgroundTransparency = 1
+FruitTitle.Text = "🍎 Fruit Spawn Timers"
+FruitTitle.TextColor3 = Color3.fromRGB(120, 200, 255)
+FruitTitle.TextSize = 15
+FruitTitle.Font = Enum.Font.GothamBold
+FruitTitle.TextXAlignment = Enum.TextXAlignment.Left
+FruitTitle.TextYAlignment = Enum.TextYAlignment.Center
+FruitTitle.Parent = FruitTimerFrame
+
+local FruitList = Instance.new("TextLabel")
+FruitList.Name = "FruitList"
+FruitList.Size = UDim2.new(1, -10, 1, -25)
+FruitList.Position = UDim2.new(0, 10, 0, 25)
+FruitList.BackgroundTransparency = 1
+FruitList.Text = "Loading timers..."
+FruitList.TextColor3 = Color3.fromRGB(180, 180, 210)
+FruitList.TextSize = 13
+FruitList.Font = Enum.Font.Gotham
+FruitList.TextXAlignment = Enum.TextXAlignment.Left
+FruitList.TextYAlignment = Enum.TextYAlignment.Top
+FruitList.TextWrapped = true
+FruitList.Parent = FruitTimerFrame
+
+task.spawn(function()
+    local elapsed = 0
+    while true do
+        task.wait(1)
+        elapsed = elapsed + 1
+        local fruitText = ""
+        for i, fruit in ipairs(FruitSpawnTimes) do
+            local timeLeft = math.max(0, 3600 - (elapsed + fruit[2]) % 3600)
+            local minutes = math.floor(timeLeft / 60)
+            local seconds = math.floor(timeLeft % 60)
+            fruitText = fruitText .. fruit[1] .. ": " .. string.format("%02d:%02d", minutes, seconds)
+            if i < #FruitSpawnTimes then fruitText = fruitText .. "  |  " end
+            if i % 3 == 0 and i < #FruitSpawnTimes then fruitText = fruitText .. "\n" end
+        end
+        FruitList.Text = fruitText
+    end
+end)
+
+yOffset = yOffset + 80
 
 local StartButton = Instance.new("TextButton")
 StartButton.Name = "StartButton"
-StartButton.Size = UDim2.new(0, 200, 0, 40)
-StartButton.Position = UDim2.new(0.5, -100, 1, -55)
+StartButton.Size = UDim2.new(0, 250, 0, 45)
+StartButton.Position = UDim2.new(0.5, -125, 0, yOffset)
 StartButton.BackgroundColor3 = Color3.fromRGB(35, 45, 95)
 StartButton.BackgroundTransparency = 0
 StartButton.BorderSizePixel = 0
-StartButton.Text = "▶ START FARM"
+StartButton.Text = "▶ START HAZE FARM"
 StartButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 StartButton.TextSize = 18
 StartButton.Font = Enum.Font.GothamBold
@@ -497,12 +593,19 @@ StartGlowCorner.CornerRadius = UDim.new(0, 2)
 StartGlowCorner.Parent = StartGlow
 
 StartButton.MouseButton1Click:Connect(function()
-    print("[SeraphCA] START FARM EXECUTED")
+    print("[HazeFarm] START FARM EXECUTED")
     print("=== ACTIVE SETTINGS ===")
+    local count = 0
     for key, value in pairs(FarmSettings) do
-        print(string.format("  %s: %s", key, value and "ON" or "OFF"))
+        if value then
+            print(string.format("  ✅ %s: ON", key))
+            count = count + 1
+        end
     end
-    print("========================")
+    if count == 0 then
+        print("  ⚠️ No features enabled!")
+    end
+    print("=========================")
 end)
 
 local function SetupDrag()
@@ -592,10 +695,29 @@ local function AnimateBorder()
 end
 coroutine.wrap(AnimateBorder)()
 
-print("SeraphCA v5.0 Loaded - AUTO-FARM Edition")
+local function RandomQuote()
+    local quotes = {
+        "The sea is vast... but so is my power.",
+        "Haki is the will of the strong.",
+        "Find the One Piece... or farm stats.",
+        "Who needs a crew when you have scripts?",
+        "Fruit spawn in 47 seconds... or not.",
+        "This island is too small for both of us.",
+        "Raid bosses drop nothing but pain.",
+        "V2 quest? More like V2 pain.",
+        "The Grand Line is just a big hallway.",
+        "If you can't dodge, just teleport.",
+        "Peace was never an option in Haze.",
+        "My haki is stronger than your WiFi.",
+        "Fishing is the true endgame."
+    }
+    return quotes[math.random(1, #quotes)]
+end
+
+print("Haze Piece Farm v1.5 Loaded")
 print("╔═══════════════════════════════════════════════════════╗")
-print("║  ⬡ SeraphiCA - Auto-Farm Manager                     ║")
-print("║  Features: Auto Battle, Raid, Repeat, Upgrade,       ║")
-print("║            Placement, Skip Waves                     ║")
+print("║  ⬡ Haze Piece - Auto Farm Manager                    ║")
+print("║  Features: 15+ farm options                          ║")
+print("║  " .. RandomQuote() .. "                              ║")
 print("║  Нажми на ватермак для открытия/закрытия             ║")
 print("╚═══════════════════════════════════════════════════════╝")

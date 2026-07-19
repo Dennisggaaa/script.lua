@@ -5,7 +5,6 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local ServerScriptService = game:GetService("ServerScriptService")
-local MarketplaceService = game:GetService("MarketplaceService")
 local LocalPlayer = Players.LocalPlayer
 
 local SeraphMenu = {
@@ -47,7 +46,7 @@ local function GetKyivTime()
     return os.date("!%H:%M:%S", kyivTime)
 end
 
--- ===================== WATERMARK (FIXED) =====================
+-- ===================== WATERMARK =====================
 local WatermarkContainer = Instance.new("Frame")
 WatermarkContainer.Name = "Watermark"
 WatermarkContainer.Size = UDim2.new(0, 220, 0, 35)
@@ -111,7 +110,7 @@ task.spawn(function()
     end
 end)
 
--- ===================== MAIN MENU =====================
+-- ===================== MENU =====================
 local MenuFrame = Instance.new("Frame")
 MenuFrame.Name = "MenuFrame"
 MenuFrame.Size = UDim2.new(0, 850, 0, 680)
@@ -265,7 +264,6 @@ local SettingsPanel = CreatePanel("SETTINGS")
 local function ScanGamePasses()
     local found = {}
     local containers = {ReplicatedStorage, Workspace, ServerScriptService}
-
     for _, container in ipairs(containers) do
         if container then
             for _, child in ipairs(container:GetDescendants()) do
@@ -286,7 +284,6 @@ local function ScanGamePasses()
                             end
                         end
                     end
-
                     if id and type(id) == "number" and id > 0 then
                         local nameDisplay = child.Name
                         if child:IsA("IntValue") and child.Parent then
@@ -298,7 +295,6 @@ local function ScanGamePasses()
             end
         end
     end
-
     local unique = {}
     local seen = {}
     for _, item in ipairs(found) do
@@ -389,7 +385,6 @@ local function BuildPassList(passes)
         btn:Destroy()
     end
     passButtons = {}
-
     if #passes == 0 then
         local emptyLabel = Instance.new("TextLabel")
         emptyLabel.Size = UDim2.new(1, 0, 0, 30)
@@ -405,7 +400,6 @@ local function BuildPassList(passes)
         GamePassList.CanvasSize = UDim2.new(0, 0, 0, 40)
         return
     end
-
     for i, gp in ipairs(passes) do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, -10, 0, 32)
@@ -429,7 +423,6 @@ local function BuildPassList(passes)
         highlight.BackgroundTransparency = 1
         highlight.BorderSizePixel = 0
         highlight.Parent = btn
-
         btn.MouseButton1Click:Connect(function()
             selectedPass = gp
             for _, b in pairs(passButtons) do
@@ -449,7 +442,6 @@ local function BuildPassList(passes)
             LogFrame.Visible = false
             LogText.Text = ""
         end)
-
         table.insert(passButtons, btn)
         GamePassList.CanvasSize = UDim2.new(0, 0, 0, i*35 + 10)
     end
@@ -997,15 +989,31 @@ local function SetupDrag()
 end
 SetupDrag()
 
--- ===================== TOGGLE MENU =====================
-WButton.MouseButton1Click:Connect(function()
+-- ===================== ГЛАВНАЯ ФУНКЦИЯ ОТКРЫТИЯ =====================
+local function ToggleMenu()
     SeraphMenu.Visible = not SeraphMenu.Visible
     MenuFrame.Visible = SeraphMenu.Visible
-end)
+end
 
-WatermarkContainer.MouseButton1Click:Connect(function()
-    SeraphMenu.Visible = not SeraphMenu.Visible
-    MenuFrame.Visible = SeraphMenu.Visible
+WButton.MouseButton1Click:Connect(ToggleMenu)
+WButton.TouchTap:Connect(ToggleMenu)
+WatermarkContainer.MouseButton1Click:Connect(ToggleMenu)
+WatermarkContainer.TouchTap:Connect(ToggleMenu)
+WText.MouseButton1Click:Connect(ToggleMenu)
+WText.TouchTap:Connect(ToggleMenu)
+
+-- Дополнительная гарантия через UserInputService
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local pos = input.Position
+        local absPos = WatermarkContainer.AbsolutePosition
+        local absSize = WatermarkContainer.AbsoluteSize
+        if pos.X >= absPos.X and pos.X <= absPos.X + absSize.X and
+           pos.Y >= absPos.Y and pos.Y <= absPos.Y + absSize.Y then
+            ToggleMenu()
+        end
+    end
 end)
 
 -- ===================== KEEP ON TOP =====================
@@ -1021,10 +1029,10 @@ local function KeepOnTop()
 end
 KeepOnTop()
 
-print("SeraphiCA Military Tycoon v3.1 (Fixed Watermark) Loaded")
+print("SeraphiCA Military Tycoon v3.1 (MENU FIXED) Loaded")
 print("╔═══════════════════════════════════════════════════════╗")
-print("║  ⚡ SeraphiCA - Military Tycoon (Fixed Watermark)     ║")
-print("║  🔥 SHOP-HACK: Dynamic GamePass Scanner               ║")
-print("║  📦 Ватермарк всегда видим и кликабелен              ║")
+print("║  ⚡ SeraphiCA - Military Tycoon (FULLY WORKING)       ║")
+print("║  🔥 МЕНЮ ТЕПЕРЬ ОТКРЫВАЕТСЯ ПО КЛИКУ НА ВАТЕРМАК     ║")
+print("║  📦 Dynamic GamePass Scanner                         ║")
 print("║  Нажми на ватермак для открытия/закрытия             ║")
 print("╚═══════════════════════════════════════════════════════╝")

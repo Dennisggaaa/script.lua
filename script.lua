@@ -59,10 +59,9 @@ FullscreenEspCanvas.BackgroundTransparency = 1
 FullscreenEspCanvas.ZIndex = 1
 FullscreenEspCanvas.Parent = ScreenGui
 
--- Переменные состояний fly и misk
+-- Переменные состояний fly
 local flyEnabled = false
 local flySpeedValue = 50
-local infiniteJumpEnabled = false -- Состояние для бесконечного прыжка
 local shopHackEnabled = false
 local flyController = MovementController.new()
 
@@ -75,12 +74,12 @@ local espSettings = {
     Distance = {enabled = false, color = Color3.fromRGB(255, 255, 0)}
 }
 
--- Настройки HIT-BOX
+-- Настройки HIT-BOX (Расширенные)
 local hitboxMasterEnabled = false
 local hitboxSizeValue = 2
 local showHitboxVisuals = false
-local hitboxColorValue = Color3.fromRGB(255, 0, 0)
-local hitboxTransparencyValue = 0.5
+local hitboxColor = Color3.fromRGB(255, 0, 0)       -- Дефолтный красный цвет
+local hitboxTransparencyValue = 0.5                  -- Дефолтные 50% прозрачности
 
 local function getSpeed() return flySpeedValue end
 local function getState() return flyEnabled end
@@ -93,22 +92,11 @@ game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Обработка бесконечного прыжка (Infinite Jump)
-game:GetService("UserInputService").JumpRequest:Connect(function()
-    if infiniteJumpEnabled then
-        local player = game:GetService("Players").LocalPlayer
-        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-end)
-
 -- Главная панель
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 480, 0, 290)
-MainFrame.Position = UDim2.new(0.5, -240, 0.5, -145)
+MainFrame.Size = UDim2.new(0, 480, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -130)
 MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 MainFrame.BorderSizePixel = 1
 MainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
@@ -117,7 +105,7 @@ MainFrame.Visible = false
 MainFrame.ZIndex = 5
 MainFrame.Parent = ScreenGui
 
--- Окно выбора цвета
+-- Окно графического выбора цвета (Color Picker)
 local ColorPickerFrame = Instance.new("Frame")
 ColorPickerFrame.Name = "ColorPickerFrame"
 ColorPickerFrame.Size = UDim2.new(0, 160, 0, 170)
@@ -176,7 +164,7 @@ end)
 -- Панель ESP Preview
 local PreviewFrame = Instance.new("Frame")
 PreviewFrame.Name = "PreviewFrame"
-PreviewFrame.Size = UDim2.new(0, 180, 1, 0)
+PreviewFrame.Size = UDim2.new(0, 180, 0, 260)
 PreviewFrame.Position = UDim2.new(1, 5, 0, 0)
 PreviewFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 PreviewFrame.BorderSizePixel = 1
@@ -204,7 +192,7 @@ Viewport.Parent = PreviewFrame
 
 local viewCam = Instance.new("Camera")
 Viewport.CurrentCamera = viewCam
-viewCam.Parent = viewCam
+viewCam.Parent = Viewport
 
 local previewChar = nil
 local previewHighlight = nil
@@ -221,7 +209,7 @@ local function updatePreviewCharacter()
         lp.Character.Archivable = false
         
         for _, obj in ipairs(previewChar:GetDescendants()) do
-            if obj:IsA("LuaSourceContainer") or obj:IsA("Highlight") or obj:IsA("BillboardGui") or obj:IsA("SelectionBox") or obj:IsA("BoxHandleAdornment") then
+            if obj:IsA("LuaSourceContainer") or obj:IsA("Highlight") or obj:IsA("BillboardGui") or obj:IsA("SelectionBox") then
                 obj:Destroy()
             end
         end
@@ -379,11 +367,10 @@ end
 showTab("MISK")
 
 ----------------------------------------------------
--- ВКЛАДКА MISK (ДОБАВЛЕН INFINITE JUMP)
+-- ВКЛАДКА MISK
 ----------------------------------------------------
 local MiskPage = tabPages["MISK"]
 
--- Строка Fly
 local FlyRow = Instance.new("Frame")
 FlyRow.Size = UDim2.new(1, 0, 0, 35)
 FlyRow.Position = UDim2.new(0, 0, 0, 5)
@@ -415,42 +402,9 @@ FlyCheckbox.TextSize = 18
 FlyCheckbox.ZIndex = 9
 FlyCheckbox.Parent = FlyRow
 
--- Строка InfJump (Новая кастомная функция)
-local InfJumpRow = Instance.new("Frame")
-InfJumpRow.Size = UDim2.new(1, 0, 0, 35)
-InfJumpRow.Position = UDim2.new(0, 0, 0, 40)
-InfJumpRow.BackgroundTransparency = 1
-InfJumpRow.ZIndex = 8
-InfJumpRow.Parent = MiskPage
-
-local InfJumpText = Instance.new("TextLabel")
-InfJumpText.Size = UDim2.new(0, 60, 0, 30)
-InfJumpText.Position = UDim2.new(0, 10, 0, 2)
-InfJumpText.BackgroundTransparency = 1
-InfJumpText.Text = "InfJump"
-InfJumpText.TextColor3 = Color3.fromRGB(255, 255, 255)
-InfJumpText.TextSize = 18
-InfJumpText.Font = Enum.Font.Arial
-InfJumpText.TextXAlignment = Enum.TextXAlignment.Left
-InfJumpText.ZIndex = 9
-InfJumpText.Parent = InfJumpRow
-
-local InfJumpCheckbox = Instance.new("TextButton")
-InfJumpCheckbox.Size = UDim2.new(0, 22, 0, 22)
-InfJumpCheckbox.Position = UDim2.new(0, 80, 0, 6)
-InfJumpCheckbox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-InfJumpCheckbox.BorderColor3 = Color3.fromRGB(255, 255, 255)
-InfJumpCheckbox.BorderSizePixel = 1
-InfJumpCheckbox.Text = ""
-InfJumpCheckbox.TextColor3 = Color3.fromRGB(255, 255, 255)
-InfJumpCheckbox.TextSize = 18
-InfJumpCheckbox.ZIndex = 9
-InfJumpCheckbox.Parent = InfJumpRow
-
--- Контейнер скорости Fly
 local SpeedContainer = Instance.new("Frame")
 SpeedContainer.Size = UDim2.new(1, 0, 0, 35)
-SpeedContainer.Position = UDim2.new(0, 0, 0, 80) -- Сдвинут вниз, чтобы не перекрывать кнопки
+SpeedContainer.Position = UDim2.new(0, 0, 0, 40)
 SpeedContainer.BackgroundTransparency = 1
 SpeedContainer.Visible = false
 SpeedContainer.ZIndex = 8
@@ -495,9 +449,554 @@ FlyCheckbox.MouseButton1Click:Connect(function()
     end
 end)
 
-InfJumpCheckbox.MouseButton1Click:Connect(function()
-    infiniteJumpEnabled = not infiniteJumpEnabled
-    InfJumpCheckbox.Text = infiniteJumpEnabled and "✓" or ""
+SpeedInput.TouchTap:Connect(function() SpeedInput:CaptureFocus() end)
+SpeedInput.FocusLost:Connect(function()
+    local val = tonumber(SpeedInput.Text)
+    if val then flySpeedValue = val else SpeedInput.Text = tostring(flySpeedValue) end
+end)
+
+----------------------------------------------------
+-- ВКЛАДКА ESP
+----------------------------------------------------
+local EspPage = tabPages["ESP"]
+
+local EspScroll = Instance.new("ScrollingFrame")
+EspScroll.Size = UDim2.new(1, 0, 1, 0)
+EspScroll.BackgroundTransparency = 1
+EspScroll.CanvasSize = UDim2.new(0, 0, 0, 240)
+EspScroll.ScrollBarThickness = 4
+EspScroll.ZIndex = 8
+EspScroll.Parent = EspPage
+
+local EspMasterRow = Instance.new("Frame")
+EspMasterRow.Size = UDim2.new(1, 0, 0, 35)
+EspMasterRow.Position = UDim2.new(0, 0, 0, 5)
+EspMasterRow.BackgroundTransparency = 1
+EspMasterRow.ZIndex = 9
+EspMasterRow.Parent = EspScroll
+
+local EspMasterText = Instance.new("TextLabel")
+EspMasterText.Size = UDim2.new(0, 40, 0, 30)
+EspMasterText.Position = UDim2.new(0, 10, 0, 2)
+EspMasterText.BackgroundTransparency = 1
+EspMasterText.Text = "ESP"
+EspMasterText.TextColor3 = Color3.fromRGB(255, 255, 255)
+EspMasterText.TextSize = 18
+EspMasterText.Font = Enum.Font.Arial
+EspMasterText.TextXAlignment = Enum.TextXAlignment.Left
+EspMasterText.ZIndex = 10
+EspMasterText.Parent = EspMasterRow
+
+local EspMasterCheckbox = Instance.new("TextButton")
+EspMasterCheckbox.Size = UDim2.new(0, 22, 0, 22)
+EspMasterCheckbox.Position = UDim2.new(0, 50, 0, 6)
+EspMasterCheckbox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+EspMasterCheckbox.BorderColor3 = Color3.fromRGB(255, 255, 255)
+EspMasterCheckbox.BorderSizePixel = 1
+EspMasterCheckbox.Text = ""
+EspMasterCheckbox.TextColor3 = Color3.fromRGB(255, 255, 255)
+EspMasterCheckbox.TextSize = 18
+EspMasterCheckbox.ZIndex = 10
+EspMasterCheckbox.Parent = EspMasterRow
+
+local EspSubContainer = Instance.new("Frame")
+EspSubContainer.Size = UDim2.new(1, 0, 0, 160)
+EspSubContainer.Position = UDim2.new(0, 0, 0, 40)
+EspSubContainer.BackgroundTransparency = 1
+EspSubContainer.Visible = false
+EspSubContainer.ZIndex = 9
+EspSubContainer.Parent = EspScroll
+
+local subFeatures = {"Outline", "NickName", "Distance"}
+
+for idx, featureName in ipairs(subFeatures) do
+    local offset = (idx - 1) * 35
+    
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1, 0, 0, 30)
+    Row.Position = UDim2.new(0, 0, 0, offset)
+    Row.BackgroundTransparency = 1
+    Row.ZIndex = 10
+    Row.Parent = EspSubContainer
+    
+    local TextLabel = Instance.new("TextLabel")
+    TextLabel.Size = UDim2.new(0, 80, 0, 25)
+    TextLabel.Position = UDim2.new(0, 25, 0, 2)
+    TextLabel.BackgroundTransparency = 1
+    TextLabel.Text = featureName
+    TextLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    TextLabel.TextSize = 15
+    TextLabel.Font = Enum.Font.Arial
+    TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TextLabel.ZIndex = 11
+    TextLabel.Parent = Row
+    
+    local Checkbox = Instance.new("TextButton")
+    Checkbox.Size = UDim2.new(0, 18, 0, 18)
+    Checkbox.Position = UDim2.new(0, 115, 0, 6)
+    Checkbox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    Checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
+    Checkbox.BorderSizePixel = 1
+    Checkbox.Text = ""
+    Checkbox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Checkbox.TextSize = 14
+    Checkbox.ZIndex = 11
+    Checkbox.Parent = Row
+    
+    local ColorPreviewBtn = Instance.new("TextButton")
+    ColorPreviewBtn.Size = UDim2.new(0, 50, 0, 20)
+    ColorPreviewBtn.Position = UDim2.new(0, 145, 0, 5)
+    ColorPreviewBtn.BackgroundColor3 = espSettings[featureName].color
+    ColorPreviewBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    ColorPrevie-- Контекст и инициализация хелперов
+local MovementController = {}
+MovementController.__index = MovementController
+
+function MovementController.new()
+    local self = setmetatable({}, MovementController)
+    self.connection = nil
+    self.velocityObject = nil
+    return self
+end
+
+function MovementController:ConnectToTarget(character, speedGetter, stateGetter)
+    self:Disconnect()
+    local hrp = character:WaitForChild("HumanoidRootPart")
+    local camera = workspace.CurrentCamera
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bv.Velocity = Vector3.new(0, 0, 0)
+    bv.Parent = hrp
+    self.velocityObject = bv
+    
+    self.connection = game:GetService("RunService").RenderStepped:Connect(function()
+        if not stateGetter() or not hrp.Parent then
+            self:Disconnect()
+            return
+        end
+        local moveDir = Vector3.new(0, 0, 0)
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            local dir = humanoid.MoveDirection
+            if dir.Magnitude > 0 then
+                moveDir = camera.CFrame.LookVector * dir.Magnitude
+            end
+        end
+        bv.Velocity = moveDir * speedGetter()
+    end)
+end
+
+function MovementController:Disconnect()
+    if self.connection then self.connection:Disconnect() self.connection = nil end
+    if self.velocityObject then self.velocityObject:Destroy() self.velocityObject = nil end
+end
+
+-- Инициализация GUI
+local targetGui = (pcall(function() return game:GetService("CoreGui") end) and game:GetService("CoreGui")) or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+if targetGui:FindFirstChild("SeraphCAMenu") then targetGui.SeraphCAMenu:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SeraphCAMenu"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 999
+ScreenGui.Parent = targetGui
+
+-- Холст для 2D элементов ESP
+local FullscreenEspCanvas = Instance.new("Frame")
+FullscreenEspCanvas.Name = "FullscreenEspCanvas"
+FullscreenEspCanvas.Size = UDim2.new(1, 0, 1, 0)
+FullscreenEspCanvas.BackgroundTransparency = 1
+FullscreenEspCanvas.ZIndex = 1
+FullscreenEspCanvas.Parent = ScreenGui
+
+-- Переменные состояний fly
+local flyEnabled = false
+local flySpeedValue = 50
+local shopHackEnabled = false
+local flyController = MovementController.new()
+
+-- Настройки ESP
+local espMasterEnabled = false
+local currentTab = "MISK"
+local espSettings = {
+    Outline = {enabled = false, color = Color3.fromRGB(255, 0, 0)},
+    NickName = {enabled = false, color = Color3.fromRGB(0, 255, 255)},
+    Distance = {enabled = false, color = Color3.fromRGB(255, 255, 0)}
+}
+
+-- Настройки HIT-BOX (Расширенные)
+local hitboxMasterEnabled = false
+local hitboxSizeValue = 2
+local showHitboxVisuals = false
+local hitboxColor = Color3.fromRGB(255, 0, 0)       -- Дефолтный красный цвет
+local hitboxTransparencyValue = 0.5                  -- Дефолтные 50% прозрачности
+
+local function getSpeed() return flySpeedValue end
+local function getState() return flyEnabled end
+
+game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function(char)
+    flyController:Disconnect()
+    if flyEnabled then
+        task.wait(0.5)
+        flyController:ConnectToTarget(char, getSpeed, getState)
+    end
+end)
+
+-- Главная панель
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 480, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -130)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.BorderSizePixel = 1
+MainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+MainFrame.Active = true
+MainFrame.Visible = false 
+MainFrame.ZIndex = 5
+MainFrame.Parent = ScreenGui
+
+-- Окно графического выбора цвета (Color Picker)
+local ColorPickerFrame = Instance.new("Frame")
+ColorPickerFrame.Name = "ColorPickerFrame"
+ColorPickerFrame.Size = UDim2.new(0, 160, 0, 170)
+ColorPickerFrame.Position = UDim2.new(0.5, -80, 0.5, -85)
+ColorPickerFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+ColorPickerFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+ColorPickerFrame.BorderSizePixel = 1
+ColorPickerFrame.Visible = false
+ColorPickerFrame.ZIndex = 20
+ColorPickerFrame.Parent = ScreenGui
+
+local ColorPickerGrid = Instance.new("Frame")
+ColorPickerGrid.Size = UDim2.new(1, -10, 1, -40)
+ColorPickerGrid.Position = UDim2.new(0, 5, 0, 5)
+ColorPickerGrid.BackgroundTransparency = 1
+ColorPickerGrid.ZIndex = 21
+ColorPickerGrid.Parent = ColorPickerFrame
+
+local UIGridLayout = Instance.new("UIGridLayout")
+UIGridLayout.CellSize = UDim2.new(0, 22, 0, 22)
+UIGridLayout.CellPadding = UDim2.new(0, 3, 0, 3)
+UIGridLayout.Parent = ColorPickerGrid
+
+local ClosePickerBtn = Instance.new("TextButton")
+ClosePickerBtn.Size = UDim2.new(1, -10, 0, 25)
+ClosePickerBtn.Position = UDim2.new(0, 5, 1, -30)
+ClosePickerBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ClosePickerBtn.Text = "Закрыть"
+ClosePickerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ClosePickerBtn.TextSize = 12
+ClosePickerBtn.ZIndex = 21
+ClosePickerBtn.Parent = ColorPickerFrame
+
+local presetColors = {
+    Color3.fromRGB(255, 0, 0), Color3.fromRGB(255, 128, 0), Color3.fromRGB(255, 255, 0), Color3.fromRGB(128, 255, 0),
+    Color3.fromRGB(0, 255, 0), Color3.fromRGB(0, 255, 128), Color3.fromRGB(0, 255, 255), Color3.fromRGB(0, 128, 255),
+    Color3.fromRGB(0, 0, 255), Color3.fromRGB(128, 0, 255), Color3.fromRGB(255, 0, 255), Color3.fromRGB(255, 0, 128),
+    Color3.fromRGB(255, 255, 255), Color3.fromRGB(170, 170, 170), Color3.fromRGB(85, 85, 85), Color3.fromRGB(0, 0, 0)
+}
+
+local activePickingFeature = nil
+local activeColorButtonRef = nil
+
+local function openColorPicker(featureName, buttonRef)
+    activePickingFeature = featureName
+    activeColorButtonRef = buttonRef
+    ColorPickerFrame.Visible = true
+end
+
+ClosePickerBtn.MouseButton1Click:Connect(function()
+    ColorPickerFrame.Visible = false
+    activePickingFeature = nil
+    activeColorButtonRef = nil
+end)
+
+-- Панель ESP Preview
+local PreviewFrame = Instance.new("Frame")
+PreviewFrame.Name = "PreviewFrame"
+PreviewFrame.Size = UDim2.new(0, 180, 0, 260)
+PreviewFrame.Position = UDim2.new(1, 5, 0, 0)
+PreviewFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+PreviewFrame.BorderSizePixel = 1
+PreviewFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+PreviewFrame.Visible = false
+PreviewFrame.ZIndex = 5
+PreviewFrame.Parent = MainFrame
+
+local PreviewTitle = Instance.new("TextLabel")
+PreviewTitle.Size = UDim2.new(1, 0, 0, 25)
+PreviewTitle.BackgroundTransparency = 1
+PreviewTitle.Text = "ESP PREVIEW"
+PreviewTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+PreviewTitle.TextSize = 14
+PreviewTitle.Font = Enum.Font.ArialBold
+PreviewTitle.ZIndex = 6
+PreviewTitle.Parent = PreviewFrame
+
+local Viewport = Instance.new("ViewportFrame")
+Viewport.Size = UDim2.new(1, -10, 1, -35)
+Viewport.Position = UDim2.new(0, 5, 0, 30)
+Viewport.BackgroundTransparency = 1
+Viewport.ZIndex = 6
+Viewport.Parent = PreviewFrame
+
+local viewCam = Instance.new("Camera")
+Viewport.CurrentCamera = viewCam
+viewCam.Parent = Viewport
+
+local previewChar = nil
+local previewHighlight = nil
+local currentRotationY = 180 
+local isRotating = false
+local lastInputPos = nil
+
+local function updatePreviewCharacter()
+    if previewChar then previewChar:Destroy() end
+    local lp = game:GetService("Players").LocalPlayer
+    if lp.Character then
+        lp.Character.Archivable = true
+        previewChar = lp.Character:Clone()
+        lp.Character.Archivable = false
+        
+        for _, obj in ipairs(previewChar:GetDescendants()) do
+            if obj:IsA("LuaSourceContainer") or obj:IsA("Highlight") or obj:IsA("BillboardGui") or obj:IsA("SelectionBox") then
+                obj:Destroy()
+            end
+        end
+        
+        previewHighlight = Instance.new("Highlight")
+        previewHighlight.Name = "PreviewHighlight"
+        previewHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        previewHighlight.FillTransparency = 0.5
+        previewHighlight.OutlineTransparency = 0
+        previewHighlight.Parent = previewChar
+        
+        previewChar:SetPrimaryPartCFrame(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(currentRotationY), 0))
+        previewChar.Parent = Viewport
+        
+        viewCam.CFrame = CFrame.new(Vector3.new(0, 0.5, 6), Vector3.new(0, 0, 0))
+    end
+end
+
+Viewport.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isRotating = true lastInputPos = input.Position
+    end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if isRotating and lastInputPos and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local deltaX = input.Position.X - lastInputPos.X
+        lastInputPos = input.Position
+        currentRotationY = currentRotationY - (deltaX * 0.8)
+        if previewChar and previewChar.PrimaryPart then
+            previewChar:SetPrimaryPartCFrame(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(currentRotationY), 0))
+        end
+    end
+end)
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isRotating = false end
+end)
+
+local PreviewOverlay = Instance.new("Frame")
+PreviewOverlay.Size = UDim2.new(1, 0, 1, 0)
+PreviewOverlay.BackgroundTransparency = 1
+PreviewOverlay.ZIndex = 7
+PreviewOverlay.Parent = Viewport
+
+local function updatePreviewVisibility()
+    if MainFrame.Visible and currentTab == "ESP" and espMasterEnabled then
+        PreviewFrame.Visible = true
+        updatePreviewCharacter()
+    else
+        PreviewFrame.Visible = false
+    end
+end
+
+-- Кнопка меню
+local WatermarkButton = Instance.new("TextButton")
+WatermarkButton.Name = "WatermarkButton"
+WatermarkButton.Size = UDim2.new(0, 140, 0, 35)
+WatermarkButton.Position = UDim2.new(0, 20, 0, 70)
+WatermarkButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+WatermarkButton.Text = "SeraphCA"
+WatermarkButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+WatermarkButton.TextSize = 18
+WatermarkButton.Font = Enum.Font.Arial
+WatermarkButton.ZIndex = 10
+WatermarkButton.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = WatermarkButton
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(255, 255, 255)
+UIStroke.Thickness = 1
+UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+UIStroke.Parent = WatermarkButton
+
+WatermarkButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    updatePreviewVisibility()
+end)
+
+-- Драг меню
+local dragging, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true dragStart = input.Position startPos = MainFrame.Position
+    end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+end)
+
+local Separator = Instance.new("Frame")
+Separator.Size = UDim2.new(1, -20, 0, 2)
+Separator.Position = UDim2.new(0, 10, 0, 45)
+Separator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Separator.ZIndex = 6
+Separator.Parent = MainFrame
+
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Size = UDim2.new(1, -20, 1, -60)
+ContentContainer.Position = UDim2.new(0, 10, 0, 55)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.ZIndex = 6
+ContentContainer.Parent = MainFrame
+
+local tabNames = {"MISK", "ESP", "HIT-BOX", "SHOP-HACK"}
+local tabButtons = {}
+local tabPages = {}
+
+local function showTab(targetName)
+    currentTab = targetName
+    for _, name in ipairs(tabNames) do
+        if name == targetName then
+            tabPages[name].Visible = true
+            tabButtons[name].TextColor3 = Color3.fromRGB(255, 255, 255)
+        else
+            tabPages[name].Visible = false
+            tabButtons[name].TextColor3 = Color3.fromRGB(130, 130, 130)
+        end
+    end
+    updatePreviewVisibility()
+end
+
+for i, name in ipairs(tabNames) do
+    local TabButton = Instance.new("TextButton")
+    TabButton.Name = name .. "Tab"
+    TabButton.Size = UDim2.new(0, 90, 0, 30)
+    TabButton.Position = UDim2.new(0, 10 + ((i-1) * 105), 0, 10)
+    TabButton.BackgroundTransparency = 1
+    TabButton.Text = name
+    TabButton.TextSize = 15
+    TabButton.Font = Enum.Font.Arial
+    TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabButton.ZIndex = 7
+    TabButton.Parent = MainFrame
+    
+    tabButtons[name] = TabButton
+    
+    local Page = Instance.new("Frame")
+    Page.Size = UDim2.new(1, 0, 1, 0)
+    Page.BackgroundTransparency = 1
+    Page.Visible = false
+    Page.ZIndex = 7
+    Page.Parent = ContentContainer
+    
+    tabPages[name] = Page
+    TabButton.MouseButton1Click:Connect(function() showTab(name) end)
+end
+showTab("MISK")
+
+----------------------------------------------------
+-- ВКЛАДКА MISK
+----------------------------------------------------
+local MiskPage = tabPages["MISK"]
+
+local FlyRow = Instance.new("Frame")
+FlyRow.Size = UDim2.new(1, 0, 0, 35)
+FlyRow.Position = UDim2.new(0, 0, 0, 5)
+FlyRow.BackgroundTransparency = 1
+FlyRow.ZIndex = 8
+FlyRow.Parent = MiskPage
+
+local FlyText = Instance.new("TextLabel")
+FlyText.Size = UDim2.new(0, 40, 0, 30)
+FlyText.Position = UDim2.new(0, 10, 0, 2)
+FlyText.BackgroundTransparency = 1
+FlyText.Text = "Fly"
+FlyText.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlyText.TextSize = 18
+FlyText.Font = Enum.Font.Arial
+FlyText.TextXAlignment = Enum.TextXAlignment.Left
+FlyText.ZIndex = 9
+FlyText.Parent = FlyRow
+
+local FlyCheckbox = Instance.new("TextButton")
+FlyCheckbox.Size = UDim2.new(0, 22, 0, 22)
+FlyCheckbox.Position = UDim2.new(0, 50, 0, 6)
+FlyCheckbox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+FlyCheckbox.BorderColor3 = Color3.fromRGB(255, 255, 255)
+FlyCheckbox.BorderSizePixel = 1
+FlyCheckbox.Text = ""
+FlyCheckbox.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlyCheckbox.TextSize = 18
+FlyCheckbox.ZIndex = 9
+FlyCheckbox.Parent = FlyRow
+
+local SpeedContainer = Instance.new("Frame")
+SpeedContainer.Size = UDim2.new(1, 0, 0, 35)
+SpeedContainer.Position = UDim2.new(0, 0, 0, 40)
+SpeedContainer.BackgroundTransparency = 1
+SpeedContainer.Visible = false
+SpeedContainer.ZIndex = 8
+SpeedContainer.Parent = MiskPage
+
+local SpeedText = Instance.new("TextLabel")
+SpeedText.Size = UDim2.new(0, 80, 0, 25)
+SpeedText.Position = UDim2.new(0, 10, 0, 5)
+SpeedText.BackgroundTransparency = 1
+SpeedText.Text = "FlySpeed"
+SpeedText.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedText.TextSize = 16
+SpeedText.TextXAlignment = Enum.TextXAlignment.Left
+SpeedText.ZIndex = 9
+SpeedText.Parent = SpeedContainer
+
+local SpeedInput = Instance.new("TextBox")
+SpeedInput.Size = UDim2.new(0, 60, 0, 22)
+SpeedInput.Position = UDim2.new(0, 100, 0, 6)
+SpeedInput.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SpeedInput.BorderColor3 = Color3.fromRGB(255, 255, 255)
+SpeedInput.BorderSizePixel = 1
+SpeedInput.Text = tostring(flySpeedValue)
+SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedInput.TextSize = 14
+SpeedInput.ClearTextOnFocus = false
+SpeedInput.ZIndex = 9
+SpeedInput.Parent = SpeedContainer
+
+FlyCheckbox.MouseButton1Click:Connect(function()
+    flyEnabled = not flyEnabled
+    if flyEnabled then
+        FlyCheckbox.Text = "✓"
+        SpeedContainer.Visible = true
+        if game:GetService("Players").LocalPlayer.Character then
+            flyController:ConnectToTarget(game:GetService("Players").LocalPlayer.Character, getSpeed, getState)
+        end
+    else
+        FlyCheckbox.Text = ""
+        SpeedContainer.Visible = false
+        flyController:Disconnect()
+    end
 end)
 
 SpeedInput.TouchTap:Connect(function() SpeedInput:CaptureFocus() end)
@@ -625,8 +1124,8 @@ for _, color in ipairs(presetColors) do
     
     Tile.MouseButton1Click:Connect(function()
         if activePickingFeature and activeColorButtonRef then
-            if activePickingFeature == "HITBOX_COLOR" then
-                hitboxColorValue = color
+            if activePickingFeature == "HitboxColor" then
+                hitboxColor = color
             else
                 espSettings[activePickingFeature].color = color
             end
@@ -647,7 +1146,7 @@ EspMasterCheckbox.MouseButton1Click:Connect(function()
 end)
 
 ----------------------------------------------------
--- ВКЛАДКА HIT-BOX
+-- ВКЛАДКА HIT-BOX (РАСШИРЕННАЯ НАСТРОЙКА И УДОБНЫЕ ПОЛЗУНКИ)
 ----------------------------------------------------
 local HitboxPage = tabPages["HIT-BOX"]
 
@@ -668,8 +1167,9 @@ HitboxText.TextSize = 18
 HitboxText.Font = Enum.Font.Arial
 HitboxText.TextXAlignment = Enum.TextXAlignment.Left
 HitboxText.ZIndex = 9
-HitboxText.Parent = HitboxMasterRow
+HitboxMasterRow.Parent = HitboxPage
 
+-- Кубик переключателя
 local HitboxCheckbox = Instance.new("TextButton")
 HitboxCheckbox.Size = UDim2.new(0, 22, 0, 22)
 HitboxCheckbox.Position = UDim2.new(0, 80, 0, 6)
@@ -682,17 +1182,19 @@ HitboxCheckbox.TextSize = 18
 HitboxCheckbox.ZIndex = 9
 HitboxCheckbox.Parent = HitboxMasterRow
 
+-- Контейнер настроек
 local HitboxSettingsContainer = Instance.new("Frame")
-HitboxSettingsContainer.Size = UDim2.new(1, 0, 1, -40)
+HitboxSettingsContainer.Size = UDim2.new(1, 0, 0, 160)
 HitboxSettingsContainer.Position = UDim2.new(0, 0, 0, 40)
 HitboxSettingsContainer.BackgroundTransparency = 1
 HitboxSettingsContainer.Visible = false
 HitboxSettingsContainer.ZIndex = 8
 HitboxSettingsContainer.Parent = HitboxPage
 
+-- --- НАСТРОЙКА РАЗМЕРА (СЛАЙДЕР СДЕЛАН БОЛЬШЕ С 220 ДО 280) ---
 local SizeTitle = Instance.new("TextLabel")
 SizeTitle.Size = UDim2.new(0, 100, 0, 20)
-SizeTitle.Position = UDim2.new(0, 10, 0, 0)
+SizeTitle.Position = UDim2.new(0, 10, 0, 5)
 SizeTitle.BackgroundTransparency = 1
 SizeTitle.Text = "hitbox size"
 SizeTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -703,15 +1205,15 @@ SizeTitle.ZIndex = 9
 SizeTitle.Parent = HitboxSettingsContainer
 
 local SliderBar = Instance.new("Frame")
-SliderBar.Size = UDim2.new(0, 220, 0, 8)
-SliderBar.Position = UDim2.new(0, 10, 0, 25)
+SliderBar.Size = UDim2.new(0, 280, 0, 6) -- Увеличен в длину и толщину для точности
+SliderBar.Position = UDim2.new(0, 10, 0, 30)
 SliderBar.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 SliderBar.BorderSizePixel = 0
 SliderBar.ZIndex = 9
 SliderBar.Parent = HitboxSettingsContainer
 
 local SliderButton = Instance.new("TextButton")
-SliderButton.Size = UDim2.new(0, 20, 0, 24)
+SliderButton.Size = UDim2.new(0, 14, 0, 20) -- Увеличен сам ползунок
 SliderButton.AnchorPoint = Vector2.new(0.5, 0.5)
 SliderButton.Position = UDim2.new(0, 0, 0.5, 0)
 SliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -721,7 +1223,7 @@ SliderButton.Parent = SliderBar
 
 local SizeValueLabel = Instance.new("TextLabel")
 SizeValueLabel.Size = UDim2.new(0, 50, 0, 20)
-SizeValueLabel.Position = UDim2.new(0, 240, 0, 18)
+SizeValueLabel.Position = UDim2.new(0, 300, 0, 23)
 SizeValueLabel.BackgroundTransparency = 1
 SizeValueLabel.Text = "2"
 SizeValueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -731,11 +1233,12 @@ SizeValueLabel.TextXAlignment = Enum.TextXAlignment.Left
 SizeValueLabel.ZIndex = 9
 SizeValueLabel.Parent = HitboxSettingsContainer
 
+-- --- НАСТРОЙКА ПРОЗРАЧНОСТИ (НОВЫЙ СЛАЙДЕР) ---
 local TransTitle = Instance.new("TextLabel")
-TransTitle.Size = UDim2.new(0, 150, 0, 20)
-TransTitle.Position = UDim2.new(0, 10, 0, 50)
+TransTitle.Size = UDim2.new(0, 100, 0, 20)
+TransTitle.Position = UDim2.new(0, 10, 0, 55)
 TransTitle.BackgroundTransparency = 1
-TransTitle.Text = "hitbox transparency (%)"
+TransTitle.Text = "transparency"
 TransTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
 TransTitle.TextSize = 14
 TransTitle.Font = Enum.Font.Arial
@@ -744,17 +1247,17 @@ TransTitle.ZIndex = 9
 TransTitle.Parent = HitboxSettingsContainer
 
 local TransSliderBar = Instance.new("Frame")
-TransSliderBar.Size = UDim2.new(0, 220, 0, 8)
-TransSliderBar.Position = UDim2.new(0, 10, 0, 75)
+TransSliderBar.Size = UDim2.new(0, 280, 0, 6)
+TransSliderBar.Position = UDim2.new(0, 10, 0, 80)
 TransSliderBar.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 TransSliderBar.BorderSizePixel = 0
 TransSliderBar.ZIndex = 9
-TransSliderBar.Parent = TransSliderBar
+TransSliderBar.Parent = HitboxSettingsContainer
 
 local TransSliderButton = Instance.new("TextButton")
-TransSliderButton.Size = UDim2.new(0, 20, 0, 24)
+TransSliderButton.Size = UDim2.new(0, 14, 0, 20)
 TransSliderButton.AnchorPoint = Vector2.new(0.5, 0.5)
-TransSliderButton.Position = UDim2.new(0.5, 0, 0.5, 0)
+TransSliderButton.Position = UDim2.new(0.5, 0, 0.5, 0) -- Дефолтно стоит на 50%
 TransSliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 TransSliderButton.Text = ""
 TransSliderButton.ZIndex = 10
@@ -762,7 +1265,7 @@ TransSliderButton.Parent = TransSliderBar
 
 local TransValueLabel = Instance.new("TextLabel")
 TransValueLabel.Size = UDim2.new(0, 50, 0, 20)
-TransValueLabel.Position = UDim2.new(0, 240, 0, 68)
+TransValueLabel.Position = UDim2.new(0, 300, 0, 73)
 TransValueLabel.BackgroundTransparency = 1
 TransValueLabel.Text = "50%"
 TransValueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -772,67 +1275,68 @@ TransValueLabel.TextXAlignment = Enum.TextXAlignment.Left
 TransValueLabel.ZIndex = 9
 TransValueLabel.Parent = HitboxSettingsContainer
 
-local ColorTitle = Instance.new("TextLabel")
-ColorTitle.Size = UDim2.new(0, 50, 0, 20)
-ColorTitle.Position = UDim2.new(0, 10, 0, 105)
-ColorTitle.BackgroundTransparency = 1
-ColorTitle.Text = "Color:"
-ColorTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
-ColorTitle.TextSize = 14
-ColorTitle.Font = Enum.Font.Arial
-ColorTitle.TextXAlignment = Enum.TextXAlignment.Left
-ColorTitle.ZIndex = 9
-ColorTitle.Parent = HitboxSettingsContainer
-
-local HitboxColorBtn = Instance.new("TextButton")
-HitboxColorBtn.Size = UDim2.new(0, 50, 0, 20)
-HitboxColorBtn.Position = UDim2.new(0, 60, 0, 105)
-HitboxColorBtn.BackgroundColor3 = hitboxColorValue
-HitboxColorBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
-HitboxColorBtn.Text = ""
-HitboxColorBtn.ZIndex = 9
-HitboxColorBtn.Parent = HitboxSettingsContainer
-
+-- --- НИЖНЯЯ СТРОКА: SHOW BUTTON И COLOR PICKER ---
 local ShowHitboxBtn = Instance.new("TextButton")
-ShowHitboxBtn.Size = UDim2.new(0, 140, 0, 30)
-ShowHitboxBtn.Position = UDim2.new(0, 10, 0, 135)
+ShowHitboxBtn.Size = UDim2.new(0, 110, 0, 26)
+ShowHitboxBtn.Position = UDim2.new(0, 10, 0, 110)
 ShowHitboxBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 ShowHitboxBtn.BorderColor3 = Color3.fromRGB(100, 100, 100)
 ShowHitboxBtn.Text = "Show Hit-Box"
 ShowHitboxBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
-ShowHitboxBtn.TextSize = 14
+ShowHitboxBtn.TextSize = 13
 ShowHitboxBtn.Font = Enum.Font.Arial
 ShowHitboxBtn.ZIndex = 9
 ShowHitboxBtn.Parent = HitboxSettingsContainer
 
+local HitboxColorPreviewBtn = Instance.new("TextButton")
+HitboxColorPreviewBtn.Size = UDim2.new(0, 45, 0, 26)
+HitboxColorPreviewBtn.Position = UDim2.new(0, 130, 0, 110)
+HitboxColorPreviewBtn.BackgroundColor3 = hitboxColor
+HitboxColorPreviewBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
+HitboxColorPreviewBtn.BorderSizePixel = 1
+HitboxColorPreviewBtn.Text = ""
+HitboxColorPreviewBtn.ZIndex = 9
+HitboxColorPreviewBtn.Parent = HitboxSettingsContainer
+
+-- Логика слайдера размера (Мин: 2, Макс: 200)
 local isSlidingSize = false
+local function updateSizeSlider(inputPosition)
+    local relativeX = inputPosition.X - SliderBar.AbsolutePosition.X
+    local percentage = math.clamp(relativeX / SliderBar.AbsoluteSize.X, 0, 1)
+    hitboxSizeValue = math.round(2 + (percentage * 198))
+    SliderButton.Position = UDim2.new(percentage, 0, 0.5, 0)
+    SizeValueLabel.Text = tostring(hitboxSizeValue)
+end
+
 SliderButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isSlidingSize = true end
 end)
 game:GetService("UserInputService").InputChanged:Connect(function(input)
     if isSlidingSize and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local relativeX = input.Position.X - SliderBar.AbsolutePosition.X
-        local percentage = math.clamp(relativeX / SliderBar.AbsoluteSize.X, 0, 1)
-        hitboxSizeValue = math.round(2 + (percentage * 198))
-        SliderButton.Position = UDim2.new(percentage, 0, 0.5, 0)
-        SizeValueLabel.Text = tostring(hitboxSizeValue)
+        updateSizeSlider(input.Position)
     end
 end)
 
+-- Логика слайдера прозрачности (0.0 - 1.0)
 local isSlidingTrans = false
+local function updateTransSlider(inputPosition)
+    local relativeX = inputPosition.X - TransSliderBar.AbsolutePosition.X
+    local percentage = math.clamp(relativeX / TransSliderBar.AbsoluteSize.X, 0, 1)
+    hitboxTransparencyValue = percentage
+    TransSliderButton.Position = UDim2.new(percentage, 0, 0.5, 0)
+    TransValueLabel.Text = math.round(percentage * 100) .. "%"
+end
+
 TransSliderButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isSlidingTrans = true end
 end)
 game:GetService("UserInputService").InputChanged:Connect(function(input)
     if isSlidingTrans and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local relativeX = input.Position.X - TransSliderBar.AbsolutePosition.X
-        local percentage = math.clamp(relativeX / TransSliderBar.AbsoluteSize.X, 0, 1)
-        hitboxTransparencyValue = percentage
-        TransSliderButton.Position = UDim2.new(percentage, 0, 0.5, 0)
-        TransValueLabel.Text = math.round(percentage * 100) .. "%"
+        updateTransSlider(input.Position)
     end
 end)
 
+-- Глобальный сброс перетаскивания ползунков
 game:GetService("UserInputService").InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         isSlidingSize = false
@@ -840,16 +1344,19 @@ game:GetService("UserInputService").InputEnded:Connect(function(input)
     end
 end)
 
-HitboxColorBtn.MouseButton1Click:Connect(function()
-    openColorPicker("HITBOX_COLOR", HitboxColorBtn)
+-- Выбор цвета для хитбокса
+HitboxColorPreviewBtn.MouseButton1Click:Connect(function()
+    openColorPicker("HitboxColor", HitboxColorPreviewBtn)
 end)
 
+-- Активация хитбоксов
 HitboxCheckbox.MouseButton1Click:Connect(function()
     hitboxMasterEnabled = not hitboxMasterEnabled
     HitboxCheckbox.Text = hitboxMasterEnabled and "✓" or ""
     HitboxSettingsContainer.Visible = hitboxMasterEnabled
 end)
 
+-- Переключатель Show Hit-Box визуалов
 ShowHitboxBtn.MouseButton1Click:Connect(function()
     showHitboxVisuals = not showHitboxVisuals
     if showHitboxVisuals then
@@ -864,7 +1371,73 @@ ShowHitboxBtn.MouseButton1Click:Connect(function()
 end)
 
 ----------------------------------------------------
--- МИРОВОЙ ЦИКЛ ОТРЕСОВКИ ESP И ХИТБОКСОВ
+-- ОБНОВЛЕНИЕ ПРЕВЬЮ ОКНА С HIGHLIGHT
+----------------------------------------------------
+local previewVisuals = {}
+local function createPreviewVisuals()
+    for _, v in pairs(previewVisuals) do v:Destroy() end
+    previewVisuals = {}
+    
+    local nick = Instance.new("TextLabel")
+    nick.Size = UDim2.new(1, 0, 0, 20)
+    nick.Position = UDim2.new(0, 0, 0.5, -90)
+    nick.BackgroundTransparency = 1
+    nick.Font = Enum.Font.ArialBold
+    nick.TextSize = 13
+    nick.ZIndex = 8
+    nick.Parent = PreviewOverlay
+    previewVisuals.Nick = nick
+
+    local dist = Instance.new("TextLabel")
+    dist.Size = UDim2.new(1, 0, 0, 20)
+    dist.Position = UDim2.new(0, 0, 0.5, 80)
+    dist.BackgroundTransparency = 1
+    dist.Font = Enum.Font.Arial
+    dist.TextSize = 11
+    dist.ZIndex = 8
+    dist.Parent = PreviewOverlay
+    previewVisuals.Dist = dist
+end
+createPreviewVisuals()
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if not PreviewFrame.Visible or not previewChar then return end
+    
+    if not isRotating then
+        local diff = 180 - currentRotationY
+        if math.abs(diff) > 0.05 then currentRotationY = currentRotationY + (diff * 0.15) else currentRotationY = 180 end
+        if previewChar.PrimaryPart then previewChar:SetPrimaryPartCFrame(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(currentRotationY), 0)) end
+    end
+    
+    if previewHighlight then
+        if espSettings.Outline.enabled then
+            previewHighlight.Enabled = true
+            previewHighlight.FillColor = espSettings.Outline.color
+            previewHighlight.OutlineColor = espSettings.Outline.color
+        else
+            previewHighlight.Enabled = false
+        end
+    end
+    
+    if espSettings.NickName.enabled then
+        previewVisuals.Nick.Visible = true
+        previewVisuals.Nick.TextColor3 = espSettings.NickName.color
+        previewVisuals.Nick.Text = game:GetService("Players").LocalPlayer.Name
+    else
+        previewVisuals.Nick.Visible = false
+    end
+    
+    if espSettings.Distance.enabled then
+        previewVisuals.Dist.Visible = true
+        previewVisuals.Dist.TextColor3 = espSettings.Distance.color
+        previewVisuals.Dist.Text = "[0.0 studs]"
+    else
+        previewVisuals.Dist.Visible = false
+    end
+end)
+
+----------------------------------------------------
+-- МИРОВОЙ ЦИКЛ ОТРЕСОВКИ ESP И РАБОТЫ ХИТБОКСОВ
 ----------------------------------------------------
 local playerEspCache = {}
 
@@ -918,6 +1491,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
         local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         
+        -- Рендер ESP подсветок (Highlight)
         local highlight = char and char:FindFirstChild("SeraphHighlight")
         if char and not highlight then
             highlight = Instance.new("Highlight")
@@ -928,16 +1502,17 @@ game:GetService("RunService").RenderStepped:Connect(function()
             highlight.Parent = char
         end
         
+        -- Рендер физического визуального куба хитбокса (Show Hit-Box)
         local visualBox = hrp and hrp:FindFirstChild("VisualHitboxCube")
         if hrp and not visualBox then
-            visualBox = Instance.new("BoxHandleAdornment")
+            visualBox = Instance.new("SelectionBox")
             visualBox.Name = "VisualHitboxCube"
-            visualBox.AlwaysOnTop = true
-            visualBox.ZIndex = 10
+            visualBox.LineThickness = 0.05
             visualBox.Adornee = hrp
             visualBox.Parent = hrp
         end
         
+        -- Условие валидности
         if not char or not hrp or player == localPlayer then
             if highlight then highlight.Enabled = false end
             if visualBox then visualBox.Visible = false end
@@ -946,23 +1521,25 @@ game:GetService("RunService").RenderStepped:Connect(function()
             continue
         end
         
+        -- РАБОТА ХИТБОКСА (Динамический размер, цвет и прозрачность)
         if hitboxMasterEnabled then
             hrp.Size = Vector3.new(hitboxSizeValue, hitboxSizeValue, hitboxSizeValue)
             hrp.CanCollide = false
             
-            if showHitboxVisuals then
+            if showHitboxVisuals and visualBox then
                 visualBox.Visible = true
-                visualBox.Size = hrp.Size
-                visualBox.Color3 = hitboxColorValue
-                visualBox.Transparency = hitboxTransparencyValue
-            else
+                visualBox.Color3 = hitboxColor                            -- Кастомный цвет из настроек
+                visualBox.Transparency = hitboxTransparencyValue          -- Кастомная прозрачность из настроек
+            elseif visualBox then
                 visualBox.Visible = false
             end
         else
+            -- Возвращаем исходный стандартный размер хитбокса
             hrp.Size = Vector3.new(2, 2, 1)
             if visualBox then visualBox.Visible = false end
         end
         
+        -- Синхронизация логики ESP мастер-выключателя
         if not espMasterEnabled then
             if highlight then highlight.Enabled = false end
             cache.Name.Visible = false

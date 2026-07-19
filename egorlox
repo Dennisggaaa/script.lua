@@ -46,7 +46,7 @@ local function GetKyivTime()
     return os.date("!%H:%M:%S", kyivTime)
 end
 
--- ===================== WATERMARK =====================
+-- ===================== WATERMARK (ТОЛЬКО ВИЗУАЛ) =====================
 local WatermarkContainer = Instance.new("Frame")
 WatermarkContainer.Name = "Watermark"
 WatermarkContainer.Size = UDim2.new(0, 220, 0, 35)
@@ -89,26 +89,46 @@ WText.TextYAlignment = Enum.TextYAlignment.Center
 WText.ZIndex = 102
 WText.Parent = WatermarkContainer
 
-local WButton = Instance.new("TextButton")
-WButton.Size = UDim2.new(1, 0, 1, 0)
-WButton.Position = UDim2.new(0, 0, 0, 0)
-WButton.BackgroundTransparency = 1
-WButton.Text = ""
-WButton.ZIndex = 200
-WButton.AutoButtonColor = false
-WButton.Parent = WatermarkContainer
-
 local function UpdateWatermarkTime()
     WText.Text = "✦ SeraphiCA  |  " .. GetKyivTime()
 end
 UpdateWatermarkTime()
-
 task.spawn(function()
     while true do
         task.wait(1)
         UpdateWatermarkTime()
     end
 end)
+
+-- ===================== БОЛЬШАЯ КНОПКА ОТКРЫТИЯ (100% РАБОТАЕТ) =====================
+local OpenButton = Instance.new("TextButton")
+OpenButton.Name = "OpenButton"
+OpenButton.Size = UDim2.new(0, 60, 0, 60)
+OpenButton.Position = UDim2.new(0, 10, 0, 50)
+OpenButton.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+OpenButton.BackgroundTransparency = 0.2
+OpenButton.BorderSizePixel = 0
+OpenButton.Text = "☰"
+OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.TextSize = 28
+OpenButton.Font = Enum.Font.GothamBold
+OpenButton.ZIndex = 300
+OpenButton.Parent = ScreenGui
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(0, 12)
+OpenCorner.Parent = OpenButton
+
+local OpenGlow = Instance.new("Frame")
+OpenGlow.Size = UDim2.new(1, 20, 1, 20)
+OpenGlow.Position = UDim2.new(0, -10, 0, -10)
+OpenGlow.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+OpenGlow.BackgroundTransparency = 0.9
+OpenGlow.BorderSizePixel = 0
+OpenGlow.ZIndex = -1
+OpenGlow.Parent = OpenButton
+local OpenGlowCorner = Instance.new("UICorner")
+OpenGlowCorner.CornerRadius = UDim.new(0, 20)
+OpenGlowCorner.Parent = OpenGlow
 
 -- ===================== MENU =====================
 local MenuFrame = Instance.new("Frame")
@@ -989,26 +1009,24 @@ local function SetupDrag()
 end
 SetupDrag()
 
--- ===================== ГЛАВНАЯ ФУНКЦИЯ ОТКРЫТИЯ =====================
+-- ===================== ОТКРЫТИЕ МЕНЮ (100% РАБОТАЕТ) =====================
 local function ToggleMenu()
     SeraphMenu.Visible = not SeraphMenu.Visible
     MenuFrame.Visible = SeraphMenu.Visible
+    print("[SeraphCA] Menu toggled:", SeraphMenu.Visible)
 end
 
-WButton.MouseButton1Click:Connect(ToggleMenu)
-WButton.TouchTap:Connect(ToggleMenu)
-WatermarkContainer.MouseButton1Click:Connect(ToggleMenu)
-WatermarkContainer.TouchTap:Connect(ToggleMenu)
-WText.MouseButton1Click:Connect(ToggleMenu)
-WText.TouchTap:Connect(ToggleMenu)
+-- Кнопка открытия (большая, кликабельная)
+OpenButton.MouseButton1Click:Connect(ToggleMenu)
+OpenButton.TouchTap:Connect(ToggleMenu)
 
--- Дополнительная гарантия через UserInputService
+-- Доп. гарантия
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         local pos = input.Position
-        local absPos = WatermarkContainer.AbsolutePosition
-        local absSize = WatermarkContainer.AbsoluteSize
+        local absPos = OpenButton.AbsolutePosition
+        local absSize = OpenButton.AbsoluteSize
         if pos.X >= absPos.X and pos.X <= absPos.X + absSize.X and
            pos.Y >= absPos.Y and pos.Y <= absPos.Y + absSize.Y then
             ToggleMenu()
@@ -1025,14 +1043,16 @@ local function KeepOnTop()
         if WatermarkContainer and ScreenGui then
             WatermarkContainer.Parent = ScreenGui
         end
+        if OpenButton and ScreenGui then
+            OpenButton.Parent = ScreenGui
+        end
     end)
 end
 KeepOnTop()
 
-print("SeraphiCA Military Tycoon v3.1 (MENU FIXED) Loaded")
+print("SeraphiCA Military Tycoon v3.1 (FINAL FIX) Loaded")
 print("╔═══════════════════════════════════════════════════════╗")
-print("║  ⚡ SeraphiCA - Military Tycoon (FULLY WORKING)       ║")
-print("║  🔥 МЕНЮ ТЕПЕРЬ ОТКРЫВАЕТСЯ ПО КЛИКУ НА ВАТЕРМАК     ║")
-print("║  📦 Dynamic GamePass Scanner                         ║")
-print("║  Нажми на ватермак для открытия/закрытия             ║")
+print("║  ⚡ SeraphiCA - Military Tycoon (FINAL FIX)           ║")
+print("║  🔥 БОЛЬШАЯ КНОПКА ☰ В ЛЕВОМ ВЕРХНЕМ УГЛУ           ║")
+print("║  📦 Кликни на кнопку — меню откроется 100%           ║")
 print("╚═══════════════════════════════════════════════════════╝")

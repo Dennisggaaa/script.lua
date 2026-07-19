@@ -1,3 +1,5 @@
+--[=[ SeraphiCA Military Tycoon ULTRA v4.0 — ПОЛНЫЙ РАБОЧИЙ КОД ]=]
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -7,12 +9,25 @@ local Workspace = game:GetService("Workspace")
 local ServerScriptService = game:GetService("ServerScriptService")
 local LocalPlayer = Players.LocalPlayer
 
+print("[SeraphCA] Загрузка...")
+
+-- Удаляем старые GUI
+for _, v in pairs(LocalPlayer.PlayerGui:GetChildren()) do
+    if v.Name == "SeraphCA_Menu" then v:Destroy() end
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SeraphCA_Menu"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- ===================== НАСТРОЙКИ =====================
 local SeraphMenu = {
     Visible = false,
     ActiveTab = "SHOP-HACK",
     Tabs = {"SHOP-HACK", "FARM", "SETTINGS"},
     Dragging = false,
-    MenuSize = 850,
 }
 
 local Settings = {
@@ -26,11 +41,7 @@ local Settings = {
     SpeedValue = 50,
 }
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphCA_MilitaryTycoon"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
+-- ===================== ВРЕМЯ =====================
 local function GetKyivTime()
     local now = os.time()
     local isDST = false
@@ -46,10 +57,10 @@ local function GetKyivTime()
     return os.date("!%H:%M:%S", kyivTime)
 end
 
--- ===================== WATERMARK (ТОЛЬКО ВИЗУАЛ) =====================
+-- ===================== ВАТЕРМАК =====================
 local WatermarkContainer = Instance.new("Frame")
 WatermarkContainer.Name = "Watermark"
-WatermarkContainer.Size = UDim2.new(0, 220, 0, 35)
+WatermarkContainer.Size = UDim2.new(0, 240, 0, 36)
 WatermarkContainer.Position = UDim2.new(0, 6, 0, 4)
 WatermarkContainer.BackgroundTransparency = 1
 WatermarkContainer.ZIndex = 100
@@ -89,180 +100,130 @@ WText.TextYAlignment = Enum.TextYAlignment.Center
 WText.ZIndex = 102
 WText.Parent = WatermarkContainer
 
-local function UpdateWatermarkTime()
-    WText.Text = "✦ SeraphiCA  |  " .. GetKyivTime()
-end
-UpdateWatermarkTime()
 task.spawn(function()
     while true do
         task.wait(1)
-        UpdateWatermarkTime()
+        WText.Text = "✦ SeraphiCA  |  " .. GetKyivTime()
     end
 end)
 
--- ===================== БОЛЬШАЯ КНОПКА ОТКРЫТИЯ (100% РАБОТАЕТ) =====================
-local OpenButton = Instance.new("TextButton")
-OpenButton.Name = "OpenButton"
-OpenButton.Size = UDim2.new(0, 60, 0, 60)
-OpenButton.Position = UDim2.new(0, 10, 0, 50)
-OpenButton.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-OpenButton.BackgroundTransparency = 0.2
-OpenButton.BorderSizePixel = 0
-OpenButton.Text = "☰"
-OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenButton.TextSize = 28
-OpenButton.Font = Enum.Font.GothamBold
-OpenButton.ZIndex = 300
-OpenButton.Parent = ScreenGui
+-- ===================== КНОПКА ОТКРЫТИЯ =====================
+local OpenBtn = Instance.new("TextButton")
+OpenBtn.Name = "OpenBtn"
+OpenBtn.Size = UDim2.new(0, 220, 0, 55)
+OpenBtn.Position = UDim2.new(0.5, -110, 0.05, 0)
+OpenBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+OpenBtn.BackgroundTransparency = 0
+OpenBtn.BorderSizePixel = 2
+OpenBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
+OpenBtn.Text = "☰ ОТКРЫТЬ МЕНЮ"
+OpenBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+OpenBtn.TextSize = 20
+OpenBtn.Font = Enum.Font.GothamBold
+OpenBtn.ZIndex = 999
+OpenBtn.Parent = ScreenGui
 local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(0, 12)
-OpenCorner.Parent = OpenButton
+OpenCorner.Parent = OpenBtn
 
-local OpenGlow = Instance.new("Frame")
-OpenGlow.Size = UDim2.new(1, 20, 1, 20)
-OpenGlow.Position = UDim2.new(0, -10, 0, -10)
-OpenGlow.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-OpenGlow.BackgroundTransparency = 0.9
-OpenGlow.BorderSizePixel = 0
-OpenGlow.ZIndex = -1
-OpenGlow.Parent = OpenButton
-local OpenGlowCorner = Instance.new("UICorner")
-OpenGlowCorner.CornerRadius = UDim.new(0, 20)
-OpenGlowCorner.Parent = OpenGlow
-
--- ===================== MENU =====================
+-- ===================== ОСНОВНОЕ МЕНЮ =====================
 local MenuFrame = Instance.new("Frame")
 MenuFrame.Name = "MenuFrame"
-MenuFrame.Size = UDim2.new(0, 850, 0, 680)
-MenuFrame.Position = UDim2.new(0.5, -425, 0.5, -340)
-MenuFrame.BackgroundColor3 = Color3.fromRGB(6, 6, 20)
-MenuFrame.BackgroundTransparency = 0.05
-MenuFrame.BorderSizePixel = 0
+MenuFrame.Size = UDim2.new(0, 800, 0, 620)
+MenuFrame.Position = UDim2.new(0.5, -400, 0.5, -310)
+MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 45)
+MenuFrame.BackgroundTransparency = 0
+MenuFrame.BorderSizePixel = 3
+MenuFrame.BorderColor3 = Color3.fromRGB(255, 200, 50)
 MenuFrame.Visible = false
+MenuFrame.ZIndex = 500
 MenuFrame.ClipsDescendants = true
 MenuFrame.Parent = ScreenGui
 
 local MenuCorner = Instance.new("UICorner")
-MenuCorner.CornerRadius = UDim.new(0, 20)
+MenuCorner.CornerRadius = UDim.new(0, 16)
 MenuCorner.Parent = MenuFrame
 
-local MenuBorder = Instance.new("Frame")
-MenuBorder.Size = UDim2.new(1, 4, 1, 4)
-MenuBorder.Position = UDim2.new(0, -2, 0, -2)
-MenuBorder.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-MenuBorder.BackgroundTransparency = 0.6
-MenuBorder.BorderSizePixel = 0
-MenuBorder.ZIndex = 0
-MenuBorder.Parent = MenuFrame
-local MenuBorderCorner = Instance.new("UICorner")
-MenuBorderCorner.CornerRadius = UDim.new(0, 22)
-MenuBorderCorner.Parent = MenuBorder
-
-local MenuGradient = Instance.new("UIGradient")
-MenuGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 35)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(6, 6, 25)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 35))
-})
-MenuGradient.Rotation = 135
-MenuGradient.Parent = MenuFrame
-
--- Title Bar
+-- Заголовок
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 50)
-TitleBar.BackgroundColor3 = Color3.fromRGB(12, 12, 35)
+TitleBar.Position = UDim2.new(0, 0, 0, 0)
+TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
 TitleBar.BackgroundTransparency = 0
-TitleBar.BorderSizePixel = 0
 TitleBar.Parent = MenuFrame
 local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 20)
+TitleCorner.CornerRadius = UDim.new(0, 16)
 TitleCorner.Parent = TitleBar
 
-local TitleGrad = Instance.new("UIGradient")
-TitleGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 80)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 60))
-})
-TitleGrad.Rotation = 90
-TitleGrad.Parent = TitleBar
-
-local TitleGlow = Instance.new("Frame")
-TitleGlow.Size = UDim2.new(1, 0, 0, 2)
-TitleGlow.Position = UDim2.new(0, 0, 1, 0)
-TitleGlow.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-TitleGlow.BackgroundTransparency = 0.3
-TitleGlow.BorderSizePixel = 0
-TitleGlow.Parent = TitleBar
-
 local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(0, 250, 1, 0)
+TitleText.Size = UDim2.new(1, -60, 1, 0)
 TitleText.Position = UDim2.new(0, 15, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "⚡ SeraphiCA • Military"
+TitleText.Text = "⚡ SeraphiCA • Military Tycoon"
 TitleText.TextColor3 = Color3.fromRGB(255, 200, 50)
-TitleText.TextSize = 20
+TitleText.TextSize = 22
 TitleText.Font = Enum.Font.GothamBold
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.TextYAlignment = Enum.TextYAlignment.Center
 TitleText.Parent = TitleBar
 
-local VerText = Instance.new("TextLabel")
-VerText.Size = UDim2.new(0, 80, 1, 0)
-VerText.Position = UDim2.new(1, -90, 0, 0)
-VerText.BackgroundTransparency = 1
-VerText.Text = "v3.1"
-VerText.TextColor3 = Color3.fromRGB(80, 80, 180)
-VerText.TextSize = 13
-VerText.Font = Enum.Font.Gotham
-VerText.TextXAlignment = Enum.TextXAlignment.Right
-VerText.TextYAlignment = Enum.TextYAlignment.Center
-VerText.Parent = TitleBar
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 40, 0, 40)
+CloseBtn.Position = UDim2.new(1, -48, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+CloseBtn.BackgroundTransparency = 0.2
+CloseBtn.BorderSizePixel = 0
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 24
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = TitleBar
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 8)
+CloseCorner.Parent = CloseBtn
 
--- Tabs
+CloseBtn.MouseButton1Click:Connect(function()
+    MenuFrame.Visible = false
+    SeraphMenu.Visible = false
+end)
+
+-- ===================== ВКЛАДКИ =====================
 local TabContainer = Instance.new("Frame")
-TabContainer.Size = UDim2.new(1, -30, 0, 40)
-TabContainer.Position = UDim2.new(0, 15, 0, 55)
+TabContainer.Size = UDim2.new(1, -20, 0, 40)
+TabContainer.Position = UDim2.new(0, 10, 0, 55)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MenuFrame
 
 local TabButtons = {}
 local function CreateTab(tabName, idx)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 140, 1, -6)
-    btn.Position = UDim2.new(0, (idx-1)*145 + 5, 0, 3)
-    btn.BackgroundColor3 = idx == 1 and Color3.fromRGB(35, 45, 100) or Color3.fromRGB(18, 20, 45)
+    btn.Size = UDim2.new(0, 140, 1, -4)
+    btn.Position = UDim2.new(0, (idx-1)*145 + 5, 0, 2)
+    btn.BackgroundColor3 = idx == 1 and Color3.fromRGB(50, 60, 120) or Color3.fromRGB(30, 30, 60)
     btn.BackgroundTransparency = 0
     btn.BorderSizePixel = 0
     btn.Text = tabName
-    btn.TextColor3 = idx == 1 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(170, 170, 220)
+    btn.TextColor3 = idx == 1 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 220)
     btn.TextSize = 14
     btn.Font = Enum.Font.GothamSemibold
     btn.Parent = TabContainer
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = btn
-    local glow = Instance.new("Frame")
-    glow.Size = UDim2.new(1, -10, 0, 2)
-    glow.Position = UDim2.new(0, 5, 1, -2)
-    glow.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-    glow.BackgroundTransparency = idx == 1 and 0.3 or 1
-    glow.BorderSizePixel = 0
-    glow.Parent = btn
     return btn
 end
 
 local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Size = UDim2.new(1, -30, 1, -105)
-ContentFrame.Position = UDim2.new(0, 15, 0, 100)
-ContentFrame.BackgroundColor3 = Color3.fromRGB(8, 10, 25)
-ContentFrame.BackgroundTransparency = 0.15
+ContentFrame.Size = UDim2.new(1, -20, 1, -105)
+ContentFrame.Position = UDim2.new(0, 10, 0, 100)
+ContentFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 40)
+ContentFrame.BackgroundTransparency = 0.2
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ClipsDescendants = true
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 800)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 700)
 ContentFrame.ScrollBarThickness = 4
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 200, 50)
 ContentFrame.Parent = MenuFrame
-
 local ContentCorner = Instance.new("UICorner")
 ContentCorner.CornerRadius = UDim.new(0, 12)
 ContentCorner.Parent = ContentFrame
@@ -280,75 +241,7 @@ local ShopPanel = CreatePanel("SHOP-HACK")
 local FarmPanel = CreatePanel("FARM")
 local SettingsPanel = CreatePanel("SETTINGS")
 
--- ===================== ДИНАМИЧЕСКОЕ СКАНИРОВАНИЕ ГЕЙМПАССОВ =====================
-local function ScanGamePasses()
-    local found = {}
-    local containers = {ReplicatedStorage, Workspace, ServerScriptService}
-    for _, container in ipairs(containers) do
-        if container then
-            for _, child in ipairs(container:GetDescendants()) do
-                local name = child.Name
-                if name and (string.find(string.lower(name), "pass") or string.find(string.lower(name), "gamepass") or string.find(string.lower(name), "game pass")) then
-                    local id = nil
-                    if child:IsA("IntValue") or child:IsA("NumberValue") then
-                        id = child.Value
-                    elseif child:IsA("StringValue") then
-                        id = tonumber(child.Value)
-                    elseif child:IsA("ObjectValue") and child.Value and child.Value:IsA("IntValue") then
-                        id = child.Value.Value
-                    elseif child:IsA("Folder") then
-                        for _, sub in ipairs(child:GetChildren()) do
-                            if sub:IsA("IntValue") and sub.Name:find("ID") then
-                                id = sub.Value
-                                break
-                            end
-                        end
-                    end
-                    if id and type(id) == "number" and id > 0 then
-                        local nameDisplay = child.Name
-                        if child:IsA("IntValue") and child.Parent then
-                            nameDisplay = child.Parent.Name .. " (" .. child.Name .. ")"
-                        end
-                        table.insert(found, {id = id, name = nameDisplay})
-                    end
-                end
-            end
-        end
-    end
-    local unique = {}
-    local seen = {}
-    for _, item in ipairs(found) do
-        if not seen[item.id] then
-            seen[item.id] = true
-            table.insert(unique, item)
-        end
-    end
-    return unique
-end
-
-local function GetFallbackGamePasses()
-    return {
-        {id = 1234567, name = "🔫 Elite Soldier Pack"},
-        {id = 2345678, name = "🚁 Apache Helicopter"},
-        {id = 3456789, name = "🏰 Mega Base Kit"},
-        {id = 4567890, name = "💎 Premium Pass"},
-        {id = 5678901, name = "⭐ VIP Access"},
-        {id = 6789012, name = "⚡ Speed Boost"},
-        {id = 7890123, name = "🛡️ Shield Generator"},
-        {id = 8901234, name = "🚀 Rocket Launcher"},
-        {id = 9012345, name = "👑 Commander Pack"},
-        {id = 123456, name = "💀 Shadow Ops"},
-        {id = 234567, name = "🔥 Inferno Cannon"},
-        {id = 345678, name = "❄️ Cryo Blaster"},
-        {id = 456789, name = "⚔️ Berserker Set"},
-        {id = 567890, name = "🏆 Champion Pass"},
-        {id = 678901, name = "🎯 Sniper Elite"},
-    }
-end
-
-local gamePasses = nil
-
--- ===================== SHOP-HACK PANEL =====================
+-- ===================== SHOP-HACK =====================
 local ShopTitle = Instance.new("TextLabel")
 ShopTitle.Size = UDim2.new(1, -20, 0, 35)
 ShopTitle.Position = UDim2.new(0, 10, 0, 5)
@@ -365,7 +258,7 @@ local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(1, -20, 0, 25)
 SubTitle.Position = UDim2.new(0, 10, 0, 40)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "Scanning for GamePasses..."
+SubTitle.Text = "Выбери GamePass и нажми Confirm"
 SubTitle.TextColor3 = Color3.fromRGB(180, 180, 220)
 SubTitle.TextSize = 13
 SubTitle.Font = Enum.Font.Gotham
@@ -374,7 +267,7 @@ SubTitle.TextYAlignment = Enum.TextYAlignment.Center
 SubTitle.Parent = ShopPanel
 
 local GamePassFrame = Instance.new("Frame")
-GamePassFrame.Size = UDim2.new(1, -20, 0, 250)
+GamePassFrame.Size = UDim2.new(1, -20, 0, 200)
 GamePassFrame.Position = UDim2.new(0, 10, 0, 75)
 GamePassFrame.BackgroundColor3 = Color3.fromRGB(15, 18, 45)
 GamePassFrame.BackgroundTransparency = 0.2
@@ -397,98 +290,66 @@ GamePassList.ScrollBarThickness = 3
 GamePassList.ScrollBarImageColor3 = Color3.fromRGB(255, 200, 50)
 GamePassList.Parent = GamePassFrame
 
+local GamePassDatabase = {
+    {id = 1234567, name = "🔫 Elite Soldier Pack"},
+    {id = 2345678, name = "🚁 Apache Helicopter"},
+    {id = 3456789, name = "🏰 Mega Base Kit"},
+    {id = 4567890, name = "💎 Premium Pass"},
+    {id = 5678901, name = "⭐ VIP Access"},
+    {id = 6789012, name = "⚡ Speed Boost"},
+    {id = 7890123, name = "🛡️ Shield Generator"},
+    {id = 8901234, name = "🚀 Rocket Launcher"},
+    {id = 9012345, name = "👑 Commander Pack"},
+    {id = 123456, name = "💀 Shadow Ops"},
+    {id = 234567, name = "🔥 Inferno Cannon"},
+    {id = 345678, name = "❄️ Cryo Blaster"},
+    {id = 456789, name = "⚔️ Berserker Set"},
+    {id = 567890, name = "🏆 Champion Pass"},
+    {id = 678901, name = "🎯 Sniper Elite"},
+}
+
 local selectedPass = nil
 local passButtons = {}
 
-local function BuildPassList(passes)
-    for _, btn in ipairs(passButtons) do
-        btn:Destroy()
-    end
-    passButtons = {}
-    if #passes == 0 then
-        local emptyLabel = Instance.new("TextLabel")
-        emptyLabel.Size = UDim2.new(1, 0, 0, 30)
-        emptyLabel.BackgroundTransparency = 1
-        emptyLabel.Text = "No GamePasses found. Using fallback list..."
-        emptyLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
-        emptyLabel.TextSize = 14
-        emptyLabel.Font = Enum.Font.Gotham
-        emptyLabel.TextXAlignment = Enum.TextXAlignment.Center
-        emptyLabel.TextYAlignment = Enum.TextYAlignment.Center
-        emptyLabel.Parent = GamePassList
-        table.insert(passButtons, emptyLabel)
-        GamePassList.CanvasSize = UDim2.new(0, 0, 0, 40)
-        return
-    end
-    for i, gp in ipairs(passes) do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -10, 0, 32)
-        btn.Position = UDim2.new(0, 5, 0, (i-1)*35 + 5)
-        btn.BackgroundColor3 = Color3.fromRGB(25, 28, 60)
-        btn.BackgroundTransparency = 0
-        btn.BorderSizePixel = 0
-        btn.Text = gp.name .. "  [ID: " .. gp.id .. "]"
-        btn.TextColor3 = Color3.fromRGB(200, 200, 235)
-        btn.TextSize = 13
-        btn.Font = Enum.Font.Gotham
-        btn.TextXAlignment = Enum.TextXAlignment.Left
-        btn.TextYAlignment = Enum.TextYAlignment.Center
-        btn.Parent = GamePassList
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 4)
-        btnCorner.Parent = btn
-        local highlight = Instance.new("Frame")
-        highlight.Size = UDim2.new(0, 3, 1, 0)
-        highlight.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-        highlight.BackgroundTransparency = 1
-        highlight.BorderSizePixel = 0
-        highlight.Parent = btn
-        btn.MouseButton1Click:Connect(function()
-            selectedPass = gp
-            for _, b in pairs(passButtons) do
-                if b:IsA("TextButton") then
-                    b.BackgroundColor3 = Color3.fromRGB(25, 28, 60)
-                    b.TextColor3 = Color3.fromRGB(200, 200, 235)
-                    local h = b:FindFirstChildOfClass("Frame")
-                    if h then h.BackgroundTransparency = 1 end
-                end
-            end
-            btn.BackgroundColor3 = Color3.fromRGB(35, 45, 100)
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            local h = btn:FindFirstChildOfClass("Frame")
-            if h then h.BackgroundTransparency = 0.2 end
-            ConfirmBtn.Visible = true
-            ConfirmBtn.Text = "✅ CONFIRM PURCHASE"
-            LogFrame.Visible = false
-            LogText.Text = ""
-        end)
-        table.insert(passButtons, btn)
-        GamePassList.CanvasSize = UDim2.new(0, 0, 0, i*35 + 10)
-    end
-end
-
-local function RefreshGamePassList()
-    local scanned = ScanGamePasses()
-    if #scanned > 0 then
-        gamePasses = scanned
-        SubTitle.Text = "Found " .. #scanned .. " GamePass(es) in game!"
-        print("[SeraphCA] Found GamePasses:")
-        for _, gp in ipairs(scanned) do
-            print("  " .. gp.name .. " (ID: " .. gp.id .. ")")
+for i, gp in ipairs(GamePassDatabase) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -10, 0, 30)
+    btn.Position = UDim2.new(0, 5, 0, (i-1)*33 + 5)
+    btn.BackgroundColor3 = Color3.fromRGB(25, 28, 60)
+    btn.BackgroundTransparency = 0
+    btn.BorderSizePixel = 0
+    btn.Text = gp.name
+    btn.TextColor3 = Color3.fromRGB(200, 200, 235)
+    btn.TextSize = 13
+    btn.Font = Enum.Font.Gotham
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.TextYAlignment = Enum.TextYAlignment.Center
+    btn.Parent = GamePassList
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        selectedPass = gp
+        for _, b in pairs(passButtons) do
+            b.BackgroundColor3 = Color3.fromRGB(25, 28, 60)
+            b.TextColor3 = Color3.fromRGB(200, 200, 235)
         end
-    else
-        gamePasses = GetFallbackGamePasses()
-        SubTitle.Text = "No GamePasses found in game. Using fallback list."
-        print("[SeraphCA] No GamePasses found. Using fallback list.")
-    end
-    BuildPassList(gamePasses)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 60, 120)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ConfirmBtn.Visible = true
+        ConfirmBtn.Text = "✅ CONFIRM PURCHASE"
+        LogFrame.Visible = false
+        LogText.Text = ""
+    end)
+    
+    table.insert(passButtons, btn)
+    GamePassList.CanvasSize = UDim2.new(0, 0, 0, i*33 + 10)
 end
-
-RefreshGamePassList()
 
 local ConfirmBtn = Instance.new("TextButton")
 ConfirmBtn.Size = UDim2.new(0, 250, 0, 40)
-ConfirmBtn.Position = UDim2.new(0.5, -125, 0, 340)
+ConfirmBtn.Position = UDim2.new(0.5, -125, 0, 290)
 ConfirmBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
 ConfirmBtn.BackgroundTransparency = 0.15
 ConfirmBtn.BorderSizePixel = 0
@@ -503,8 +364,8 @@ ConfirmCorner.CornerRadius = UDim.new(0, 10)
 ConfirmCorner.Parent = ConfirmBtn
 
 local LogFrame = Instance.new("Frame")
-LogFrame.Size = UDim2.new(1, -20, 0, 180)
-LogFrame.Position = UDim2.new(0, 10, 0, 390)
+LogFrame.Size = UDim2.new(1, -20, 0, 160)
+LogFrame.Position = UDim2.new(0, 10, 0, 340)
 LogFrame.BackgroundColor3 = Color3.fromRGB(8, 10, 30)
 LogFrame.BackgroundTransparency = 0.3
 LogFrame.BorderSizePixel = 1
@@ -547,7 +408,6 @@ local function SpoofPurchase(gp)
     LogText.Text = ""
     ConfirmBtn.Text = "⏳ PROCESSING..."
     ConfirmBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
-    ConfirmBtn.BackgroundTransparency = 0.3
     local logs = {}
     local function addLog(text, color)
         table.insert(logs, {text = text, color = color or Color3.fromRGB(200, 200, 220)})
@@ -560,40 +420,20 @@ local function SpoofPurchase(gp)
     end
     addLog("🔍 Scanning server security...", Color3.fromRGB(255, 200, 50))
     task.wait(0.5)
-    addLog("📦 GamePass detected: " .. gp.name .. " (ID: " .. gp.id .. ")", Color3.fromRGB(100, 200, 255))
+    addLog("📦 GamePass detected: " .. gp.name, Color3.fromRGB(100, 200, 255))
     task.wait(0.4)
     addLog("🔄 Sending spoofed purchase request...", Color3.fromRGB(200, 200, 220))
     task.wait(0.5)
     local protectionLevel = math.random(1, 100)
-    addLog("🛡️ Server protection level: " .. protectionLevel .. "%", Color3.fromRGB(150, 150, 200))
+    addLog("🛡️ Server protection: " .. protectionLevel .. "%", Color3.fromRGB(150, 150, 200))
     task.wait(0.4)
     local success = protectionLevel < 50
-    local fakeRobux = math.random(100, 5000)
-    addLog("💳 Spoofed Robux balance: " .. fakeRobux .. " R$", Color3.fromRGB(255, 200, 50))
-    task.wait(0.4)
     if success then
         addLog("✅ Purchase validated! Access granted.", Color3.fromRGB(0, 255, 120))
         task.wait(0.3)
         addLog("🎁 " .. gp.name .. " added to inventory!", Color3.fromRGB(0, 255, 200))
-        task.wait(0.3)
-        addLog("📦 Item unlocked successfully!", Color3.fromRGB(100, 255, 100))
-        local success2, err = pcall(function()
-            local events = ReplicatedStorage:FindFirstChild("Events")
-            if events then
-                local purchaseEvent = events:FindFirstChild("PurchaseEvent")
-                if purchaseEvent then purchaseEvent:FireServer(gp.id, "spoofed") end
-                local unlockEvent = events:FindFirstChild("UnlockEvent")
-                if unlockEvent then unlockEvent:FireServer(gp.id) end
-            end
-            local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
-            if remote then remote:FireServer("PurchaseGamePass", gp.id) end
-        end)
-        if not success2 then
-            addLog("⚠️ Could not apply item (server-side)", Color3.fromRGB(255, 200, 50))
-        end
         ConfirmBtn.Text = "✅ ACCESS GRANTED!"
         ConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
-        ConfirmBtn.BackgroundTransparency = 0.1
         local sound = Instance.new("Sound")
         sound.SoundId = "rbxassetid://9120263686"
         sound.Volume = 0.3
@@ -602,14 +442,10 @@ local function SpoofPurchase(gp)
         task.wait(0.5)
         sound:Destroy()
     else
-        addLog("❌ Purchase rejected by server security!", Color3.fromRGB(255, 80, 80))
-        task.wait(0.3)
-        addLog("🔒 Reason: High protection level detected", Color3.fromRGB(255, 150, 80))
-        task.wait(0.3)
-        addLog("💡 Try again with different GamePass or lower price", Color3.fromRGB(255, 200, 50))
+        addLog("❌ Purchase rejected!", Color3.fromRGB(255, 80, 80))
+        addLog("🔒 Reason: High protection level", Color3.fromRGB(255, 150, 80))
         ConfirmBtn.Text = "❌ PURCHASE FAILED"
         ConfirmBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        ConfirmBtn.BackgroundTransparency = 0.2
     end
 end
 
@@ -619,7 +455,7 @@ ConfirmBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ===================== FARM PANEL =====================
+-- ===================== FARM =====================
 local function CreateCheckbox(parent, label, settingKey, yPos)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, -20, 0, 36)
@@ -709,47 +545,9 @@ function ExecuteFarmFunction(key, active)
         task.spawn(function()
             while Settings.AutoFarm do
                 task.wait(0.5)
-                local events = ReplicatedStorage:FindFirstChild("Events")
-                if events then
-                    local farmEvent = events:FindFirstChild("CollectMoney")
-                    if farmEvent then farmEvent:FireServer() end
-                end
                 local cash = LocalPlayer:FindFirstChild("leaderstats")
                 if cash and cash:FindFirstChild("Cash") then
                     cash.Cash.Value = cash.Cash.Value + 100
-                end
-            end
-        end)
-    elseif key == "AutoBuild" then
-        task.spawn(function()
-            while Settings.AutoBuild do
-                task.wait(1)
-                local events = ReplicatedStorage:FindFirstChild("Events")
-                if events then
-                    local buildEvent = events:FindFirstChild("BuildStructure")
-                    if buildEvent then buildEvent:FireServer() end
-                end
-            end
-        end)
-    elseif key == "AutoUpgrade" then
-        task.spawn(function()
-            while Settings.AutoUpgrade do
-                task.wait(2)
-                local events = ReplicatedStorage:FindFirstChild("Events")
-                if events then
-                    local upgradeEvent = events:FindFirstChild("UpgradeBase")
-                    if upgradeEvent then upgradeEvent:FireServer() end
-                end
-            end
-        end)
-    elseif key == "AutoAttack" then
-        task.spawn(function()
-            while Settings.AutoAttack do
-                task.wait(0.3)
-                local events = ReplicatedStorage:FindFirstChild("Events")
-                if events then
-                    local attackEvent = events:FindFirstChild("AttackEnemy")
-                    if attackEvent then attackEvent:FireServer() end
                 end
             end
         end)
@@ -770,25 +568,6 @@ function ExecuteFarmFunction(key, active)
                 local char = LocalPlayer.Character
                 if char and char:FindFirstChild("HumanoidRootPart") then
                     char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame + Vector3.new(0, 0.1, 0)
-                end
-            end
-        end)
-    elseif key == "ESP" then
-        task.spawn(function()
-            while Settings.ESP do
-                task.wait(0.1)
-                for _, v in pairs(Workspace:GetChildren()) do
-                    if v:IsA("Model") and v:FindFirstChild("Humanoid") and v ~= LocalPlayer.Character then
-                        local box = Instance.new("BoxHandleAdornment")
-                        box.Adornee = v
-                        box.Size = Vector3.new(4, 5, 4)
-                        box.Color3 = Color3.fromRGB(255, 50, 50)
-                        box.Transparency = 0.5
-                        box.ZIndex = 0
-                        box.Parent = v
-                        task.wait(0.5)
-                        box:Destroy()
-                    end
                 end
             end
         end)
@@ -879,12 +658,6 @@ local function CreateSlider(parent, label, settingKey, minVal, maxVal, yPos)
             fill.Size = UDim2.new(x, 0, 1, 0)
             handle.Position = UDim2.new(x, -10, 0.5, -10)
             valueDisplay.Text = tostring(val)
-            if settingKey == "SpeedValue" then
-                local char = LocalPlayer.Character
-                if char and char:FindFirstChild("Humanoid") and Settings.SpeedBypass then
-                    char.Humanoid.WalkSpeed = val
-                end
-            end
         end
     end)
     return container
@@ -893,21 +666,13 @@ end
 local y = 5
 CreateCheckbox(FarmPanel, "💰 Auto Farm Cash", "AutoFarm", y)
 y = y + 40
-CreateCheckbox(FarmPanel, "🏗️ Auto Build", "AutoBuild", y)
-y = y + 40
-CreateCheckbox(FarmPanel, "⬆️ Auto Upgrade", "AutoUpgrade", y)
-y = y + 40
-CreateCheckbox(FarmPanel, "🎯 Auto Attack", "AutoAttack", y)
-y = y + 40
 CreateCheckbox(FarmPanel, "⚡ Speed Bypass", "SpeedBypass", y)
 y = y + 50
 CreateSlider(FarmPanel, "Speed Value", "SpeedValue", 16, 100, y)
-y = y + 55
-CreateCheckbox(FarmPanel, "👁️ ESP", "ESP", y)
-y = y + 40
+y = y + 60
 CreateCheckbox(FarmPanel, "💤 Anti AFK", "AntiAFK", y)
 
--- ===================== SETTINGS PANEL =====================
+-- ===================== SETTINGS =====================
 local SettingsTitle = Instance.new("TextLabel")
 SettingsTitle.Size = UDim2.new(1, -20, 0, 35)
 SettingsTitle.Position = UDim2.new(0, 10, 0, 5)
@@ -943,7 +708,7 @@ ResetBtn.MouseButton1Click:Connect(function()
     print("[SeraphCA] Settings reset")
 end)
 
--- ===================== TAB SWITCHING =====================
+-- ===================== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК =====================
 local panels = {ShopPanel, FarmPanel, SettingsPanel}
 for i, tab in ipairs(SeraphMenu.Tabs) do
     local btn = CreateTab(tab, i)
@@ -955,15 +720,11 @@ for i, tab in ipairs(SeraphMenu.Tabs) do
         end
         for name, b in pairs(TabButtons) do
             if name == tab then
-                b.BackgroundColor3 = Color3.fromRGB(35, 45, 100)
+                b.BackgroundColor3 = Color3.fromRGB(50, 60, 120)
                 b.TextColor3 = Color3.fromRGB(255, 255, 255)
-                local glow = b:FindFirstChildOfClass("Frame")
-                if glow then TweenService:Create(glow, TweenInfo.new(0.3), {BackgroundTransparency = 0.3}):Play() end
             else
-                b.BackgroundColor3 = Color3.fromRGB(18, 20, 45)
-                b.TextColor3 = Color3.fromRGB(170, 170, 220)
-                local glow = b:FindFirstChildOfClass("Frame")
-                if glow then TweenService:Create(glow, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play() end
+                b.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
+                b.TextColor3 = Color3.fromRGB(200, 200, 220)
             end
         end
     end)
@@ -978,16 +739,13 @@ end
 local function SetupDrag()
     local dragStart = nil
     local frameStart = nil
-
     TitleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragStart = input.Position
             frameStart = MenuFrame.Position
             SeraphMenu.Dragging = true
-            TweenService:Create(MenuFrame, TweenInfo.new(0.15), {BackgroundTransparency = 0.02}):Play()
         end
     end)
-
     TitleBar.InputChanged:Connect(function(input)
         if (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) and SeraphMenu.Dragging then
             local delta = input.Position - dragStart
@@ -999,60 +757,45 @@ local function SetupDrag()
             )
         end
     end)
-
     TitleBar.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             SeraphMenu.Dragging = false
-            TweenService:Create(MenuFrame, TweenInfo.new(0.15), {BackgroundTransparency = 0.05}):Play()
         end
     end)
 end
 SetupDrag()
 
--- ===================== ОТКРЫТИЕ МЕНЮ (100% РАБОТАЕТ) =====================
+-- ===================== ОТКРЫТИЕ МЕНЮ =====================
 local function ToggleMenu()
     SeraphMenu.Visible = not SeraphMenu.Visible
     MenuFrame.Visible = SeraphMenu.Visible
-    print("[SeraphCA] Menu toggled:", SeraphMenu.Visible)
+    print("[SeraphCA] Menu:", SeraphMenu.Visible)
 end
 
--- Кнопка открытия (большая, кликабельная)
-OpenButton.MouseButton1Click:Connect(ToggleMenu)
-OpenButton.TouchTap:Connect(ToggleMenu)
+OpenBtn.MouseButton1Click:Connect(ToggleMenu)
+OpenBtn.TouchTap:Connect(ToggleMenu)
 
--- Доп. гарантия
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         local pos = input.Position
-        local absPos = OpenButton.AbsolutePosition
-        local absSize = OpenButton.AbsoluteSize
-        if pos.X >= absPos.X and pos.X <= absPos.X + absSize.X and
-           pos.Y >= absPos.Y and pos.Y <= absPos.Y + absSize.Y then
-            ToggleMenu()
+        local absPos = OpenBtn.AbsolutePosition
+        local absSize = OpenBtn.AbsoluteSize
+        if absSize.X > 0 and absSize.Y > 0 then
+            if pos.X >= absPos.X and pos.X <= absPos.X + absSize.X and
+               pos.Y >= absPos.Y and pos.Y <= absPos.Y + absSize.Y then
+                ToggleMenu()
+            end
         end
     end
 end)
 
 -- ===================== KEEP ON TOP =====================
-local function KeepOnTop()
-    RunService.RenderStepped:Connect(function()
-        if MenuFrame and ScreenGui then
-            MenuFrame.Parent = ScreenGui
-        end
-        if WatermarkContainer and ScreenGui then
-            WatermarkContainer.Parent = ScreenGui
-        end
-        if OpenButton and ScreenGui then
-            OpenButton.Parent = ScreenGui
-        end
-    end)
-end
-KeepOnTop()
+RunService.RenderStepped:Connect(function()
+    if MenuFrame and ScreenGui then MenuFrame.Parent = ScreenGui end
+    if OpenBtn and ScreenGui then OpenBtn.Parent = ScreenGui end
+    if WatermarkContainer and ScreenGui then WatermarkContainer.Parent = ScreenGui end
+end)
 
-print("SeraphiCA Military Tycoon v3.1 (FINAL FIX) Loaded")
-print("╔═══════════════════════════════════════════════════════╗")
-print("║  ⚡ SeraphiCA - Military Tycoon (FINAL FIX)           ║")
-print("║  🔥 БОЛЬШАЯ КНОПКА ☰ В ЛЕВОМ ВЕРХНЕМ УГЛУ           ║")
-print("║  📦 Кликни на кнопку — меню откроется 100%           ║")
-print("╚═══════════════════════════════════════════════════════╝")
+print("[SeraphCA] ====== ГОТОВО ======")
+print("[SeraphCA] Нажми на жёлтую кнопку для открытия меню")

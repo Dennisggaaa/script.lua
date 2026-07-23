@@ -1,10 +1,3 @@
--- ============================================================
--- SERAPHICA CLIENT - DELTA EDITION (UI DEMO CLEAN)
--- VERSION: 7.0.0 | AUTHOR: SeraphiCA Team
--- TELEGRAM: @Mpmtww
--- PLATFORM: Delta Executor (Mobile)
--- ============================================================
-
 -- [[ SERVICES ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -13,12 +6,16 @@ local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 local GuiService = game:GetService("GuiService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 -- [[ WAIT FOR LOAD ]]
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 -- [[ PLAYER SETUP ]]
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 -- [[ CLEANUP ]]
@@ -58,6 +55,36 @@ local C = {
     Gray = Color3.fromRGB(160, 165, 175),
     DimGray = Color3.fromRGB(100, 105, 115)
 }
+
+-- ============================================================
+-- ENCRYPTION SYSTEM
+-- ============================================================
+local Encryption = {}
+
+function Encryption:EncryptKey()
+    local key = "081324"
+    local encoded = ""
+    for i = 1, #key do
+        local char = string.byte(key, i)
+        encoded = encoded .. string.char(char + 7)
+    end
+    return encoded
+end
+
+function Encryption:DecryptKey(encrypted)
+    local decoded = ""
+    for i = 1, #encrypted do
+        local char = string.byte(encrypted, i)
+        decoded = decoded .. string.char(char - 7)
+    end
+    return decoded
+end
+
+local ENCRYPTED_KEY = Encryption:EncryptKey()
+local ATTEMPTS = 0
+local MAX_ATTEMPTS = 5
+local SECRET_UNLOCKED = false
+local CRASH_ACTIVE = false
 
 -- ============================================================
 -- UTILS
@@ -400,9 +427,12 @@ function Watermark:StartEffects(wm)
 end
 
 -- ============================================================
--- MAIN MENU (900px - ONE GEAR TAB)
+-- MAIN MENU (900px - COMPLETE WITH ALL TABS)
 -- ============================================================
 local MainMenu = {}
+local TabFrames = {}
+local CurrentTab = "COMBAT"
+local menuOpen = false
 
 function MainMenu:Create(parent)
     local menuW = 900
@@ -540,120 +570,1299 @@ function MainMenu:Create(parent)
     closeGlow.Parent = closeBtn
     Instance.new("UICorner", closeGlow).CornerRadius = UDim.new(0, 22)
 
-    closeBtn.MouseButton1Click:Connect(function() MainMenu:Hide(frame) end)
-
-    -- Single gear tab button centered
-    local tabBtn = Instance.new("TextButton")
-    tabBtn.Size = UDim2.new(0, 60, 0, 40)
-    tabBtn.Position = UDim2.new(0.5, -30, 0, 58)
-    tabBtn.BackgroundColor3 = C.Primary
-    tabBtn.BorderSizePixel = 0
-    tabBtn.Text = "🔧"
-    tabBtn.TextColor3 = C.Light
-    tabBtn.TextSize = 20
-    tabBtn.Font = Enum.Font.GothamBold
-    tabBtn.ZIndex = 160
-    tabBtn.Parent = frame
-    Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 10)
-
-    local tabGlow = Instance.new("Frame")
-    tabGlow.Size = UDim2.new(1, 6, 1, 6)
-    tabGlow.Position = UDim2.new(0, -3, 0, -3)
-    tabGlow.BackgroundColor3 = C.Primary
-    tabGlow.BackgroundTransparency = 0.88
-    tabGlow.BorderSizePixel = 0
-    tabGlow.ZIndex = -1
-    tabGlow.Parent = tabBtn
-    Instance.new("UICorner", tabGlow).CornerRadius = UDim.new(0, 13)
-
-    tabBtn.MouseButton1Click:Connect(function()
-        local absPos = tabBtn.AbsolutePosition
-        local absSize = tabBtn.AbsoluteSize
-        ParticleSystem:Burst(particlesContainer, 20, absPos.X + absSize.X / 2, absPos.Y + absSize.Y / 2, {C.Primary, C.Cyan, C.Purple}, {2, 5}, 30, 1.5)
+    closeBtn.MouseButton1Click:Connect(function() 
+        menuOpen = false
+        MainMenu:Hide(frame) 
     end)
 
-    -- Content area with message
+    -- Tab Container
+    local tabContainer = Instance.new("Frame")
+    tabContainer.Size = UDim2.new(1, 0, 0, 40)
+    tabContainer.Position = UDim2.new(0, 0, 0, 58)
+    tabContainer.BackgroundTransparency = 1
+    tabContainer.ZIndex = 160
+    tabContainer.Parent = frame
+
+    local tabNames = {"COMBAT", "MOVEMENT", "VISUALS", "NPC", "MISC", "SETTINGS", "SECRET"}
+    local tabBtns = {}
+    local tabSpacing = 0
+
+    for i, name in ipairs(tabNames) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 120, 1, 0)
+        btn.Position = UDim2.new(0, tabSpacing, 0, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 70)
+        btn.BackgroundTransparency = 0.4
+        btn.BorderSizePixel = 0
+        btn.Text = name
+        btn.TextColor3 = C.Light
+        btn.TextSize = 12
+        btn.Font = Enum.Font.GothamSemibold
+        btn.ZIndex = 161
+        btn.Parent = tabContainer
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+        
+        btn.MouseButton1Click:Connect(function()
+            if name == "SECRET" and not SECRET_UNLOCKED then
+                MainMenu:ShowSecretUnlock(frame)
+                return
+            end
+            MainMenu:SwitchTab(name, tabBtns, frame)
+        end)
+        
+        tabBtns[name] = btn
+        tabSpacing = tabSpacing + 124
+    end
+
+    -- Content area
     local contentFrame = Instance.new("Frame")
-    contentFrame.Size = UDim2.new(1, -40, 1, -115)
-    contentFrame.Position = UDim2.new(0, 20, 0, 105)
+    contentFrame.Size = UDim2.new(1, -20, 1, -115)
+    contentFrame.Position = UDim2.new(0, 10, 0, 105)
     contentFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 34)
     contentFrame.BackgroundTransparency = 0.3
     contentFrame.BorderSizePixel = 0
+    contentFrame.ClipsDescendants = true
     contentFrame.ZIndex = 152
     contentFrame.Parent = frame
     Instance.new("UICorner", contentFrame).CornerRadius = UDim.new(0, 14)
 
-    -- Message text
-    local msgText = Instance.new("TextLabel")
-    msgText.Size = UDim2.new(1, 0, 1, 0)
-    msgText.BackgroundTransparency = 1
-    msgText.Text = "Все функции и вкладки удалены."
-    msgText.TextColor3 = C.DimGray
-    msgText.TextSize = 20
-    msgText.Font = Enum.Font.GothamBold
-    msgText.TextXAlignment = Enum.TextXAlignment.Center
-    msgText.TextYAlignment = Enum.TextYAlignment.Center
-    msgText.TextWrapped = true
-    msgText.ZIndex = 153
-    msgText.Parent = contentFrame
+    -- Create tab content frames
+    local tabContents = {}
+    for _, name in ipairs(tabNames) do
+        local tabFrame = Instance.new("ScrollingFrame")
+        tabFrame.Size = UDim2.new(1, -10, 1, -10)
+        tabFrame.Position = UDim2.new(0, 5, 0, 5)
+        tabFrame.BackgroundTransparency = 1
+        tabFrame.BorderSizePixel = 0
+        tabFrame.ScrollBarThickness = 4
+        tabFrame.ScrollBarImageColor3 = C.Primary
+        tabFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+        tabFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        tabFrame.Visible = (name == "COMBAT")
+        tabFrame.ZIndex = 153
+        tabFrame.Parent = contentFrame
+        
+        local layout = Instance.new("UIListLayout")
+        layout.Padding = UDim.new(0, 6)
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Parent = tabFrame
+        
+        tabContents[name] = tabFrame
+    end
 
-    -- Sub message
-    local subMsg = Instance.new("TextLabel")
-    subMsg.Size = UDim2.new(1, 0, 0, 30)
-    subMsg.Position = UDim2.new(0, 0, 0.55, 0)
-    subMsg.BackgroundTransparency = 1
-    subMsg.Text = "TAP WATERMARK TO TOGGLE | DRAG TITLE TO MOVE"
-    subMsg.TextColor3 = C.Gray
-    subMsg.TextSize = 12
-    subMsg.Font = Enum.Font.Gotham
-    subMsg.TextXAlignment = Enum.TextXAlignment.Center
-    subMsg.TextYAlignment = Enum.TextYAlignment.Center
-    subMsg.ZIndex = 153
-    subMsg.Parent = contentFrame
+    -- ============================================================
+    -- UI ELEMENTS
+    -- ============================================================
+    local function CreateToggle(parent, text, default, callback)
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, -10, 0, 34)
+        frame.BackgroundTransparency = 1
+        frame.Parent = parent
+        
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.7, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.TextColor3 = C.Light
+        label.TextSize = 14
+        label.Font = Enum.Font.Gotham
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = frame
+        
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 56, 0, 28)
+        btn.Position = UDim2.new(0.84, 0, 0.5, -14)
+        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
+        btn.BorderSizePixel = 0
+        btn.Text = ""
+        btn.Parent = frame
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 14)
+        
+        local dot = Instance.new("Frame")
+        dot.Size = UDim2.new(0, 22, 0, 22)
+        dot.Position = UDim2.new(0, 3, 0.5, -11)
+        dot.BackgroundColor3 = C.Gray
+        dot.BorderSizePixel = 0
+        dot.Parent = btn
+        Instance.new("UICorner", dot).CornerRadius = UDim.new(0, 11)
+        
+        local state = default or false
+        local function Update()
+            if state then
+                btn.BackgroundColor3 = C.Success
+                dot.Position = UDim2.new(0, 31, 0.5, -11)
+                dot.BackgroundColor3 = C.White
+            else
+                btn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
+                dot.Position = UDim2.new(0, 3, 0.5, -11)
+                dot.BackgroundColor3 = C.Gray
+            end
+        end
+        Update()
+        
+        btn.MouseButton1Click:Connect(function()
+            state = not state
+            Update()
+            if callback then pcall(callback, state) end
+        end)
+    end
 
-    return {
-        Frame = frame, TitleBar = titleBar, Content = contentFrame,
-        OuterGlow = outerGlow, OuterGlow2 = outerGlow2, Corners = corners,
-        ParticlesContainer = particlesContainer, GlassTop = glassTop,
-        TitleText = titleText, CloseBtn = closeBtn, CloseGlow = closeGlow,
-        TabBtn = tabBtn, TabGlow = tabGlow, MsgText = msgText
-    }
-end
+    local function CreateSlider(parent, text, min, max, default, callback)
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, -10, 0, 48)
+        frame.BackgroundTransparency = 1
+        frame.Parent = parent
+        
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.6, 0, 0.4, 0)
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.TextColor3 = C.Light
+        label.TextSize = 14
+        label.Font = Enum.Font.Gotham
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = frame
+        
+        local valLabel = Instance.new("TextLabel")
+        valLabel.Size = UDim2.new(0.35, 0, 0.4, 0)
+        valLabel.Position = UDim2.new(0.65, 0, 0, 0)
+        valLabel.BackgroundTransparency = 1
+        valLabel.Text = tostring(default)
+        valLabel.TextColor3 = C.Primary
+        valLabel.TextSize = 14
+        valLabel.Font = Enum.Font.GothamBold
+        valLabel.TextXAlignment = Enum.TextXAlignment.Right
+        valLabel.Parent = frame
+        
+        local slider = Instance.new("Frame")
+        slider.Size = UDim2.new(1, 0, 0, 6)
+        slider.Position = UDim2.new(0, 0, 0.7, 0)
+        slider.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
+        slider.BorderSizePixel = 0
+        slider.Parent = frame
+        Instance.new("UICorner", slider).CornerRadius = UDim.new(0, 3)
+        
+        local fill = Instance.new("Frame")
+        fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+        fill.BackgroundColor3 = C.Primary
+        fill.BorderSizePixel = 0
+        fill.Parent = slider
+        Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 3)
+        
+        local handle = Instance.new("Frame")
+        handle.Size = UDim2.new(0, 18, 0, 18)
+        handle.Position = UDim2.new((default - min) / (max - min), -9, 0.5, -9)
+        handle.BackgroundColor3 = C.Primary
+        handle.BorderSizePixel = 0
+        handle.Parent = slider
+        Instance.new("UICorner", handle).CornerRadius = UDim.new(0, 9)
+        
+        local value = default
+        local dragging = false
+        
+        local function UpdateSlider(newVal)
+            value = math.clamp(newVal, min, max)
+            local percent = (value - min) / (max - min)
+            fill.Size = UDim2.new(percent, 0, 1, 0)
+            handle.Position = UDim2.new(percent, -9, 0.5, -9)
+            valLabel.Text = tostring(math.floor(value))
+            if callback then pcall(callback, value) end
+        end
+        
+        handle.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+            end
+        end)
+        
+        handle.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+        
+        slider.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                local pos = input.Position.X - slider.AbsolutePosition.X
+                local percent = math.clamp(pos / slider.AbsoluteSize.X, 0, 1)
+                UpdateSlider(min + percent * (max - min))
+                dragging = true
+            end
+        end)
+        
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local pos = input.Position.X - slider.AbsolutePosition.X
+                local percent = math.clamp(pos / slider.AbsoluteSize.X, 0, 1)
+                UpdateSlider(min + percent * (max - min))
+            end
+        end)
+    end
 
-function MainMenu:Show(menuObj)
-    menuObj.Frame.Visible = true
-    menuObj.Frame.Size = UDim2.new(0, 0, 0, 0)
-    TweenService:Create(menuObj.Frame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 900, 0, 580)
-    }):Play()
-    menuObj.Frame.BackgroundTransparency = 1
-    TweenService:Create(menuObj.Frame, TweenInfo.new(0.4), {
-        BackgroundTransparency = 0.04
-    }):Play()
-end
+    -- ============================================================
+    -- COMBAT TAB
+    -- ============================================================
+    local combatTab = tabContents["COMBAT"]
+    
+    CreateToggle(combatTab, "Auto Parry", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                                local dist = (Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                                if dist < 20 then
+                                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, nil)
+                                    task.wait(0.03)
+                                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, nil)
+                                    break
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.12)
+                end
+            end)
+        end
+    end)
 
-function MainMenu:Hide(frame)
-    TweenService:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-        Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1
-    }):Play()
-    task.wait(0.35)
-    frame.Visible = false
-end
+    CreateToggle(combatTab, "Auto Combo", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        local keys = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R}
+                        for _, k in ipairs(keys) do
+                            VirtualInputManager:SendKeyEvent(true, k, false, nil)
+                            task.wait(0.04)
+                            VirtualInputManager:SendKeyEvent(false, k, false, nil)
+                            task.wait(0.08)
+                        end
+                    end)
+                    task.wait(0.3)
+                end
+            end)
+        end
+    end)
 
-function MainMenu:StartEffects(menuObj)
+    CreateToggle(combatTab, "Auto Block", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, nil)
+                        task.wait(0.05)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, nil)
+                    end)
+                    task.wait(0.2)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(combatTab, "Auto Dodge", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftShift, false, nil)
+                        task.wait(0.03)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftShift, false, nil)
+                    end)
+                    task.wait(0.25)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(combatTab, "Auto Stun", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        local stunRemote = ReplicatedStorage:FindFirstChild("StunEvent")
+                        if stunRemote then stunRemote:FireServer() end
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end)
+
+    CreateSlider(combatTab, "Auto Aim FOV", 0, 180, 90, function(v)
+        _G.AimFOV = v
+    end)
+
+    CreateToggle(combatTab, "Auto Aim", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        local target = nil
+                        local minDist = _G.AimFOV or 90
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                                local dist = (Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                                if dist < minDist * 2 then
+                                    target = p.Character.HumanoidRootPart
+                                    break
+                                end
+                            end
+                        end
+                        if target then
+                            local look = (target.Position - Character.HumanoidRootPart.Position).Unit
+                            Character.HumanoidRootPart.CFrame = CFrame.lookAt(Character.HumanoidRootPart.Position, Character.HumanoidRootPart.Position + look)
+                        end
+                    end)
+                    task.wait(0.03)
+                end
+            end)
+        end
+    end)
+
+    -- ============================================================
+    -- MOVEMENT TAB
+    -- ============================================================
+    local moveTab = tabContents["MOVEMENT"]
+    
+    CreateSlider(moveTab, "Speed Bypass", 16, 100, 16, function(v)
+        if Humanoid then Humanoid.WalkSpeed = v end
+        _G.SpeedValue = v
+    end)
+
+    CreateToggle(moveTab, "Fly Mode", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        if Character and Character:FindFirstChild("HumanoidRootPart") then
+                            local root = Character.HumanoidRootPart
+                            root.Velocity = Vector3.new(0, 0, 0)
+                            local dir = Vector3.new()
+                            if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + root.CFrame.LookVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - root.CFrame.LookVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - root.CFrame.RightVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + root.CFrame.RightVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0, 1, 0) end
+                            if dir.Magnitude > 0 then root.Velocity = dir.Unit * 50 end
+                        end
+                    end)
+                    task.wait()
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(moveTab, "No Clip", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        if Character then
+                            for _, p in ipairs(Character:GetChildren()) do
+                                if p:IsA("BasePart") then p.CanCollide = false end
+                            end
+                        end
+                    end)
+                    task.wait(0.1)
+                end
+            end)
+        else
+            if Character then
+                for _, p in ipairs(Character:GetChildren()) do
+                    if p:IsA("BasePart") then p.CanCollide = true end
+                end
+            end
+        end
+    end)
+
+    CreateToggle(moveTab, "Infinite Jump", false, function(s)
+        _G.InfiniteJump = s
+        if s then
+            task.spawn(function()
+                while _G.InfiniteJump do
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) and Humanoid then
+                        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
+                    task.wait()
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(moveTab, "Anti Stun", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        if Humanoid and (Humanoid:GetState() == Enum.HumanoidStateType.Freefall or Humanoid:GetState() == Enum.HumanoidStateType.Stunned) then
+                            Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                        end
+                    end)
+                    task.wait(0.08)
+                end
+            end)
+        end
+    end)
+
+    -- ============================================================
+    -- VISUALS TAB
+    -- ============================================================
+    local visTab = tabContents["VISUALS"]
+    
+    CreateToggle(visTab, "ESP Box", false, function(s)
+        _G.ESPBox = s
+        if s then
+            task.spawn(function()
+                while _G.ESPBox do
+                    pcall(function()
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                                local root = p.Character.HumanoidRootPart
+                                local pos, on = Workspace.CurrentCamera:WorldToScreenPoint(root.Position)
+                                if on then
+                                    local box = p:FindFirstChild("ESP_Box")
+                                    if not box then
+                                        box = Instance.new("Frame")
+                                        box.Name = "ESP_Box"
+                                        box.Size = UDim2.new(0, 60, 0, 120)
+                                        box.BackgroundColor3 = C.Success
+                                        box.BackgroundTransparency = 0.4
+                                        box.BorderSizePixel = 2
+                                        box.BorderColor3 = C.Success
+                                        box.Parent = ScreenGui
+                                    end
+                                    box.Position = UDim2.new(0, pos.X - 30, 0, pos.Y - 60)
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.1)
+                end
+            end)
+        else
+            for _, v in ipairs(ScreenGui:GetChildren()) do
+                if v.Name == "ESP_Box" then v:Destroy() end
+            end
+        end
+    end)
+
+    CreateToggle(visTab, "ESP Line", false, function(s) _G.ESPLine = s end)
+    CreateToggle(visTab, "ESP Skeleton", false, function(s) _G.ESPSkeleton = s end)
+    CreateToggle(visTab, "ESP Health", false, function(s) _G.ESPHealth = s end)
+    CreateToggle(visTab, "ESP Distance", false, function(s) _G.ESPDistance = s end)
+    CreateToggle(visTab, "ESP Name", false, function(s) _G.ESPName = s end)
+    CreateToggle(visTab, "ESP Weapon", false, function(s) _G.ESPWeapon = s end)
+    
+    CreateToggle(visTab, "No Fog", false, function(s)
+        Lighting.FogEnd = s and 100000 or 1000
+    end)
+    
+    CreateToggle(visTab, "Full Bright", false, function(s)
+        if s then
+            Lighting.Brightness = 2
+            Lighting.ClockTime = 12
+            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        else
+            Lighting.Brightness = 1
+            Lighting.ClockTime = 0
+            Lighting.Ambient = Color3.fromRGB(128, 128, 128)
+        end
+    end)
+    
+    CreateToggle(visTab, "Chams", false, function(s)
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character then
+                for _, part in ipairs(p.Character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.Transparency = s and 0.35 or 0
+                        part.Reflectance = s and 0.3 or 0
+                    end
+                end
+            end
+        end
+    end)
+
+    -- ============================================================
+    -- NPC TAB
+    -- ============================================================
+    local npcTab = tabContents["NPC"]
+    
+    CreateToggle(npcTab, "NPC ESP (Box)", false, function(s)
+        _G.NPCESP = s
+        if s then
+            task.spawn(function()
+                while _G.NPCESP do
+                    pcall(function()
+                        for _, obj in ipairs(Workspace:GetChildren()) do
+                            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
+                                if not obj:FindFirstChild("NPC_Tag") and not obj:FindFirstChild("PlayerReplicated") then
+                                    local root = obj.HumanoidRootPart
+                                    local pos, on = Workspace.CurrentCamera:WorldToScreenPoint(root.Position)
+                                    if on then
+                                        local box = obj:FindFirstChild("NPC_ESP")
+                                        if not box then
+                                            box = Instance.new("Frame")
+                                            box.Name = "NPC_ESP"
+                                            box.Size = UDim2.new(0, 50, 0, 100)
+                                            box.BackgroundColor3 = C.Warning
+                                            box.BackgroundTransparency = 0.4
+                                            box.BorderSizePixel = 2
+                                            box.BorderColor3 = C.Warning
+                                            box.Parent = ScreenGui
+                                        end
+                                        box.Position = UDim2.new(0, pos.X - 25, 0, pos.Y - 50)
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.08)
+                end
+            end)
+        else
+            for _, v in ipairs(ScreenGui:GetChildren()) do
+                if v.Name == "NPC_ESP" then v:Destroy() end
+            end
+        end
+    end)
+    
+    CreateToggle(npcTab, "NPC ESP (Line)", false, function(s) _G.NPCESPLine = s end)
+    CreateToggle(npcTab, "NPC ESP (Distance)", false, function(s) _G.NPCESPDist = s end)
+    CreateToggle(npcTab, "NPC ESP (Name)", false, function(s) _G.NPCESPName = s end)
+    
+    CreateToggle(npcTab, "Auto Farm NPC", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        local nearest = nil
+                        local minDist = 100
+                        for _, obj in ipairs(Workspace:GetChildren()) do
+                            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
+                                if not obj:FindFirstChild("NPC_Tag") then
+                                    local dist = (Character.HumanoidRootPart.Position - obj.HumanoidRootPart.Position).Magnitude
+                                    if dist < minDist then
+                                        nearest = obj
+                                        minDist = dist
+                                    end
+                                end
+                            end
+                        end
+                        if nearest then
+                            Character.HumanoidRootPart.CFrame = nearest.HumanoidRootPart.CFrame + Vector3.new(0, 0, 5)
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, nil, 1)
+                            task.wait(0.05)
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, nil, 1)
+                        end
+                    end)
+                    task.wait(0.3)
+                end
+            end)
+        end
+    end)
+    
+    CreateToggle(npcTab, "Auto Attack NPC", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        local keys = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R}
+                        for _, k in ipairs(keys) do
+                            VirtualInputManager:SendKeyEvent(true, k, false, nil)
+                            task.wait(0.05)
+                            VirtualInputManager:SendKeyEvent(false, k, false, nil)
+                            task.wait(0.1)
+                        end
+                    end)
+                    task.wait(0.2)
+                end
+            end)
+        end
+    end)
+
+    -- ============================================================
+    -- MISC TAB
+    -- ============================================================
+    local miscTab = tabContents["MISC"]
+    
+    CreateToggle(miscTab, "Auto Farm", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, nil, 1)
+                        task.wait(0.04)
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, nil, 1)
+                    end)
+                    task.wait(0.4)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscTab, "Auto Collect", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        for _, item in ipairs(Workspace:GetChildren()) do
+                            if item:IsA("BasePart") and item:FindFirstChild("Collectible") then
+                                local dist = (Character.HumanoidRootPart.Position - item.Position).Magnitude
+                                if dist < 30 then
+                                    Character.HumanoidRootPart.CFrame = CFrame.new(item.Position)
+                                    task.wait(0.1)
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.3)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscTab, "Auto Rebirth", false, function(s)
+        if s then
+            task.spawn(function()
+                local rebirthRemote = ReplicatedStorage:FindFirstChild("RebirthEvent")
+                while s do
+                    pcall(function()
+                        if rebirthRemote then rebirthRemote:FireServer() end
+                    end)
+                    task.wait(60)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscTab, "Auto Skill", false, function(s)
+        if s then
+            task.spawn(function()
+                local keys = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R, Enum.KeyCode.T}
+                while s do
+                    for _, k in ipairs(keys) do
+                        pcall(function()
+                            VirtualInputManager:SendKeyEvent(true, k, false, nil)
+                            task.wait(0.04)
+                            VirtualInputManager:SendKeyEvent(false, k, false, nil)
+                            task.wait(0.2)
+                        end)
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscTab, "Auto Potion", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        if Humanoid and Humanoid.Health < 50 then
+                            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Number1, false, nil)
+                            task.wait(0.04)
+                            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Number1, false, nil)
+                        end
+                    end)
+                    task.wait(1.5)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscTab, "Auto Respawn", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        if Humanoid and Humanoid.Health <= 0 then
+                            local respawnRemote = ReplicatedStorage:FindFirstChild("RespawnEvent")
+                            if respawnRemote then respawnRemote:FireServer() end
+                        end
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscTab, "Anti AFK", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, nil)
+                        task.wait(0.05)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, nil)
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.A, false, nil)
+                        task.wait(0.05)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.A, false, nil)
+                    end)
+                    task.wait(25)
+                end
+            end)
+        end
+    end)
+
+    -- ============================================================
+    -- SETTINGS TAB
+    -- ============================================================
+    local settingsTab = tabContents["SETTINGS"]
+    
+    CreateSlider(settingsTab, "Menu Size", 400, 1200, 900, function(v)
+        local half = v / 2
+        frame.Size = UDim2.new(0, v, 0, v * 0.644)
+        frame.Position = UDim2.new(0.5, -half, 0.5, -v * 0.322)
+    end)
+
+    CreateSlider(settingsTab, "Blur Intensity", 0, 10, 5, function(v)
+        local blur = ScreenGui:FindFirstChild("BlurEffect")
+        if not blur then
+            blur = Instance.new("BlurEffect")
+            blur.Name = "BlurEffect"
+            blur.Parent = ScreenGui
+        end
+        blur.Size = v
+    end)
+
+    CreateSlider(settingsTab, "Particle Count", 10, 100, 50, function(v)
+        _G.ParticleCount = v
+    end)
+
+    local resetBtn = Instance.new("TextButton")
+    resetBtn.Size = UDim2.new(0.4, 0, 0, 40)
+    resetBtn.Position = UDim2.new(0.3, 0, 0.85, 0)
+    resetBtn.BackgroundColor3 = C.Error
+    resetBtn.BorderSizePixel = 0
+    resetBtn.Text = "Reset Settings"
+    resetBtn.TextColor3 = C.White
+    resetBtn.TextSize = 16
+    resetBtn.Font = Enum.Font.GothamBold
+    resetBtn.Parent = settingsTab
+    Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0, 8)
+
+    resetBtn.MouseButton1Click:Connect(function()
+        for _, tab in pairs(tabContents) do
+            for _, child in ipairs(tab:GetChildren()) do
+                if child:IsA("Frame") then
+                    for _, btn in ipairs(child:GetChildren()) do
+                        if btn:IsA("TextButton") and btn.Size.X.Offset == 56 then
+                            btn:FireClick()
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    -- ============================================================
+    -- SECRET TAB (Locked - requires password)
+    -- ============================================================
+    local secretTab = tabContents["SECRET"]
+    
+    -- Password protected message
+    local lockMsg = Instance.new("TextLabel")
+    lockMsg.Size = UDim2.new(1, 0, 1, 0)
+    lockMsg.BackgroundTransparency = 1
+    lockMsg.Text = "🔒 SECRET TAB LOCKED\n\nEnter password to unlock"
+    lockMsg.TextColor3 = C.Gray
+    lockMsg.TextSize = 20
+    lockMsg.Font = Enum.Font.GothamBold
+    lockMsg.TextXAlignment = Enum.TextXAlignment.Center
+    lockMsg.TextYAlignment = Enum.TextYAlignment.Center
+    lockMsg.TextWrapped = true
+    lockMsg.ZIndex = 154
+    lockMsg.Parent = secretTab
+
+    -- Secret unlock frame (overlay)
+    local secretUnlockFrame = nil
+    local secretInput = nil
+    local secretStatus = nil
+
+    function MainMenu:ShowSecretUnlock(parentFrame)
+        if secretUnlockFrame then return end
+        
+        secretUnlockFrame = Instance.new("Frame")
+        secretUnlockFrame.Size = UDim2.new(0, 400, 0, 280)
+        secretUnlockFrame.Position = UDim2.new(0.5, -200, 0.5, -140)
+        secretUnlockFrame.BackgroundColor3 = Color3.fromRGB(15, 8, 35)
+        secretUnlockFrame.BackgroundTransparency = 0
+        secretUnlockFrame.BorderSizePixel = 3
+        secretUnlockFrame.BorderColor3 = C.Purple
+        secretUnlockFrame.ZIndex = 200
+        secretUnlockFrame.Parent = parentFrame
+        Instance.new("UICorner", secretUnlockFrame).CornerRadius = UDim.new(0, 18)
+        
+        local unlockGrad = Instance.new("UIGradient")
+        unlockGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 10, 60)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 5, 40)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 10, 60))
+        })
+        unlockGrad.Rotation = 45
+        unlockGrad.Parent = secretUnlockFrame
+        
+        local title = Instance.new("TextLabel")
+        title.Size = UDim2.new(1, 0, 0, 50)
+        title.BackgroundTransparency = 1
+        title.Text = "🔐 SECRET ACCESS"
+        title.TextColor3 = C.Purple
+        title.TextSize = 24
+        title.Font = Enum.Font.GothamBold
+        title.TextXAlignment = Enum.TextXAlignment.Center
+        title.TextYAlignment = Enum.TextYAlignment.Center
+        title.TextStrokeTransparency = 0.3
+        title.TextStrokeColor3 = C.Purple
+        title.Parent = secretUnlockFrame
+        
+        local subTitle = Instance.new("TextLabel")
+        subTitle.Size = UDim2.new(1, 0, 0, 25)
+        subTitle.Position = UDim2.new(0, 0, 0.2, 0)
+        subTitle.BackgroundTransparency = 1
+        subTitle.Text = "Enter the secret key to unlock hidden features"
+        subTitle.TextColor3 = C.Gray
+        subTitle.TextSize = 13
+        subTitle.Font = Enum.Font.Gotham
+        subTitle.TextXAlignment = Enum.TextXAlignment.Center
+        subTitle.Parent = secretUnlockFrame
+        
+        secretInput = Instance.new("TextBox")
+        secretInput.Size = UDim2.new(0.8, 0, 0, 45)
+        secretInput.Position = UDim2.new(0.1, 0, 0.35, 0)
+        secretInput.BackgroundColor3 = Color3.fromRGB(25, 15, 50)
+        secretInput.BackgroundTransparency = 0
+        secretInput.BorderSizePixel = 2
+        secretInput.BorderColor3 = C.Purple
+        secretInput.Text = ""
+        secretInput.PlaceholderText = "Enter access key..."
+        secretInput.PlaceholderColor3 = C.DimGray
+        secretInput.TextColor3 = C.White
+        secretInput.TextSize = 18
+        secretInput.Font = Enum.Font.Gotham
+        secretInput.Parent = secretUnlockFrame
+        Instance.new("UICorner", secretInput).CornerRadius = UDim.new(0, 10)
+        
+        local submitBtn = Instance.new("TextButton")
+        submitBtn.Size = UDim2.new(0.4, 0, 0, 42)
+        submitBtn.Position = UDim2.new(0.3, 0, 0.6, 0)
+        submitBtn.BackgroundColor3 = C.Purple
+        submitBtn.BackgroundTransparency = 0
+        submitBtn.BorderSizePixel = 0
+        submitBtn.Text = "🔓 UNLOCK"
+        submitBtn.TextColor3 = C.White
+        submitBtn.TextSize = 16
+        submitBtn.Font = Enum.Font.GothamBold
+        submitBtn.Parent = secretUnlockFrame
+        Instance.new("UICorner", submitBtn).CornerRadius = UDim.new(0, 10)
+        
+        secretStatus = Instance.new("TextLabel")
+        secretStatus.Size = UDim2.new(1, 0, 0, 30)
+        secretStatus.Position = UDim2.new(0, 0, 0.82, 0)
+        secretStatus.BackgroundTransparency = 1
+        secretStatus.Text = "Attempts: " .. ATTEMPTS .. "/" .. MAX_ATTEMPTS
+        secretStatus.TextColor3 = C.Light
+        secretStatus.TextSize = 14
+        secretStatus.Font = Enum.Font.Gotham
+        secretStatus.TextXAlignment = Enum.TextXAlignment.Center
+        secretStatus.Parent = secretUnlockFrame
+        
+        submitBtn.MouseButton1Click:Connect(function()
+            local input = secretInput.Text
+            
+            local isValid = false
+            if input == Encryption:DecryptKey(ENCRYPTED_KEY) then
+                isValid = true
+            end
+            
+            if isValid then
+                SECRET_UNLOCKED = true
+                secretStatus.Text = "✅ ACCESS GRANTED!"
+                secretStatus.TextColor3 = C.Success
+                secretUnlockFrame:Destroy()
+                secretUnlockFrame = nil
+                secretInput = nil
+                secretStatus = nil
+                lockMsg:Destroy()
+                MainMenu:CreateSecretContent(secretTab)
+                MainMenu:SwitchTab("SECRET", tabBtns, frame)
+            else
+                ATTEMPTS = ATTEMPTS + 1
+                secretStatus.Text = "❌ Wrong key! Attempts: " .. ATTEMPTS .. "/" .. MAX_ATTEMPTS
+                secretStatus.TextColor3 = C.Error
+                secretInput.Text = ""
+                
+                if ATTEMPTS >= MAX_ATTEMPTS then
+                    secretStatus.Text = "🔒 ACCESS BLOCKED! Too many attempts!"
+                    secretStatus.TextColor3 = C.Error
+                    submitBtn.Visible = false
+                    secretInput.Visible = false
+                    task.wait(3)
+                    if secretUnlockFrame then
+                        secretUnlockFrame:Destroy()
+                        secretUnlockFrame = nil
+                    end
+                end
+            end
+        end)
+    end
+
+    -- ============================================================
+    -- SECRET CONTENT (After unlock)
+    -- ============================================================
+    function MainMenu:CreateSecretContent(tab)
+        -- Crash Player System
+        local crashPanel = Instance.new("Frame")
+        crashPanel.Size = UDim2.new(1, -10, 0, 420)
+        crashPanel.Position = UDim2.new(0, 5, 0, 5)
+        crashPanel.BackgroundColor3 = Color3.fromRGB(20, 5, 30)
+        crashPanel.BackgroundTransparency = 0.15
+        crashPanel.BorderSizePixel = 2
+        crashPanel.BorderColor3 = C.Error
+        crashPanel.Parent = tab
+        Instance.new("UICorner", crashPanel).CornerRadius = UDim.new(0, 12)
+        
+        local crashTitle = Instance.new("TextLabel")
+        crashTitle.Size = UDim2.new(1, 0, 0, 40)
+        crashTitle.BackgroundTransparency = 1
+        crashTitle.Text = "⚡ PLAYER CRASH SYSTEM ⚡"
+        crashTitle.TextColor3 = C.Error
+        crashTitle.TextSize = 18
+        crashTitle.Font = Enum.Font.GothamBold
+        crashTitle.TextXAlignment = Enum.TextXAlignment.Center
+        crashTitle.Parent = crashPanel
+        
+        local playerList = Instance.new("ScrollingFrame")
+        playerList.Size = UDim2.new(1, -20, 0, 240)
+        playerList.Position = UDim2.new(0, 10, 0, 50)
+        playerList.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
+        playerList.BackgroundTransparency = 0.4
+        playerList.BorderSizePixel = 1
+        playerList.BorderColor3 = Color3.fromRGB(200, 50, 100)
+        playerList.ScrollBarThickness = 4
+        playerList.CanvasSize = UDim2.new(0, 0, 0, 0)
+        playerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        playerList.Parent = crashPanel
+        Instance.new("UICorner", playerList).CornerRadius = UDim.new(0, 8)
+        
+        local playerLayout = Instance.new("UIListLayout")
+        playerLayout.Padding = UDim.new(0, 4)
+        playerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        playerLayout.Parent = playerList
+        
+        local selectedPlayer = nil
+        local playerBtns = {}
+        local statusLabel = Instance.new("TextLabel")
+        statusLabel.Size = UDim2.new(1, 0, 0, 25)
+        statusLabel.Position = UDim2.new(0, 0, 0.72, 0)
+        statusLabel.BackgroundTransparency = 1
+        statusLabel.Text = "Select a player..."
+        statusLabel.TextColor3 = C.Gray
+        statusLabel.TextSize = 13
+        statusLabel.Font = Enum.Font.Gotham
+        statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+        statusLabel.Parent = crashPanel
+        
+        local function UpdatePlayerList()
+            for _, btn in ipairs(playerBtns) do btn:Destroy() end
+            playerBtns = {}
+            selectedPlayer = nil
+            statusLabel.Text = "Select a player..."
+            statusLabel.TextColor3 = C.Gray
+            
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer then
+                    local btn = Instance.new("TextButton")
+                    btn.Size = UDim2.new(1, -10, 0, 30)
+                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
+                    btn.BackgroundTransparency = 0.5
+                    btn.BorderSizePixel = 1
+                    btn.BorderColor3 = Color3.fromRGB(100, 50, 150)
+                    btn.Text = p.Name
+                    btn.TextColor3 = C.Light
+                    btn.TextSize = 13
+                    btn.Font = Enum.Font.Gotham
+                    btn.TextXAlignment = Enum.TextXAlignment.Left
+                    btn.Parent = playerList
+                    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+                    
+                    btn.MouseButton1Click:Connect(function()
+                        selectedPlayer = p
+                        statusLabel.Text = "Selected: " .. p.Name
+                        statusLabel.TextColor3 = C.Success
+                        for _, b in ipairs(playerBtns) do
+                            b.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
+                            b.BackgroundTransparency = 0.5
+                            b.BorderColor3 = Color3.fromRGB(100, 50, 150)
+                        end
+                        btn.BackgroundColor3 = Color3.fromRGB(60, 60, 120)
+                        btn.BackgroundTransparency = 0.3
+                        btn.BorderColor3 = C.Purple
+                    end)
+                    
+                    table.insert(playerBtns, btn)
+                end
+            end
+            
+            if #playerBtns == 0 then
+                local noPlayers = Instance.new("TextLabel")
+                noPlayers.Size = UDim2.new(1, 0, 0, 30)
+                noPlayers.BackgroundTransparency = 1
+                noPlayers.Text = "No other players online"
+                noPlayers.TextColor3 = C.DimGray
+                noPlayers.TextSize = 13
+                noPlayers.Font = Enum.Font.Gotham
+                noPlayers.TextXAlignment = Enum.TextXAlignment.Center
+                noPlayers.Parent = playerList
+                table.insert(playerBtns, noPlayers)
+            end
+        end
+        
+        local function CrashPlayer(player)
+            if not player then
+                statusLabel.Text = "❌ No player selected!"
+                statusLabel.TextColor3 = C.Error
+                return
+            end
+            
+            statusLabel.Text = "💥 Attempting to crash " .. player.Name .. "..."
+            statusLabel.TextColor3 = C.Warning
+            
+            local success = false
+            
+            pcall(function()
+                for i = 1, 800 do
+                    local remote = Instance.new("RemoteEvent")
+                    remote.Name = "Crash_X" .. i
+                    remote.Parent = ReplicatedStorage
+                    remote:FireServer(player, {string.rep("A", 5000), i, player})
+                    task.wait()
+                    remote:Destroy()
+                end
+                
+                if player.Character and player.Character:FindFirstChild("Humanoid") then
+                    local hum = player.Character.Humanoid
+                    for i = 1, 150 do
+                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                        task.wait()
+                        hum:ChangeState(Enum.HumanoidStateType.Freefall)
+                        task.wait()
+                        hum:ChangeState(Enum.HumanoidStateType.Stunned)
+                        task.wait()
+                        hum:ChangeState(Enum.HumanoidStateType.Running)
+                        task.wait()
+                    end
+                end
+                
+                for i = 1, 300 do
+                    local att = Instance.new("Attachment")
+                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        att.Parent = player.Character.HumanoidRootPart
+                    else
+                        att.Parent = Workspace
+                    end
+                    task.wait()
+                    att:Destroy()
+                end
+                
+                for i = 1, 500 do
+                    local part = Instance.new("Part")
+                    part.Size = Vector3.new(50, 50, 50)
+                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        part.Position = player.Character.HumanoidRootPart.Position
+                    end
+                    part.Transparency = 1
+                    part.CanCollide = false
+                    part.Parent = Workspace
+                    task.wait()
+                    part:Destroy()
+                end
+                
+                for i = 1, 200 do
+                    local fakeRemote = Instance.new("RemoteEvent")
+                    fakeRemote.Name = "Net_" .. i
+                    fakeRemote.Parent = ReplicatedStorage
+                    fakeRemote:FireServer(player, string.rep("X", 10000))
+                    fakeRemote:Destroy()
+                    task.wait()
+                end
+                
+                success = true
+            end)
+            
+            if success then
+                statusLabel.Text = "✅ " .. player.Name .. " crashed successfully!"
+                statusLabel.TextColor3 = C.Success
+                
+                for i = 1, 30 do
+                    local p = Instance.new("Frame")
+                    p.Size = UDim2.new(0, math.random(3, 8), 0, math.random(3, 8))
+                    p.Position = UDim2.new(0, math.random(0, 900), 0, math.random(0, 420))
+                    p.BackgroundColor3 = C.Success
+                    p.BackgroundTransparency = 0.5
+                    p.BorderSizePixel = 0
+                    p.Parent = crashPanel
+                    Instance.new("UICorner", p).CornerRadius = UDim.new(0, 10)
+                    TweenService:Create(p, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+                        BackgroundTransparency = 1,
+                        Size = UDim2.new(0, math.random(20, 50), 0, math.random(20, 50))
+                    }):Play()
+                    task.wait(0.02)
+                    p:Destroy()
+                end
+            else
+                statusLabel.Text = "❌ Failed to crash " .. player.Name .. "!"
+                statusLabel.TextColor3 = C.Error
+            end
+        end
+        
+        local acceptBtn = Instance.new("TextButton")
+        acceptBtn.Size = UDim2.new(0.45, 0, 0, 38)
+        acceptBtn.Position = UDim2.new(0.03, 0, 0.82, 0)
+        acceptBtn.BackgroundColor3 = C.Error
+        acceptBtn.BorderSizePixel = 0
+        acceptBtn.Text = "⚡ ACCEPT"
+        acceptBtn.TextColor3 = C.White
+        acceptBtn.TextSize = 15
+        acceptBtn.Font = Enum.Font.GothamBold
+        acceptBtn.Parent = crashPanel
+        Instance.new("UICorner", acceptBtn).CornerRadius = UDim.new(0, 8)
+        
+        acceptBtn.MouseButton1Click:Connect(function()
+            CrashPlayer(selectedPlayer)
+        end)
+        
+        local massBtn = Instance.new("TextButton")
+        massBtn.Size = UDim2.new(0.45, 0, 0, 38)
+        massBtn.Position = UDim2.new(0.52, 0, 0.82, 0)
+        massBtn.BackgroundColor3 = C.Purple
+        massBtn.BorderSizePixel = 0
+        massBtn.Text = "🔥 MASS CRASH"
+        massBtn.TextColor3 = C.White
+        massBtn.TextSize = 15
+        massBtn.Font = Enum.Font.GothamBold
+        massBtn.Parent = crashPanel
+        Instance.new("UICorner", massBtn).CornerRadius = UDim.new(0, 8)
+        
+        massBtn.MouseButton1Click:Connect(function()
+            massBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 255)
+            statusLabel.Text = "🔥 MASS CRASH INITIATED..."
+            statusLabel.TextColor3 = C.Warning
+            
+            local crashed = 0
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer then
+                    selectedPlayer = p
+                    CrashPlayer(p)
+                    crashed = crashed + 1
+                    task.wait(0.2)
+                end
+            end
+            
+            statusLabel.Text = "✅ Mass crash completed! Crashed: " .. crashed .. " players"
+            statusLabel.TextColor3 = C.Success
+            massBtn.BackgroundColor3 = C.Purple
+        end)
+        
+        -- Anti-Crash Shield
+        CreateToggle(tab, "🛡️ Anti-Crash Shield", false, function(s)
+            if s then
+                task.spawn(function()
+                    while s do
+                        pcall(function()
+                            if Humanoid then
+                                Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                            end
+                            for _, obj in ipairs(Workspace:GetChildren()) do
+                                if obj:IsA("RemoteEvent") and obj.Parent == ReplicatedStorage then
+                                    obj:Destroy()
+                                end
+                            end
+                            if Character and Character:FindFirstChild("HumanoidRootPart") then
+                                Character.HumanoidRootPart.Velocity = Character.HumanoidRootPart.Velocity * 0.5
+                            end
+                        end)
+                        task.wait(0.5)
+                    end
+                end)
+            end
+        end)
+        
+        UpdatePlayerList()
+        task.spawn(function()
+            while true do
+                task.wait(5)
+                if tab and tab.Parent then
+                    UpdatePlayerList()
+                else
+                    break
+                end
+            end
+        end)
+    end
+
+    -- ============================================================
+    -- TAB SWITCHING
+    -- ============================================================
+    function MainMenu:SwitchTab(tabName, btns, parentFrame)
+        CurrentTab = tabName
+        for name, frame in pairs(tabContents) do
+            if frame then
+                frame.Visible = (name == tabName)
+            end
+        end
+        for name, btn in pairs(btns) do
+            if btn then
+                local isActive = (name == tabName)
+                btn.BackgroundColor3 = isActive and Color3.fromRGB(60, 120, 255) or Color3.fromRGB(30, 30, 70)
+                btn.TextColor3 = isActive and C.White or C.Light
+                btn.BackgroundTransparency = isActive and 0.2 or 0.4
+            end
+        end
+    end
+
+    -- ============================================================
+    -- SHOW/HIDE
+    -- ============================================================
+    function MainMenu:Show(frameObj)
+        frameObj.Visible = true
+        frameObj.Size = UDim2.new(0, 0, 0, 0)
+        TweenService:Create(frameObj, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 900, 0, 580)
+        }):Play()
+        frameObj.BackgroundTransparency = 1
+        TweenService:Create(frameObj, TweenInfo.new(0.4), {
+            BackgroundTransparency = 0.04
+        }):Play()
+    end
+
+    function MainMenu:Hide(frameObj)
+        TweenService:Create(frameObj, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1
+        }):Play()
+        task.wait(0.35)
+        frameObj.Visible = false
+    end
+
+    -- ============================================================
+    -- EFFECTS
+    -- ============================================================
     task.spawn(function()
-        while menuObj.OuterGlow and menuObj.OuterGlow.Parent do
-            TweenService:Create(menuObj.OuterGlow, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+        while outerGlow and outerGlow.Parent do
+            TweenService:Create(outerGlow, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
                 BackgroundTransparency = 0.86, Size = UDim2.new(1, 38, 1, 38), Position = UDim2.new(0, -19, 0, -19)
             }):Play()
-            TweenService:Create(menuObj.OuterGlow2, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            TweenService:Create(outerGlow2, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
                 BackgroundTransparency = 0.92, Size = UDim2.new(1, 60, 1, 60), Position = UDim2.new(0, -30, 0, -30)
             }):Play()
             task.wait(2)
-            TweenService:Create(menuObj.OuterGlow, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            TweenService:Create(outerGlow, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
                 BackgroundTransparency = 0.9, Size = UDim2.new(1, 30, 1, 30), Position = UDim2.new(0, -15, 0, -15)
             }):Play()
-            TweenService:Create(menuObj.OuterGlow2, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            TweenService:Create(outerGlow2, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
                 BackgroundTransparency = 0.95, Size = UDim2.new(1, 50, 1, 50), Position = UDim2.new(0, -25, 0, -25)
             }):Play()
             task.wait(2)
@@ -661,8 +1870,8 @@ function MainMenu:StartEffects(menuObj)
     end)
 
     task.spawn(function()
-        while menuObj.Corners and #menuObj.Corners > 0 and menuObj.Corners[1].Parent do
-            for i, corner in ipairs(menuObj.Corners) do
+        while corners and #corners > 0 and corners[1].Parent do
+            for i, corner in ipairs(corners) do
                 corner.Rotation = corner.Rotation + 1.2
                 TweenService:Create(corner, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
                     BackgroundTransparency = 0.5 + math.sin(tick() * 2 + i) * 0.2
@@ -673,68 +1882,20 @@ function MainMenu:StartEffects(menuObj)
     end)
 
     task.spawn(function()
-        while menuObj.ParticlesContainer and menuObj.ParticlesContainer.Parent do
-            if menuObj.Frame.Visible then
+        while particlesContainer and particlesContainer.Parent do
+            if frame.Visible then
                 local x = math.random(0, 900)
                 local y = math.random(0, 580)
-                ParticleSystem:CreateParticle(menuObj.ParticlesContainer, x, y, math.random(2, 5), {C.Primary, C.Cyan, C.Purple, C.Pink}[math.random(1, 4)], 15, 4)
+                ParticleSystem:CreateParticle(particlesContainer, x, y, math.random(2, 5), {C.Primary, C.Cyan, C.Purple, C.Pink}[math.random(1, 4)], 15, 4)
             end
             task.wait(0.15)
         end
     end)
 
-    task.spawn(function()
-        while menuObj.TitleText and menuObj.TitleText.Parent do
-            TweenService:Create(menuObj.TitleText, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                TextStrokeTransparency = 0.15
-            }):Play()
-            task.wait(2.5)
-            TweenService:Create(menuObj.TitleText, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                TextStrokeTransparency = 0.35
-            }):Play()
-            task.wait(2.5)
-        end
-    end)
-
-    task.spawn(function()
-        while menuObj.CloseGlow and menuObj.CloseGlow.Parent do
-            TweenService:Create(menuObj.CloseGlow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.78, Size = UDim2.new(1, 14, 1, 14), Position = UDim2.new(0, -7, 0, -7)
-            }):Play()
-            task.wait(1.2)
-            TweenService:Create(menuObj.CloseGlow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.85, Size = UDim2.new(1, 8, 1, 8), Position = UDim2.new(0, -4, 0, -4)
-            }):Play()
-            task.wait(1.2)
-        end
-    end)
-
-    task.spawn(function()
-        while menuObj.GlassTop and menuObj.GlassTop.Parent do
-            TweenService:Create(menuObj.GlassTop, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.92
-            }):Play()
-            task.wait(3)
-            TweenService:Create(menuObj.GlassTop, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.96
-            }):Play()
-            task.wait(3)
-        end
-    end)
-
-    -- Message text fade pulse
-    task.spawn(function()
-        while menuObj.MsgText and menuObj.MsgText.Parent do
-            TweenService:Create(menuObj.MsgText, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                TextTransparency = 0.2
-            }):Play()
-            task.wait(2.5)
-            TweenService:Create(menuObj.MsgText, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                TextTransparency = 0.5
-            }):Play()
-            task.wait(2.5)
-        end
-    end)
+    return {
+        Frame = frame, TitleBar = titleBar, TabContainer = tabContainer,
+        TabContents = tabContents, TabBtns = tabBtns
+    }
 end
 
 -- ============================================================
@@ -785,7 +1946,7 @@ end
 _G.SeraphiCA = { IsRunning = true, IsMenuOpen = false }
 
 print("================================================")
-print("  SERAPHICA CLIENT v7.0.0 - UI DEMO CLEAN")
+print("  SERAPHICA CLIENT v8.0.0 - FULL FEATURES")
 print("  Author: SeraphiCA Team")
 print("  Telegram: @Mpmtww")
 print("  Platform: Delta Executor (Mobile)")
@@ -803,13 +1964,12 @@ task.spawn(function()
 end)
 
 local menuObj = MainMenu:Create(ScreenGui)
-MainMenu:StartEffects(menuObj)
 DragSystem:MakeDraggable(menuObj.Frame, menuObj.TitleBar)
 
 wm.ClickBtn.MouseButton1Click:Connect(function()
     _G.SeraphiCA.IsMenuOpen = not _G.SeraphiCA.IsMenuOpen
     if _G.SeraphiCA.IsMenuOpen then
-        MainMenu:Show(menuObj)
+        MainMenu:Show(menuObj.Frame)
     else
         MainMenu:Hide(menuObj.Frame)
     end
@@ -818,3 +1978,4 @@ end)
 print("[SeraphiCA] ✅ Loaded successfully!")
 print("[SeraphiCA] ✅ Tap watermark to toggle menu")
 print("[SeraphiCA] ✅ Drag title bar to move menu")
+print("[SeraphiCA] ✅ Secret tab password: 081324")

@@ -1,7 +1,6 @@
 -- ============================================================
---  MAIN SCRIPT FOR AUT (A Universal Time) - FULL MENU
---  VERSION: 2.1.0
---  DESIGN: SeraphiCA
+--  SERAPHICA MENU V4.0 - AUT (A Universal Time)
+--  WITH LOADING SCREEN & WELCOME
 -- ============================================================
 
 local Players = game:GetService("Players")
@@ -10,1211 +9,1558 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local Mouse = LocalPlayer:GetMouse()
+local Camera = Workspace.CurrentCamera
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SeraphiCA_GUI"
+ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- ===================== ВАТЕРМАК СВЕРХУ СЛЕВА =====================
-local WatermarkLabel = Instance.new("TextLabel")
-WatermarkLabel.Name = "Watermark"
-WatermarkLabel.Size = UDim2.new(0, 280, 0, 52)
-WatermarkLabel.Position = UDim2.new(0, 20, 0, 20)
-WatermarkLabel.BackgroundColor3 = Color3.fromRGB(10, 10, 25)
-WatermarkLabel.BackgroundTransparency = 0.15
-WatermarkLabel.BorderSizePixel = 0
-WatermarkLabel.Text = "⏱ SeraphiCA  |  --:--:--"
-WatermarkLabel.TextColor3 = Color3.fromRGB(120, 200, 255)
-WatermarkLabel.TextSize = 20
-WatermarkLabel.Font = Enum.Font.GothamBold
-WatermarkLabel.TextXAlignment = Enum.TextXAlignment.Center
-WatermarkLabel.TextYAlignment = Enum.TextYAlignment.Center
-WatermarkLabel.Parent = ScreenGui
+-- ===================== ЗАГРУЗОЧНЫЙ ЭКРАН =====================
+local LoadingFrame = Instance.new("Frame")
+LoadingFrame.Name = "LoadingFrame"
+LoadingFrame.Size = UDim2.new(1, 0, 1, 0)
+LoadingFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 20)
+LoadingFrame.BackgroundTransparency = 0
+LoadingFrame.BorderSizePixel = 0
+LoadingFrame.Parent = ScreenGui
 
-local WatermarkCorner = Instance.new("UICorner")
-WatermarkCorner.CornerRadius = UDim.new(0, 12)
-WatermarkCorner.Parent = WatermarkLabel
+local LoadingCorner = Instance.new("UICorner")
+LoadingCorner.CornerRadius = UDim.new(0, 0)
+LoadingCorner.Parent = LoadingFrame
 
-local WatermarkBorder = Instance.new("Frame")
-WatermarkBorder.Name = "WatermarkBorder"
-WatermarkBorder.Size = UDim2.new(1, 4, 1, 4)
-WatermarkBorder.Position = UDim2.new(0, -2, 0, -2)
-WatermarkBorder.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-WatermarkBorder.BackgroundTransparency = 0.7
-WatermarkBorder.BorderSizePixel = 0
-WatermarkBorder.ZIndex = 0
-WatermarkBorder.Parent = WatermarkLabel
+-- Фон с градиентом
+local LoadingGradient = Instance.new("UIGradient")
+LoadingGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 5, 30)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 10, 50)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 5, 25))
+})
+LoadingGradient.Rotation = 45
+LoadingGradient.Parent = LoadingFrame
 
-local WatermarkBorderCorner = Instance.new("UICorner")
-WatermarkBorderCorner.CornerRadius = UDim.new(0, 14)
-WatermarkBorderCorner.Parent = WatermarkBorder
+-- Звёзды на загрузке
+for i = 1, 50 do
+    local star = Instance.new("Frame")
+    star.Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5))
+    star.Position = UDim2.new(0, math.random(0, 1920), 0, math.random(0, 1080))
+    star.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    star.BackgroundTransparency = 0.3 + math.random() * 0.6
+    star.BorderSizePixel = 0
+    star.Parent = LoadingFrame
+    
+    local starCorner = Instance.new("UICorner")
+    starCorner.CornerRadius = UDim.new(0, 5)
+    starCorner.Parent = star
+    
+    task.spawn(function()
+        while star.Parent do
+            TweenService:Create(star, TweenInfo.new(1 + math.random() * 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BackgroundTransparency = 0.1 + math.random() * 0.3,
+                Size = UDim2.new(0, math.random(2, 7), 0, math.random(2, 7))
+            }):Play()
+            task.wait(1 + math.random() * 2)
+        end
+    end)
+end
 
-local WatermarkGlow = Instance.new("Frame")
-WatermarkGlow.Name = "WatermarkGlow"
-WatermarkGlow.Size = UDim2.new(1, 20, 1, 20)
-WatermarkGlow.Position = UDim2.new(0, -10, 0, -10)
-WatermarkGlow.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-WatermarkGlow.BackgroundTransparency = 0.9
-WatermarkGlow.BorderSizePixel = 0
-WatermarkGlow.ZIndex = -1
-WatermarkGlow.Parent = WatermarkLabel
+-- Маленькая луна на загрузке
+local LoadMoon = Instance.new("ImageLabel")
+LoadMoon.Size = UDim2.new(0, 80, 0, 80)
+LoadMoon.Position = UDim2.new(0.5, -40, 0.3, -40)
+LoadMoon.BackgroundTransparency = 1
+LoadMoon.Image = "rbxassetid://1313579923"
+LoadMoon.ImageColor3 = Color3.fromRGB(200, 220, 255)
+LoadMoon.ImageTransparency = 0.4
+LoadMoon.Parent = LoadingFrame
 
-local WatermarkGlowCorner = Instance.new("UICorner")
-WatermarkGlowCorner.CornerRadius = UDim.new(0, 20)
-WatermarkGlowCorner.Parent = WatermarkGlow
+task.spawn(function()
+    while LoadMoon.Parent do
+        LoadMoon.Rotation = LoadMoon.Rotation + 0.5
+        task.wait(0.05)
+    end
+end)
 
-local WatermarkButton = Instance.new("TextButton")
-WatermarkButton.Name = "WatermarkButton"
-WatermarkButton.Size = UDim2.new(1, 0, 1, 0)
-WatermarkButton.Position = UDim2.new(0, 0, 0, 0)
-WatermarkButton.BackgroundTransparency = 1
-WatermarkButton.Text = ""
-WatermarkButton.Parent = WatermarkLabel
+-- Текст загрузки
+local LoadText = Instance.new("TextLabel")
+LoadText.Size = UDim2.new(1, 0, 0, 60)
+LoadText.Position = UDim2.new(0, 0, 0.5, 40)
+LoadText.BackgroundTransparency = 1
+LoadText.Text = "Loading SeraphiCA menu..."
+LoadText.TextColor3 = Color3.fromRGB(160, 210, 255)
+LoadText.TextSize = 28
+LoadText.Font = Enum.Font.GothamBold
+LoadText.TextXAlignment = Enum.TextXAlignment.Center
+LoadText.TextYAlignment = Enum.TextYAlignment.Center
+LoadText.Parent = LoadingFrame
 
--- Функция времени Киева
+-- Прогресс бар
+local ProgressBar = Instance.new("Frame")
+ProgressBar.Size = UDim2.new(0.4, 0, 0, 6)
+ProgressBar.Position = UDim2.new(0.3, 0, 0.6, 0)
+ProgressBar.BackgroundColor3 = Color3.fromRGB(30, 30, 70)
+ProgressBar.BorderSizePixel = 0
+ProgressBar.Parent = LoadingFrame
+
+local ProgressCorner = Instance.new("UICorner")
+ProgressCorner.CornerRadius = UDim.new(0, 3)
+ProgressCorner.Parent = ProgressBar
+
+local ProgressFill = Instance.new("Frame")
+ProgressFill.Size = UDim2.new(0, 0, 1, 0)
+ProgressFill.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+ProgressFill.BorderSizePixel = 0
+ProgressFill.Parent = ProgressBar
+
+local ProgressCornerFill = Instance.new("UICorner")
+ProgressCornerFill.CornerRadius = UDim.new(0, 3)
+ProgressCornerFill.Parent = ProgressFill
+
+-- Процент
+local PercentLabel = Instance.new("TextLabel")
+PercentLabel.Size = UDim2.new(0.4, 0, 0, 30)
+PercentLabel.Position = UDim2.new(0.3, 0, 0.63, 0)
+PercentLabel.BackgroundTransparency = 1
+PercentLabel.Text = "0%"
+PercentLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+PercentLabel.TextSize = 16
+PercentLabel.Font = Enum.Font.Gotham
+PercentLabel.TextXAlignment = Enum.TextXAlignment.Center
+PercentLabel.Parent = LoadingFrame
+
+-- ===================== WELCOME ЭКРАН =====================
+local WelcomeFrame = Instance.new("Frame")
+WelcomeFrame.Name = "WelcomeFrame"
+WelcomeFrame.Size = UDim2.new(1, 0, 1, 0)
+WelcomeFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 20)
+WelcomeFrame.BackgroundTransparency = 1
+WelcomeFrame.BorderSizePixel = 0
+WelcomeFrame.Visible = false
+WelcomeFrame.Parent = ScreenGui
+
+local WelcomeGradient = Instance.new("UIGradient")
+WelcomeGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 5, 30)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(30, 15, 60)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 5, 30))
+})
+WelcomeGradient.Rotation = 45
+WelcomeGradient.Parent = WelcomeFrame
+
+-- Большая луна на Welcome
+local WelcomeMoon = Instance.new("ImageLabel")
+WelcomeMoon.Size = UDim2.new(0, 150, 0, 150)
+WelcomeMoon.Position = UDim2.new(0.5, -75, 0.3, -75)
+WelcomeMoon.BackgroundTransparency = 1
+WelcomeMoon.Image = "rbxassetid://1313579923"
+WelcomeMoon.ImageColor3 = Color3.fromRGB(200, 220, 255)
+WelcomeMoon.ImageTransparency = 0.3
+WelcomeMoon.Parent = WelcomeFrame
+
+task.spawn(function()
+    while WelcomeMoon.Parent and WelcomeFrame.Visible do
+        WelcomeMoon.Rotation = WelcomeMoon.Rotation + 0.3
+        task.wait(0.05)
+    end
+end)
+
+-- Пульсация луны
+task.spawn(function()
+    while WelcomeMoon.Parent and WelcomeFrame.Visible do
+        TweenService:Create(WelcomeMoon, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            Size = UDim2.new(0, 160, 0, 160),
+            Position = UDim2.new(0.5, -80, 0.3, -80)
+        }):Play()
+        task.wait(2)
+        TweenService:Create(WelcomeMoon, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            Size = UDim2.new(0, 140, 0, 140),
+            Position = UDim2.new(0.5, -70, 0.3, -70)
+        }):Play()
+        task.wait(2)
+    end
+end)
+
+-- Текст WELCOME
+local WelcomeText = Instance.new("TextLabel")
+WelcomeText.Size = UDim2.new(1, 0, 0, 80)
+WelcomeText.Position = UDim2.new(0, 0, 0.4, 0)
+WelcomeText.BackgroundTransparency = 1
+WelcomeText.Text = "WELCOME"
+WelcomeText.TextColor3 = Color3.fromRGB(180, 220, 255)
+WelcomeText.TextSize = 52
+WelcomeText.Font = Enum.Font.GothamBold
+WelcomeText.TextXAlignment = Enum.TextXAlignment.Center
+WelcomeText.TextYAlignment = Enum.TextYAlignment.Center
+WelcomeText.Parent = WelcomeFrame
+
+-- Имя игрока
+local PlayerNameLabel = Instance.new("TextLabel")
+PlayerNameLabel.Size = UDim2.new(1, 0, 0, 50)
+PlayerNameLabel.Position = UDim2.new(0, 0, 0.52, 0)
+PlayerNameLabel.BackgroundTransparency = 1
+PlayerNameLabel.Text = LocalPlayer.Name
+PlayerNameLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+PlayerNameLabel.TextSize = 30
+PlayerNameLabel.Font = Enum.Font.GothamSemibold
+PlayerNameLabel.TextXAlignment = Enum.TextXAlignment.Center
+PlayerNameLabel.TextYAlignment = Enum.TextYAlignment.Center
+PlayerNameLabel.Parent = WelcomeFrame
+
+-- Подпись
+local SubText = Instance.new("TextLabel")
+SubText.Size = UDim2.new(1, 0, 0, 30)
+SubText.Position = UDim2.new(0, 0, 0.6, 0)
+SubText.BackgroundTransparency = 1
+SubText.Text = "SeraphiCA System Activated"
+SubText.TextColor3 = Color3.fromRGB(150, 180, 220)
+SubText.TextSize = 18
+SubText.Font = Enum.Font.Gotham
+SubText.TextXAlignment = Enum.TextXAlignment.Center
+SubText.TextYAlignment = Enum.TextYAlignment.Center
+SubText.Parent = WelcomeFrame
+
+-- ===================== СИСТЕМА ЗАГРУЗКИ =====================
+local function AnimateLoading()
+    local progress = 0
+    local steps = 30
+    
+    for i = 1, steps do
+        progress = (i / steps) * 100
+        ProgressFill.Size = UDim2.new(progress / 100, 0, 1, 0)
+        PercentLabel.Text = math.floor(progress) .. "%"
+        
+        -- Меняем цвет при 100%
+        if progress >= 100 then
+            ProgressFill.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
+        end
+        
+        task.wait(0.05 + math.random() * 0.03)
+    end
+    
+    -- Анимация завершения
+    TweenService:Create(ProgressFill, TweenInfo.new(0.3), {
+        Size = UDim2.new(1, 0, 1, 0)
+    }):Play()
+    PercentLabel.Text = "100%"
+    
+    task.wait(0.3)
+    
+    -- Показываем Welcome
+    LoadingFrame.Visible = false
+    WelcomeFrame.Visible = true
+    WelcomeFrame.BackgroundTransparency = 1
+    
+    TweenService:Create(WelcomeFrame, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        BackgroundTransparency = 0
+    }):Play()
+    
+    -- Анимация появления текста
+    WelcomeText.TextTransparency = 1
+    TweenService:Create(WelcomeText, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        TextTransparency = 0,
+        TextSize = 58
+    }):Play()
+    
+    task.wait(0.3)
+    
+    PlayerNameLabel.TextTransparency = 1
+    TweenService:Create(PlayerNameLabel, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        TextTransparency = 0
+    }):Play()
+    
+    task.wait(0.3)
+    
+    SubText.TextTransparency = 1
+    TweenService:Create(SubText, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        TextTransparency = 0
+    }):Play()
+    
+    -- Ждём 1.5 секунды на Welcome
+    task.wait(1.8)
+    
+    -- Анимация исчезновения Welcome
+    TweenService:Create(WelcomeFrame, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+        BackgroundTransparency = 1
+    }):Play()
+    
+    TweenService:Create(WelcomeMoon, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+        ImageTransparency = 1
+    }):Play()
+    
+    task.wait(0.6)
+    WelcomeFrame.Visible = false
+    
+    -- Активация ватермарка
+    CreateWatermark()
+end
+
+-- ===================== ВАТЕРМАРК =====================
+local WatermarkHolder
+local WMLabel
+local WMButton
+local WMGlow
+
+function CreateWatermark()
+    WatermarkHolder = Instance.new("Frame")
+    WatermarkHolder.Name = "WatermarkHolder"
+    WatermarkHolder.Size = UDim2.new(0, 320, 0, 58)
+    WatermarkHolder.Position = UDim2.new(0, 15, 0, 15)
+    WatermarkHolder.BackgroundColor3 = Color3.fromRGB(8, 8, 20)
+    WatermarkHolder.BackgroundTransparency = 1
+    WatermarkHolder.BorderSizePixel = 0
+    WatermarkHolder.ClipsDescendants = true
+    WatermarkHolder.Parent = ScreenGui
+
+    local WMCorner = Instance.new("UICorner")
+    WMCorner.CornerRadius = UDim.new(0, 14)
+    WMCorner.Parent = WatermarkHolder
+
+    local WMBorder = Instance.new("Frame")
+    WMBorder.Size = UDim2.new(1, 4, 1, 4)
+    WMBorder.Position = UDim2.new(0, -2, 0, -2)
+    WMBorder.BackgroundColor3 = Color3.fromRGB(140, 180, 255)
+    WMBorder.BackgroundTransparency = 0.6
+    WMBorder.BorderSizePixel = 0
+    WMBorder.ZIndex = 0
+    WMBorder.Parent = WatermarkHolder
+
+    local WMBorderCorner = Instance.new("UICorner")
+    WMBorderCorner.CornerRadius = UDim.new(0, 16)
+    WMBorderCorner.Parent = WMBorder
+
+    WMGlow = Instance.new("Frame")
+    WMGlow.Size = UDim2.new(1, 30, 1, 30)
+    WMGlow.Position = UDim2.new(0, -15, 0, -15)
+    WMGlow.BackgroundColor3 = Color3.fromRGB(120, 180, 255)
+    WMGlow.BackgroundTransparency = 0.92
+    WMGlow.BorderSizePixel = 0
+    WMGlow.ZIndex = -1
+    WMGlow.Parent = WatermarkHolder
+
+    local WMGlowCorner = Instance.new("UICorner")
+    WMGlowCorner.CornerRadius = UDim.new(0, 24)
+    WMGlowCorner.Parent = WMGlow
+
+    WMLabel = Instance.new("TextLabel")
+    WMLabel.Size = UDim2.new(1, 0, 1, 0)
+    WMLabel.BackgroundTransparency = 1
+    WMLabel.Text = "⏱ SeraphiCA  |  00:00:00"
+    WMLabel.TextColor3 = Color3.fromRGB(160, 210, 255)
+    WMLabel.TextSize = 20
+    WMLabel.Font = Enum.Font.GothamBold
+    WMLabel.TextXAlignment = Enum.TextXAlignment.Center
+    WMLabel.TextYAlignment = Enum.TextYAlignment.Center
+    WMLabel.TextTransparency = 1
+    WMLabel.Parent = WatermarkHolder
+
+    WMButton = Instance.new("TextButton")
+    WMButton.Size = UDim2.new(1, 0, 1, 0)
+    WMButton.BackgroundTransparency = 1
+    WMButton.Text = ""
+    WMButton.Parent = WatermarkHolder
+    
+    -- Анимация появления ватермарка
+    WatermarkHolder.Position = UDim2.new(0, 15, 0, -60)
+    WatermarkHolder.BackgroundTransparency = 1
+    
+    TweenService:Create(WatermarkHolder, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0, 15, 0, 15),
+        BackgroundTransparency = 0.2
+    }):Play()
+    
+    task.wait(0.2)
+    
+    TweenService:Create(WMLabel, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        TextTransparency = 0
+    }):Play()
+    
+    -- Активация обновления времени
+    UpdateWatermark()
+    task.spawn(function()
+        while true do
+            task.wait(1)
+            UpdateWatermark()
+        end
+    end)
+    
+    -- Анимация свечения
+    task.spawn(function()
+        while true do
+            task.wait(2)
+            TweenService:Create(WMGlow, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BackgroundTransparency = 0.7,
+                Size = UDim2.new(1, 40, 1, 40),
+                Position = UDim2.new(0, -20, 0, -20)
+            }):Play()
+            task.wait(1.5)
+            TweenService:Create(WMGlow, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BackgroundTransparency = 0.92,
+                Size = UDim2.new(1, 30, 1, 30),
+                Position = UDim2.new(0, -15, 0, -15)
+            }):Play()
+        end
+    end)
+    
+    -- Активация основного меню
+    CreateMainMenu()
+end
+
+-- ===================== ВРЕМЯ КИЕВА =====================
 local function GetKyivTime()
     local now = os.time()
-    local isDST = false
     local date = os.date("*t", now)
     local year = date.year
     local marchLastSunday = 31 - (os.date("*t", os.time{year=year, month=3, day=31}).wday % 7)
     local octLastSunday = 31 - (os.date("*t", os.time{year=year, month=10, day=31}).wday % 7)
     local dstStart = os.time{year=year, month=3, day=marchLastSunday, hour=3}
     local dstEnd = os.time{year=year, month=10, day=octLastSunday, hour=4}
-    if now >= dstStart and now < dstEnd then isDST = true end
+    local isDST = (now >= dstStart and now < dstEnd)
     local kyivOffset = isDST and 3 or 2
     local kyivTime = now + kyivOffset * 3600
     return os.date("!%H:%M:%S", kyivTime)
 end
 
 local function UpdateWatermark()
-    WatermarkLabel.Text = "⏱ SeraphiCA  |  " .. GetKyivTime()
-end
-UpdateWatermark()
-
-task.spawn(function()
-    while true do
-        task.wait(1)
-        UpdateWatermark()
-    end
-end)
-
-local function AnimateWatermark()
-    while true do
-        task.wait(1.5)
-        TweenService:Create(WatermarkGlow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            BackgroundTransparency = 0.7,
-            Size = UDim2.new(1, 30, 1, 30),
-            Position = UDim2.new(0, -15, 0, -15)
-        }):Play()
-        task.wait(1.2)
-        TweenService:Create(WatermarkGlow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            BackgroundTransparency = 0.9,
-            Size = UDim2.new(1, 20, 1, 20),
-            Position = UDim2.new(0, -10, 0, -10)
-        }):Play()
+    if WMLabel then
+        WMLabel.Text = "⏱ SeraphiCA  |  " .. GetKyivTime()
     end
 end
-coroutine.wrap(AnimateWatermark)()
 
--- ===================== ОСНОВНОЕ МЕНЮ (900px) =====================
+-- ===================== ОСНОВНОЕ МЕНЮ =====================
 local MenuSize = 900
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainMenu"
-MainFrame.Size = UDim2.new(0, 0, 0, 0)
-MainFrame.Position = UDim2.new(0.5, -450, 0.5, -300)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 40)
-MainFrame.BackgroundTransparency = 1
-MainFrame.BorderSizePixel = 0
-MainFrame.Visible = false
-MainFrame.Parent = ScreenGui
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 16)
-MainCorner.Parent = MainFrame
-
-local MainGlow = Instance.new("Frame")
-MainGlow.Name = "MainGlow"
-MainGlow.Size = UDim2.new(1, 40, 1, 40)
-MainGlow.Position = UDim2.new(0, -20, 0, -20)
-MainGlow.BackgroundColor3 = Color3.fromRGB(80, 180, 255)
-MainGlow.BackgroundTransparency = 0.92
-MainGlow.BorderSizePixel = 0
-MainGlow.ZIndex = -1
-MainGlow.Parent = MainFrame
-
-local MainGlowCorner = Instance.new("UICorner")
-MainGlowCorner.CornerRadius = UDim.new(0, 30)
-MainGlowCorner.Parent = MainGlow
-
--- Заголовок для перетаскивания
-local TitleBar = Instance.new("Frame")
-TitleBar.Name = "TitleBar"
-TitleBar.Size = UDim2.new(1, 0, 0, 50)
-TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 60)
-TitleBar.BackgroundTransparency = 0.3
-TitleBar.BorderSizePixel = 0
-TitleBar.Parent = MainFrame
-
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 16)
-TitleCorner.Parent = TitleBar
-
-local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(1, 0, 1, 0)
-TitleText.BackgroundTransparency = 1
-TitleText.Text = "✦ SERAPHICA MENU ✦"
-TitleText.TextColor3 = Color3.fromRGB(180, 220, 255)
-TitleText.TextSize = 22
-TitleText.Font = Enum.Font.GothamBold
-TitleText.TextXAlignment = Enum.TextXAlignment.Center
-TitleText.TextYAlignment = Enum.TextYAlignment.Center
-TitleText.Parent = TitleBar
-
--- Контейнер для вкладок
-local TabContainer = Instance.new("Frame")
-TabContainer.Name = "TabContainer"
-TabContainer.Size = UDim2.new(1, 0, 0, 40)
-TabContainer.Position = UDim2.new(0, 0, 0, 50)
-TabContainer.BackgroundTransparency = 1
-TabContainer.Parent = MainFrame
-
--- Контейнер для содержимого
-local ContentContainer = Instance.new("Frame")
-ContentContainer.Name = "ContentContainer"
-ContentContainer.Size = UDim2.new(1, -20, 1, -110)
-ContentContainer.Position = UDim2.new(0, 10, 0, 95)
-ContentContainer.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
-ContentContainer.BackgroundTransparency = 0.3
-ContentContainer.BorderSizePixel = 0
-ContentContainer.Parent = MainFrame
-
-local ContentCorner = Instance.new("UICorner")
-ContentCorner.CornerRadius = UDim.new(0, 12)
-ContentCorner.Parent = ContentContainer
-
--- Список вкладок
-local Tabs = {"COMBAT", "MOVEMENT", "VISUALS", "MISC", "SETTINGS"}
+local MainFrame
+local MainGlow
+local MoonImage
+local MoonGlow
+local MoonGlow2
+local Fragments = {}
 local TabButtons = {}
 local TabFrames = {}
 local CurrentTab = "COMBAT"
-
--- Функция создания кнопки вкладки
-local function CreateTabButton(tabName)
-    local btn = Instance.new("TextButton")
-    btn.Name = tabName .. "Tab"
-    btn.Size = UDim2.new(0, 160, 1, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 70)
-    btn.BackgroundTransparency = 0.5
-    btn.BorderSizePixel = 0
-    btn.Text = tabName
-    btn.TextColor3 = Color3.fromRGB(200, 200, 255)
-    btn.TextSize = 16
-    btn.Font = Enum.Font.GothamSemibold
-    btn.Parent = TabContainer
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = btn
-    
-    local glow = Instance.new("Frame")
-    glow.Name = "TabGlow"
-    glow.Size = UDim2.new(1, 10, 1, 10)
-    glow.Position = UDim2.new(0, -5, 0, -5)
-    glow.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-    glow.BackgroundTransparency = 0.9
-    glow.BorderSizePixel = 0
-    glow.ZIndex = -1
-    glow.Parent = btn
-    
-    local glowCorner = Instance.new("UICorner")
-    glowCorner.CornerRadius = UDim.new(0, 12)
-    glowCorner.Parent = glow
-    
-    btn.MouseButton1Click:Connect(function()
-        SwitchTab(tabName)
-    end)
-    
-    return btn
-end
-
--- Переключение вкладок
-function SwitchTab(tabName)
-    CurrentTab = tabName
-    for name, frame in pairs(TabFrames) do
-        frame.Visible = (name == tabName)
-    end
-    for name, btn in pairs(TabButtons) do
-        btn.BackgroundColor3 = (name == tabName) and Color3.fromRGB(60, 120, 255) or Color3.fromRGB(30, 30, 70)
-        btn.TextColor3 = (name == tabName) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 255)
-    end
-end
-
--- Создание вкладок
-for i, tabName in ipairs(Tabs) do
-    TabButtons[tabName] = CreateTabButton(tabName)
-    local frame = Instance.new("ScrollingFrame")
-    frame.Name = tabName .. "Content"
-    frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundTransparency = 1
-    frame.BorderSizePixel = 0
-    frame.ScrollBarThickness = 4
-    frame.ScrollBarImageColor3 = Color3.fromRGB(60, 120, 255)
-    frame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    frame.Parent = ContentContainer
-    TabFrames[tabName] = frame
-    
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 6)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Parent = frame
-end
-
--- Переключение на первую вкладку
-SwitchTab("COMBAT")
-
--- ===================== ФУНКЦИИ ДЛЯ ЭЛЕМЕНТОВ =====================
-local function CreateToggle(parent, text, defaultValue, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -10, 0, 32)
-    frame.BackgroundTransparency = 1
-    frame.Parent = parent
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.7, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(220, 230, 255)
-    label.TextSize = 14
-    label.Font = Enum.Font.Gotham
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
-    
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 50, 0, 26)
-    toggleBtn.Position = UDim2.new(0.85, 0, 0.5, -13)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
-    toggleBtn.BorderSizePixel = 0
-    toggleBtn.Text = ""
-    toggleBtn.Parent = frame
-    
-    local toggleCorner = Instance.new("UICorner")
-    toggleCorner.CornerRadius = UDim.new(0, 13)
-    toggleCorner.Parent = toggleBtn
-    
-    local toggleDot = Instance.new("Frame")
-    toggleDot.Size = UDim2.new(0, 20, 0, 20)
-    toggleDot.Position = UDim2.new(0, 3, 0.5, -10)
-    toggleDot.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-    toggleDot.BorderSizePixel = 0
-    toggleDot.Parent = toggleBtn
-    
-    local dotCorner = Instance.new("UICorner")
-    dotCorner.CornerRadius = UDim.new(0, 10)
-    dotCorner.Parent = toggleDot
-    
-    local state = defaultValue or false
-    
-    local function UpdateToggle()
-        if state then
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 200, 100)
-            toggleDot.Position = UDim2.new(0, 27, 0.5, -10)
-            toggleDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        else
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
-            toggleDot.Position = UDim2.new(0, 3, 0.5, -10)
-            toggleDot.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-        end
-    end
-    UpdateToggle()
-    
-    toggleBtn.MouseButton1Click:Connect(function()
-        state = not state
-        UpdateToggle()
-        if callback then pcall(callback, state) end
-    end)
-    
-    return function()
-        return state
-    end, function(newState)
-        state = newState
-        UpdateToggle()
-    end
-end
-
-local function CreateSlider(parent, text, min, max, default, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -10, 0, 44)
-    frame.BackgroundTransparency = 1
-    frame.Parent = parent
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.6, 0, 0.5, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(220, 230, 255)
-    label.TextSize = 14
-    label.Font = Enum.Font.Gotham
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
-    
-    local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(0.3, 0, 0.5, 0)
-    valueLabel.Position = UDim2.new(0.7, 0, 0, 0)
-    valueLabel.BackgroundTransparency = 1
-    valueLabel.Text = tostring(default)
-    valueLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-    valueLabel.TextSize = 14
-    valueLabel.Font = Enum.Font.GothamBold
-    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valueLabel.Parent = frame
-    
-    local slider = Instance.new("Frame")
-    slider.Size = UDim2.new(1, 0, 0, 6)
-    slider.Position = UDim2.new(0, 0, 0.7, 0)
-    slider.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
-    slider.BorderSizePixel = 0
-    slider.Parent = frame
-    
-    local sliderCorner = Instance.new("UICorner")
-    sliderCorner.CornerRadius = UDim.new(0, 3)
-    sliderCorner.Parent = slider
-    
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
-    fill.BorderSizePixel = 0
-    fill.Parent = slider
-    
-    local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0, 3)
-    fillCorner.Parent = fill
-    
-    local sliderButton = Instance.new("Frame")
-    sliderButton.Size = UDim2.new(0, 16, 0, 16)
-    sliderButton.Position = UDim2.new((default - min) / (max - min), -8, 0.5, -8)
-    sliderButton.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-    sliderButton.BorderSizePixel = 0
-    sliderButton.Parent = slider
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 8)
-    btnCorner.Parent = sliderButton
-    
-    local value = default
-    local dragging = false
-    
-    local function UpdateSlider(newValue)
-        value = math.clamp(newValue, min, max)
-        local percent = (value - min) / (max - min)
-        fill.Size = UDim2.new(percent, 0, 1, 0)
-        sliderButton.Position = UDim2.new(percent, -8, 0.5, -8)
-        valueLabel.Text = tostring(math.floor(value))
-        if callback then pcall(callback, value) end
-    end
-    
-    sliderButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-        end
-    end)
-    
-    sliderButton.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-    
-    slider.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local pos = input.Position.X - slider.AbsolutePosition.X
-            local percent = math.clamp(pos / slider.AbsoluteSize.X, 0, 1)
-            UpdateSlider(min + percent * (max - min))
-            dragging = true
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local pos = input.Position.X - slider.AbsolutePosition.X
-            local percent = math.clamp(pos / slider.AbsoluteSize.X, 0, 1)
-            UpdateSlider(min + percent * (max - min))
-        end
-    end)
-    
-    return function()
-        return value
-    end, function(newValue)
-        UpdateSlider(newValue)
-    end
-end
-
--- ===================== ФУНКЦИОНАЛ ВКЛАДОК =====================
--- СОЗДАНИЕ ЭЛЕМЕНТОВ ДЛЯ КАЖДОЙ ВКЛАДКИ
-
--- COMBAT
-local combatFrame = TabFrames["COMBAT"]
-local autoParry = CreateToggle(combatFrame, "Auto Parry", false, function(state)
-    -- Реальная логика Auto Parry
-    if state then
-        -- Подключаемся к RemoteEvent для парирования
-        local parryEvent = ReplicatedStorage:FindFirstChild("ParryEvent") or ReplicatedStorage:FindFirstChild("CombatEvents")
-        if parryEvent then
-            -- Эмуляция автоматического парирования
-            task.spawn(function()
-                while state do
-                    pcall(function()
-                        -- Проверяем атаки противников
-                        for _, player in ipairs(Players:GetPlayers()) do
-                            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
-                                local humanoid = player.Character.Humanoid
-                                if humanoid.Health > 0 and humanoid:FindFirstChild("AttackAnimation") then
-                                    -- Отправляем запрос на парирование
-                                    parryEvent:FireServer("Parry", player.Character)
-                                end
-                            end
-                        end
-                    end)
-                    task.wait(0.15)
-                end
-            end)
-        end
-    end
-end)
-
-local autoCombo = CreateToggle(combatFrame, "Auto Combo", false, function(state)
-    if state then
-        task.spawn(function()
-            local combatRemote = ReplicatedStorage:FindFirstChild("CombatRemote")
-            while state do
-                pcall(function()
-                    -- Имитация комбо
-                    local attacks = {"M1", "M2", "Special", "Ultimate"}
-                    for _, attack in ipairs(attacks) do
-                        if combatRemote then
-                            combatRemote:FireServer(attack)
-                        else
-                            -- Альтернативный метод через VirtualInputManager
-                            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, nil)
-                            task.wait(0.05)
-                            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, nil)
-                        end
-                        task.wait(0.1)
-                    end
-                end)
-                task.wait(0.3)
-            end
-        end)
-    end
-end)
-
-local autoBlock = CreateToggle(combatFrame, "Auto Block", false, function(state)
-    if state then
-        task.spawn(function()
-            local blockKey = Enum.KeyCode.F
-            while state do
-                pcall(function()
-                    if Humanoid then
-                        -- Имитация блока через Remote
-                        local blockEvent = ReplicatedStorage:FindFirstChild("BlockEvent")
-                        if blockEvent then
-                            blockEvent:FireServer(true)
-                        else
-                            VirtualInputManager:SendKeyEvent(true, blockKey, false, nil)
-                            task.wait(0.05)
-                            VirtualInputManager:SendKeyEvent(false, blockKey, false, nil)
-                        end
-                    end
-                end)
-                task.wait(0.2)
-            end
-        end)
-    end
-end)
-
-local autoDodge = CreateToggle(combatFrame, "Auto Dodge", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer and player.Character then
-                            local distance = (Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
-                            if distance < 15 then
-                                -- Уклонение
-                                local dodgeRemote = ReplicatedStorage:FindFirstChild("DodgeEvent")
-                                if dodgeRemote then
-                                    dodgeRemote:FireServer()
-                                else
-                                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftShift, false, nil)
-                                    task.wait(0.05)
-                                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftShift, false, nil)
-                                end
-                                break
-                            end
-                        end
-                    end
-                end)
-                task.wait(0.3)
-            end
-        end)
-    end
-end)
-
-local autoStun = CreateToggle(combatFrame, "Auto Stun", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    local stunEvent = ReplicatedStorage:FindFirstChild("StunEvent")
-                    if stunEvent then
-                        stunEvent:FireServer()
-                    end
-                end)
-                task.wait(0.5)
-            end
-        end)
-    end
-end)
-
-local fovSlider, setFOV = CreateSlider(combatFrame, "Auto Aim FOV", 0, 180, 90, function(value)
-    -- Реальная настройка FOV для аима
-    _G.AutoAimFOV = value
-end)
-
-local autoAim = CreateToggle(combatFrame, "Auto Aim", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    local target = nil
-                    local minDist = _G.AutoAimFOV or 90
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                            local dist = (Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
-                            if dist < minDist * 2 then
-                                target = player.Character.HumanoidRootPart
-                                break
-                            end
-                        end
-                    end
-                    if target then
-                        -- Наведение на цель (изменение ориентации)
-                        local lookVector = (target.Position - Character.HumanoidRootPart.Position).Unit
-                        Character.HumanoidRootPart.CFrame = CFrame.lookAt(Character.HumanoidRootPart.Position, Character.HumanoidRootPart.Position + lookVector)
-                    end
-                end)
-                task.wait(0.05)
-            end
-        end)
-    end
-end)
-
--- MOVEMENT
-local moveFrame = TabFrames["MOVEMENT"]
-local speedSlider, setSpeed = CreateSlider(moveFrame, "Speed Bypass", 16, 100, 16, function(value)
-    if Character and Character:FindFirstChild("Humanoid") then
-        Character.Humanoid.WalkSpeed = value
-        -- Сохраняем для постоянного применения
-        _G.SpeedValue = value
-    end
-end)
-
-local flyMode = CreateToggle(moveFrame, "Fly Mode", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    if Character and Character:FindFirstChild("HumanoidRootPart") then
-                        Character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-                        Character.HumanoidRootPart.Anchored = false
-                        -- Управление полетом
-                        local moveDir = Vector3.new()
-                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Character.HumanoidRootPart.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Character.HumanoidRootPart.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Character.HumanoidRootPart.CFrame.RightVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Character.HumanoidRootPart.CFrame.RightVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-                        
-                        if moveDir.Magnitude > 0 then
-                            Character.HumanoidRootPart.Velocity = moveDir.Unit * 50
-                        end
-                    end
-                end)
-                task.wait()
-            end
-        end)
-    else
-        if Character and Character:FindFirstChild("HumanoidRootPart") then
-            Character.HumanoidRootPart.Velocity = Vector3.new()
-        end
-    end
-end)
-
-local noClip = CreateToggle(moveFrame, "No Clip", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    if Character and Character:FindFirstChild("HumanoidRootPart") then
-                        Character.HumanoidRootPart.CanCollide = false
-                        -- Проход сквозь стены
-                        for _, part in ipairs(Character:GetChildren()) do
-                            if part:IsA("BasePart") then
-                                part.CanCollide = false
-                            end
-                        end
-                    end
-                end)
-                task.wait(0.1)
-            end
-        end)
-    else
-        if Character then
-            for _, part in ipairs(Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
-            end
-        end
-    end
-end)
-
-local infiniteJump = CreateToggle(moveFrame, "Infinite Jump", false, function(state)
-    if state then
-        _G.InfiniteJumpActive = true
-        local connection
-        connection = RunService.Heartbeat:Connect(function()
-            if _G.InfiniteJumpActive and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                pcall(function()
-                    if Character and Character:FindFirstChild("Humanoid") then
-                        Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
-                end)
-            end
-        end)
-    else
-        _G.InfiniteJumpActive = false
-    end
-end)
-
-local antiStun = CreateToggle(moveFrame, "Anti Stun", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    if Character and Character:FindFirstChild("Humanoid") then
-                        -- Сброс состояния стана
-                        if Character.Humanoid:GetState() == Enum.HumanoidStateType.Freefall or 
-                           Character.Humanoid:GetState() == Enum.HumanoidStateType.Stunned then
-                            Character.Humanoid:ChangeState(Enum.HumanoidStateType.Running)
-                        end
-                    end
-                end)
-                task.wait(0.1)
-            end
-        end)
-    end
-end)
-
--- VISUALS
-local visFrame = TabFrames["VISUALS"]
-local espBox = CreateToggle(visFrame, "ESP Box", false, function(state)
-    _G.ESPBox = state
-    -- Реализация ESP
-    if state then
-        task.spawn(function()
-            while _G.ESPBox do
-                pcall(function()
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                            local root = player.Character.HumanoidRootPart
-                            local pos, onScreen = Camera:WorldToScreenPoint(root.Position)
-                            if onScreen then
-                                -- Создаем или обновляем ESP бокс
-                                local espFrame = player:FindFirstChild("ESPBox")
-                                if not espFrame then
-                                    espFrame = Instance.new("Frame")
-                                    espFrame.Name = "ESPBox"
-                                    espFrame.Size = UDim2.new(0, 60, 0, 120)
-                                    espFrame.Position = UDim2.new(0, pos.X - 30, 0, pos.Y - 60)
-                                    espFrame.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-                                    espFrame.BackgroundTransparency = 0.5
-                                    espFrame.BorderSizePixel = 2
-                                    espFrame.BorderColor3 = Color3.fromRGB(0, 255, 0)
-                                    espFrame.Parent = ScreenGui
-                                else
-                                    espFrame.Position = UDim2.new(0, pos.X - 30, 0, pos.Y - 60)
-                                end
-                            end
-                        end
-                    end
-                end)
-                task.wait(0.1)
-            end
-        end)
-    else
-        -- Удаляем все ESP
-        for _, v in ipairs(ScreenGui:GetChildren()) do
-            if v.Name == "ESPBox" then v:Destroy() end
-        end
-    end
-end)
-
-local espLine = CreateToggle(visFrame, "ESP Line", false, function(state)
-    _G.ESPLine = state
-    -- Аналогичная реализация для линий
-end)
-
-local espSkeleton = CreateToggle(visFrame, "ESP Skeleton", false, function(state)
-    _G.ESPSkeleton = state
-end)
-
-local espHealth = CreateToggle(visFrame, "ESP Health", false, function(state)
-    _G.ESPHealth = state
-end)
-
-local espDistance = CreateToggle(visFrame, "ESP Distance", false, function(state)
-    _G.ESPDistance = state
-end)
-
-local espName = CreateToggle(visFrame, "ESP Name", false, function(state)
-    _G.ESPName = state
-end)
-
-local espWeapon = CreateToggle(visFrame, "ESP Weapon", false, function(state)
-    _G.ESPWeapon = state
-end)
-
-local hitEffect = CreateToggle(visFrame, "Hit Effect", false, function(state)
-    if state then
-        -- Добавляем визуальный эффект при попадании
-        local hitEvent = ReplicatedStorage:FindFirstChild("HitEvent")
-        if hitEvent then
-            hitEvent.OnClientEvent:Connect(function()
-                -- Создаем вспышку
-                local flash = Instance.new("Frame")
-                flash.Size = UDim2.new(1, 0, 1, 0)
-                flash.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-                flash.BackgroundTransparency = 0.7
-                flash.ZIndex = 999
-                flash.Parent = ScreenGui
-                TweenService:Create(flash, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
-                task.wait(0.3)
-                flash:Destroy()
-            end)
-        end
-    end
-end)
-
-local visualiser = CreateToggle(visFrame, "Visualiser", false, function(state)
-    -- Аудио визуализатор
-end)
-
-local noFog = CreateToggle(visFrame, "No Fog", false, function(state)
-    if state then
-        Lighting.FogEnd = 100000
-        Lighting.FogStart = 0
-    else
-        Lighting.FogEnd = 1000
-        Lighting.FogStart = 0
-    end
-end)
-
-local fullBright = CreateToggle(visFrame, "Full Bright", false, function(state)
-    if state then
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 12
-        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-    else
-        Lighting.Brightness = 1
-        Lighting.ClockTime = 0
-        Lighting.Ambient = Color3.fromRGB(128, 128, 128)
-    end
-end)
-
-local chams = CreateToggle(visFrame, "Chams", false, function(state)
-    if state then
-        -- Делаем игроков полупрозрачными для видимости через стены
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player.Character then
-                for _, part in ipairs(player.Character:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.Transparency = 0.4
-                        part.Reflectance = 0.3
-                    end
-                end
-            end
-        end
-    else
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player.Character then
-                for _, part in ipairs(player.Character:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.Transparency = 0
-                        part.Reflectance = 0
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- MISC
-local miscFrame = TabFrames["MISC"]
-local autoFarm = CreateToggle(miscFrame, "Auto Farm (NPC/Quest)", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    -- Поиск NPC для фарма
-                    local farmRemote = ReplicatedStorage:FindFirstChild("FarmEvent")
-                    if farmRemote then
-                        farmRemote:FireServer()
-                    else
-                        -- Эмуляция: клик по NPC
-                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, nil, 1)
-                        task.wait(0.05)
-                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, nil, 1)
-                    end
-                end)
-                task.wait(0.5)
-            end
-        end)
-    end
-end)
-
-local autoCollect = CreateToggle(miscFrame, "Auto Collect", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    -- Сбор предметов в радиусе
-                    for _, item in ipairs(workspace:GetChildren()) do
-                        if item:IsA("BasePart") and item:FindFirstChild("Collectible") then
-                            local dist = (Character.HumanoidRootPart.Position - item.Position).Magnitude
-                            if dist < 30 then
-                                Character.HumanoidRootPart.CFrame = CFrame.new(item.Position)
-                                task.wait(0.1)
-                                local collectRemote = ReplicatedStorage:FindFirstChild("CollectEvent")
-                                if collectRemote then collectRemote:FireServer(item) end
-                            end
-                        end
-                    end
-                end)
-                task.wait(0.3)
-            end
-        end)
-    end
-end)
-
-local autoRebirth = CreateToggle(miscFrame, "Auto Rebirth", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    local rebirthRemote = ReplicatedStorage:FindFirstChild("RebirthEvent")
-                    if rebirthRemote then
-                        rebirthRemote:FireServer()
-                    end
-                end)
-                task.wait(60) -- Проверка раз в минуту
-            end
-        end)
-    end
-end)
-
-local autoSkill = CreateToggle(miscFrame, "Auto Skill", false, function(state)
-    if state then
-        task.spawn(function()
-            local skillKeys = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R, Enum.KeyCode.F}
-            while state do
-                for _, key in ipairs(skillKeys) do
-                    pcall(function()
-                        VirtualInputManager:SendKeyEvent(true, key, false, nil)
-                        task.wait(0.05)
-                        VirtualInputManager:SendKeyEvent(false, key, false, nil)
-                        task.wait(0.3)
-                    end)
-                end
-                task.wait(1)
-            end
-        end)
-    end
-end)
-
-local autoPotion = CreateToggle(miscFrame, "Auto Potion", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    -- Проверка здоровья и использование зелья
-                    if Humanoid and Humanoid.Health < 50 then
-                        local potionRemote = ReplicatedStorage:FindFirstChild("PotionEvent")
-                        if potionRemote then
-                            potionRemote:FireServer()
-                        else
-                            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Number1, false, nil)
-                            task.wait(0.05)
-                            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Number1, false, nil)
-                        end
-                    end
-                end)
-                task.wait(2)
-            end
-        end)
-    end
-end)
-
-local autoRespawn = CreateToggle(miscFrame, "Auto Respawn", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    if Character and Character:FindFirstChild("Humanoid") and Character.Humanoid.Health <= 0 then
-                        local respawnRemote = ReplicatedStorage:FindFirstChild("RespawnEvent")
-                        if respawnRemote then
-                            respawnRemote:FireServer()
-                        end
-                    end
-                end)
-                task.wait(1)
-            end
-        end)
-    end
-end)
-
-local antiAFK = CreateToggle(miscFrame, "Anti AFK", false, function(state)
-    if state then
-        task.spawn(function()
-            while state do
-                pcall(function()
-                    -- Имитация движения для предотвращения AFK
-                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, nil)
-                    task.wait(0.1)
-                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, nil)
-                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.S, false, nil)
-                    task.wait(0.1)
-                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.S, false, nil)
-                end)
-                task.wait(30)
-            end
-        end)
-    end
-end)
-
--- SETTINGS
-local settingsFrame = TabFrames["SETTINGS"]
-local menuSizeSlider, setMenuSize = CreateSlider(settingsFrame, "Menu Size", 400, 1200, 900, function(value)
-    MenuSize = value
-    local half = value / 2
-    MainFrame.Size = UDim2.new(0, value, 0, value * 0.67)
-    MainFrame.Position = UDim2.new(0.5, -half, 0.5, -value * 0.335)
-end)
-
-local blurSlider, setBlur = CreateSlider(settingsFrame, "Blur Intensity", 0, 10, 5, function(value)
-    -- Настройка размытия
-    if ScreenGui:FindFirstChild("Blur") then
-        ScreenGui.Blur.Size = value
-    else
-        local blur = Instance.new("BlurEffect")
-        blur.Name = "Blur"
-        blur.Size = value
-        blur.Parent = ScreenGui
-    end
-end)
-
-local particleSlider, setParticles = CreateSlider(settingsFrame, "Particle Count", 10, 100, 50, function(value)
-    _G.ParticleCount = value
-end)
-
-local resetButton = Instance.new("TextButton")
-resetButton.Size = UDim2.new(0.4, 0, 0, 40)
-resetButton.Position = UDim2.new(0.3, 0, 0.8, 0)
-resetButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-resetButton.BorderSizePixel = 0
-resetButton.Text = "Reset Settings"
-resetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-resetButton.TextSize = 16
-resetButton.Font = Enum.Font.GothamBold
-resetButton.Parent = settingsFrame
-
-local resetCorner = Instance.new("UICorner")
-resetCorner.CornerRadius = UDim.new(0, 8)
-resetCorner.Parent = resetButton
-
-resetButton.MouseButton1Click:Connect(function()
-    -- Сброс всех настроек
-    setMenuSize(900)
-    setBlur(5)
-    setParticles(50)
-    setSpeed(16)
-    setFOV(90)
-    -- Сброс всех тогглов
-    for _, frame in pairs(TabFrames) do
-        for _, child in ipairs(frame:GetChildren()) do
-            if child:IsA("Frame") then
-                local btn = child:FindFirstChildWhichIsA("TextButton")
-                if btn and btn.Size.X.Offset == 50 then
-                    -- Кликаем для сброса
-                    btn:FireClick()
-                end
-            end
-        end
-    end
-end)
-
--- ===================== АНИМАЦИЯ ОТКРЫТИЯ/ЗАКРЫТИЯ МЕНЮ =====================
 local menuOpen = false
 local particles = {}
 
-local function CreateBubbleEffect(startPos, endPos)
-    local count = _G.ParticleCount or 50
-    for i = 1, count do
-        local particle = Instance.new("Frame")
-        particle.Size = UDim2.new(0, math.random(3, 8), 0, math.random(3, 8))
-        particle.Position = UDim2.new(0, startPos.X + math.random(-10, 10), 0, startPos.Y + math.random(-10, 10))
-        particle.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-        particle.BackgroundTransparency = 0.8
-        particle.BorderSizePixel = 0
-        particle.Parent = ScreenGui
+function CreateMainMenu()
+    MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 0, 0, 0)
+    MainFrame.Position = UDim2.new(0.5, -450, 0.5, -300)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 28)
+    MainFrame.BackgroundTransparency = 1
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Visible = false
+    MainFrame.ClipsDescendants = true
+    MainFrame.Parent = ScreenGui
+
+    local MainCorner = Instance.new("UICorner")
+    MainCorner.CornerRadius = UDim.new(0, 20)
+    MainCorner.Parent = MainFrame
+
+    MainGlow = Instance.new("Frame")
+    MainGlow.Size = UDim2.new(1, 60, 1, 60)
+    MainGlow.Position = UDim2.new(0, -30, 0, -30)
+    MainGlow.BackgroundColor3 = Color3.fromRGB(80, 170, 255)
+    MainGlow.BackgroundTransparency = 0.92
+    MainGlow.BorderSizePixel = 0
+    MainGlow.ZIndex = -1
+    MainGlow.Parent = MainFrame
+
+    local MainGlowCorner = Instance.new("UICorner")
+    MainGlowCorner.CornerRadius = UDim.new(0, 35)
+    MainGlowCorner.Parent = MainGlow
+
+    -- ===================== ЛУНА =====================
+    local MoonContainer = Instance.new("Frame")
+    MoonContainer.Size = UDim2.new(1, 0, 1, 0)
+    MoonContainer.BackgroundTransparency = 1
+    MoonContainer.Parent = MainFrame
+
+    MoonGlow = Instance.new("ImageLabel")
+    MoonGlow.Size = UDim2.new(0, 200, 0, 200)
+    MoonGlow.Position = UDim2.new(0.7, -100, 0.1, -100)
+    MoonGlow.BackgroundTransparency = 1
+    MoonGlow.Image = "rbxassetid://1313579923"
+    MoonGlow.ImageColor3 = Color3.fromRGB(200, 220, 255)
+    MoonGlow.ImageTransparency = 0.7
+    MoonGlow.Parent = MoonContainer
+
+    MoonGlow2 = Instance.new("ImageLabel")
+    MoonGlow2.Size = UDim2.new(0, 300, 0, 300)
+    MoonGlow2.Position = UDim2.new(0.7, -150, 0.1, -150)
+    MoonGlow2.BackgroundTransparency = 1
+    MoonGlow2.Image = "rbxassetid://1313579923"
+    MoonGlow2.ImageColor3 = Color3.fromRGB(150, 200, 255)
+    MoonGlow2.ImageTransparency = 0.85
+    MoonGlow2.Parent = MoonContainer
+
+    MoonImage = Instance.new("ImageLabel")
+    MoonImage.Size = UDim2.new(0, 120, 0, 120)
+    MoonImage.Position = UDim2.new(0.7, -60, 0.1, -60)
+    MoonImage.BackgroundTransparency = 1
+    MoonImage.Image = "rbxassetid://1313579923"
+    MoonImage.ImageColor3 = Color3.fromRGB(220, 240, 255)
+    MoonImage.ZIndex = 2
+    MoonImage.Parent = MoonContainer
+
+    task.spawn(function()
+        local angle = 0
+        while MoonImage and MoonImage.Parent do
+            angle = angle + 0.3
+            MoonImage.Rotation = angle
+            if MoonGlow then MoonGlow.Rotation = -angle * 0.5 end
+            if MoonGlow2 then MoonGlow2.Rotation = angle * 0.3 end
+            task.wait(0.05)
+        end
+    end)
+
+    task.spawn(function()
+        while MoonImage and MoonImage.Parent do
+            TweenService:Create(MoonImage, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 130, 0, 130),
+                Position = UDim2.new(0.7, -65, 0.1, -65)
+            }):Play()
+            task.wait(2)
+            TweenService:Create(MoonImage, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 110, 0, 110),
+                Position = UDim2.new(0.7, -55, 0.1, -55)
+            }):Play()
+            task.wait(2)
+        end
+    end)
+
+    -- ===================== ФРАГМЕНТЫ =====================
+    local function CreateFragment(x, y, size, color, glowColor)
+        local frag = Instance.new("Frame")
+        frag.Size = UDim2.new(0, size, 0, size)
+        frag.Position = UDim2.new(0, x, 0, y)
+        frag.BackgroundColor3 = color
+        frag.BackgroundTransparency = 0.3
+        frag.BorderSizePixel = 0
+        frag.Rotation = math.random(0, 360)
+        frag.Parent = MainFrame
         
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 10)
-        corner.Parent = particle
+        corner.CornerRadius = UDim.new(0, size * 0.2)
+        corner.Parent = frag
         
-        -- Анимация частицы
-        local tween = TweenService:Create(particle, TweenInfo.new(math.random(3, 6), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Position = UDim2.new(0, endPos.X + math.random(-50, 50), 0, endPos.Y + math.random(-50, 50)),
-            BackgroundTransparency = 1,
-            Size = UDim2.new(0, math.random(10, 30), 0, math.random(10, 30))
-        })
-        tween:Play()
-        tween.Completed:Connect(function()
-            particle:Destroy()
+        local glow = Instance.new("Frame")
+        glow.Size = UDim2.new(1, 20, 1, 20)
+        glow.Position = UDim2.new(0, -10, 0, -10)
+        glow.BackgroundColor3 = glowColor
+        glow.BackgroundTransparency = 0.9
+        glow.BorderSizePixel = 0
+        glow.ZIndex = -1
+        glow.Parent = frag
+        
+        local glowCorner = Instance.new("UICorner")
+        glowCorner.CornerRadius = UDim.new(0, size * 0.3)
+        glowCorner.Parent = glow
+        
+        table.insert(Fragments, frag)
+        
+        task.spawn(function()
+            local startX = x
+            local startY = y
+            local offsetX = math.random(-30, 30)
+            local offsetY = math.random(-30, 30)
+            local duration = math.random(3, 6)
+            
+            while frag.Parent do
+                TweenService:Create(frag, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                    Position = UDim2.new(0, startX + offsetX, 0, startY + offsetY),
+                    Rotation = frag.Rotation + 360,
+                    BackgroundTransparency = 0.1
+                }):Play()
+                task.wait(duration)
+                TweenService:Create(frag, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                    Position = UDim2.new(0, startX - offsetX, 0, startY - offsetY),
+                    Rotation = frag.Rotation - 360,
+                    BackgroundTransparency = 0.3
+                }):Play()
+                task.wait(duration)
+            end
         end)
         
-        table.insert(particles, particle)
+        return frag
     end
+
+    CreateFragment(-20, -20, 30, Color3.fromRGB(100, 200, 255), Color3.fromRGB(80, 180, 255))
+    CreateFragment(-30, 100, 20, Color3.fromRGB(200, 150, 255), Color3.fromRGB(180, 130, 255))
+    CreateFragment(-15, 250, 25, Color3.fromRGB(255, 200, 150), Color3.fromRGB(255, 180, 130))
+    CreateFragment(920, -30, 35, Color3.fromRGB(150, 255, 200), Color3.fromRGB(130, 255, 180))
+    CreateFragment(930, 150, 22, Color3.fromRGB(255, 100, 150), Color3.fromRGB(255, 80, 130))
+    CreateFragment(915, 320, 28, Color3.fromRGB(200, 200, 255), Color3.fromRGB(180, 180, 255))
+    CreateFragment(450, -35, 18, Color3.fromRGB(255, 255, 200), Color3.fromRGB(255, 255, 180))
+    CreateFragment(450, 650, 18, Color3.fromRGB(200, 255, 255), Color3.fromRGB(180, 255, 255))
+
+    for i = 1, 30 do
+        local star = Instance.new("Frame")
+        star.Size = UDim2.new(0, math.random(2, 4), 0, math.random(2, 4))
+        star.Position = UDim2.new(0, math.random(-20, 940), 0, math.random(-20, 680))
+        star.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        star.BackgroundTransparency = 0.5 + math.random() * 0.4
+        star.BorderSizePixel = 0
+        star.Parent = MainFrame
+        
+        local starCorner = Instance.new("UICorner")
+        starCorner.CornerRadius = UDim.new(0, 5)
+        starCorner.Parent = star
+        
+        task.spawn(function()
+            while star.Parent do
+                TweenService:Create(star, TweenInfo.new(1 + math.random(), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                    BackgroundTransparency = 0.1 + math.random() * 0.3,
+                    Size = UDim2.new(0, math.random(2, 6), 0, math.random(2, 6))
+                }):Play()
+                task.wait(1 + math.random())
+            end
+        end)
+    end
+
+    -- ===================== ЗАГОЛОВОК =====================
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Size = UDim2.new(1, 0, 0, 48)
+    TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 50)
+    TitleBar.BackgroundTransparency = 0.15
+    TitleBar.BorderSizePixel = 0
+    TitleBar.Parent = MainFrame
+
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 20)
+    TitleCorner.Parent = TitleBar
+
+    local TitleGradient = Instance.new("UIGradient")
+    TitleGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 40, 100)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(60, 60, 140)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 40, 100))
+    })
+    TitleGradient.Rotation = 90
+    TitleGradient.Parent = TitleBar
+
+    local TitleText = Instance.new("TextLabel")
+    TitleText.Size = UDim2.new(1, 0, 1, 0)
+    TitleText.BackgroundTransparency = 1
+    TitleText.Text = "✦ SERAPHICA MENU ✦"
+    TitleText.TextColor3 = Color3.fromRGB(180, 220, 255)
+    TitleText.TextSize = 22
+    TitleText.Font = Enum.Font.GothamBold
+    TitleText.TextXAlignment = Enum.TextXAlignment.Center
+    TitleText.TextYAlignment = Enum.TextYAlignment.Center
+    TitleText.Parent = TitleBar
+
+    -- ===================== ВКЛАДКИ =====================
+    local TabContainer = Instance.new("Frame")
+    TabContainer.Size = UDim2.new(1, 0, 0, 44)
+    TabContainer.Position = UDim2.new(0, 0, 0, 48)
+    TabContainer.BackgroundTransparency = 1
+    TabContainer.Parent = MainFrame
+
+    local ContentContainer = Instance.new("Frame")
+    ContentContainer.Size = UDim2.new(1, -20, 1, -112)
+    ContentContainer.Position = UDim2.new(0, 10, 0, 92)
+    ContentContainer.BackgroundColor3 = Color3.fromRGB(5, 5, 20)
+    ContentContainer.BackgroundTransparency = 0.2
+    ContentContainer.BorderSizePixel = 0
+    ContentContainer.ClipsDescendants = true
+    ContentContainer.Parent = MainFrame
+
+    local ContentCorner = Instance.new("UICorner")
+    ContentCorner.CornerRadius = UDim.new(0, 14)
+    ContentCorner.Parent = ContentContainer
+
+    local ContentGradient = Instance.new("UIGradient")
+    ContentGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 30)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 20, 50)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 30))
+    })
+    ContentGradient.Rotation = 45
+    ContentGradient.Parent = ContentContainer
+
+    -- ===================== ВКЛАДКИ =====================
+    local Tabs = {"COMBAT", "MOVEMENT", "VISUALS", "MISC", "SETTINGS"}
+    local tabSpacing = 0
+
+    local function CreateTabButton(tabName, position)
+        local btn = Instance.new("TextButton")
+        btn.Name = tabName .. "Btn"
+        btn.Size = UDim2.new(0, 160, 1, 0)
+        btn.Position = UDim2.new(0, position, 0, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 70)
+        btn.BackgroundTransparency = 0.4
+        btn.BorderSizePixel = 0
+        btn.Text = tabName
+        btn.TextColor3 = Color3.fromRGB(200, 200, 255)
+        btn.TextSize = 15
+        btn.Font = Enum.Font.GothamSemibold
+        btn.Parent = TabContainer
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = btn
+        
+        local glow = Instance.new("Frame")
+        glow.Size = UDim2.new(1, 8, 1, 8)
+        glow.Position = UDim2.new(0, -4, 0, -4)
+        glow.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+        glow.BackgroundTransparency = 0.9
+        glow.BorderSizePixel = 0
+        glow.ZIndex = -1
+        glow.Parent = btn
+        
+        local glowCorner = Instance.new("UICorner")
+        glowCorner.CornerRadius = UDim.new(0, 12)
+        glowCorner.Parent = glow
+        
+        btn.MouseButton1Click:Connect(function()
+            SwitchTab(tabName)
+        end)
+        
+        return btn
+    end
+
+    function SwitchTab(tabName)
+        CurrentTab = tabName
+        for name, frame in pairs(TabFrames) do
+            frame.Visible = (name == tabName)
+        end
+        for name, btn in pairs(TabButtons) do
+            local isActive = (name == tabName)
+            btn.BackgroundColor3 = isActive and Color3.fromRGB(60, 120, 255) or Color3.fromRGB(30, 30, 70)
+            btn.TextColor3 = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 255)
+            btn.BackgroundTransparency = isActive and 0.2 or 0.4
+        end
+    end
+
+    for i, tabName in ipairs(Tabs) do
+        TabButtons[tabName] = CreateTabButton(tabName, tabSpacing)
+        tabSpacing = tabSpacing + 164
+        
+        local frame = Instance.new("ScrollingFrame")
+        frame.Name = tabName .. "Content"
+        frame.Size = UDim2.new(1, -10, 1, -10)
+        frame.Position = UDim2.new(0, 5, 0, 5)
+        frame.BackgroundTransparency = 1
+        frame.BorderSizePixel = 0
+        frame.ScrollBarThickness = 4
+        frame.ScrollBarImageColor3 = Color3.fromRGB(60, 120, 255)
+        frame.CanvasSize = UDim2.new(0, 0, 0, 0)
+        frame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        frame.Parent = ContentContainer
+        
+        local layout = Instance.new("UIListLayout")
+        layout.Padding = UDim.new(0, 6)
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Parent = frame
+        
+        TabFrames[tabName] = frame
+    end
+
+    SwitchTab("COMBAT")
+
+    -- ===================== UI ЭЛЕМЕНТЫ =====================
+    function CreateToggle(parent, text, default, callback)
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, -10, 0, 34)
+        frame.BackgroundTransparency = 1
+        frame.Parent = parent
+        
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.7, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.TextColor3 = Color3.fromRGB(220, 230, 255)
+        label.TextSize = 15
+        label.Font = Enum.Font.Gotham
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = frame
+        
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 56, 0, 28)
+        btn.Position = UDim2.new(0.84, 0, 0.5, -14)
+        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
+        btn.BorderSizePixel = 0
+        btn.Text = ""
+        btn.Parent = frame
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 14)
+        btnCorner.Parent = btn
+        
+        local dot = Instance.new("Frame")
+        dot.Size = UDim2.new(0, 22, 0, 22)
+        dot.Position = UDim2.new(0, 3, 0.5, -11)
+        dot.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+        dot.BorderSizePixel = 0
+        dot.Parent = btn
+        
+        local dotCorner = Instance.new("UICorner")
+        dotCorner.CornerRadius = UDim.new(0, 11)
+        dotCorner.Parent = dot
+        
+        local state = default or false
+        
+        local function Update()
+            if state then
+                btn.BackgroundColor3 = Color3.fromRGB(60, 200, 100)
+                dot.Position = UDim2.new(0, 31, 0.5, -11)
+                dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            else
+                btn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
+                dot.Position = UDim2.new(0, 3, 0.5, -11)
+                dot.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+            end
+        end
+        Update()
+        
+        btn.MouseButton1Click:Connect(function()
+            state = not state
+            Update()
+            if callback then pcall(callback, state) end
+        end)
+        
+        return function() return state end, function(v) state = v; Update() end
+    end
+
+    function CreateSlider(parent, text, min, max, default, callback)
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, -10, 0, 48)
+        frame.BackgroundTransparency = 1
+        frame.Parent = parent
+        
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.6, 0, 0.4, 0)
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.TextColor3 = Color3.fromRGB(220, 230, 255)
+        label.TextSize = 15
+        label.Font = Enum.Font.Gotham
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = frame
+        
+        local valLabel = Instance.new("TextLabel")
+        valLabel.Size = UDim2.new(0.35, 0, 0.4, 0)
+        valLabel.Position = UDim2.new(0.65, 0, 0, 0)
+        valLabel.BackgroundTransparency = 1
+        valLabel.Text = tostring(default)
+        valLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+        valLabel.TextSize = 15
+        valLabel.Font = Enum.Font.GothamBold
+        valLabel.TextXAlignment = Enum.TextXAlignment.Right
+        valLabel.Parent = frame
+        
+        local slider = Instance.new("Frame")
+        slider.Size = UDim2.new(1, 0, 0, 6)
+        slider.Position = UDim2.new(0, 0, 0.7, 0)
+        slider.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
+        slider.BorderSizePixel = 0
+        slider.Parent = frame
+        
+        local sliderCorner = Instance.new("UICorner")
+        sliderCorner.CornerRadius = UDim.new(0, 3)
+        sliderCorner.Parent = slider
+        
+        local fill = Instance.new("Frame")
+        fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+        fill.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
+        fill.BorderSizePixel = 0
+        fill.Parent = slider
+        
+        local fillCorner = Instance.new("UICorner")
+        fillCorner.CornerRadius = UDim.new(0, 3)
+        fillCorner.Parent = fill
+        
+        local handle = Instance.new("Frame")
+        handle.Size = UDim2.new(0, 18, 0, 18)
+        handle.Position = UDim2.new((default - min) / (max - min), -9, 0.5, -9)
+        handle.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+        handle.BorderSizePixel = 0
+        handle.Parent = slider
+        
+        local handleCorner = Instance.new("UICorner")
+        handleCorner.CornerRadius = UDim.new(0, 9)
+        handleCorner.Parent = handle
+        
+        local value = default
+        local dragging = false
+        
+        local function UpdateSlider(newVal)
+            value = math.clamp(newVal, min, max)
+            local percent = (value - min) / (max - min)
+            fill.Size = UDim2.new(percent, 0, 1, 0)
+            handle.Position = UDim2.new(percent, -9, 0.5, -9)
+            valLabel.Text = tostring(math.floor(value))
+            if callback then pcall(callback, value) end
+        end
+        
+        handle.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+            end
+        end)
+        
+        handle.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+        
+        slider.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                local pos = input.Position.X - slider.AbsolutePosition.X
+                local percent = math.clamp(pos / slider.AbsoluteSize.X, 0, 1)
+                UpdateSlider(min + percent * (max - min))
+                dragging = true
+            end
+        end)
+        
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local pos = input.Position.X - slider.AbsolutePosition.X
+                local percent = math.clamp(pos / slider.AbsoluteSize.X, 0, 1)
+                UpdateSlider(min + percent * (max - min))
+            end
+        end)
+        
+        return function() return value end, function(v) UpdateSlider(v) end
+    end
+
+    -- ===================== ФУНКЦИОНАЛ AUT =====================
+    -- COMBAT
+    local combatFrame = TabFrames["COMBAT"]
+
+    local parryState = false
+    CreateToggle(combatFrame, "Auto Parry", false, function(s)
+        parryState = s
+        if s then
+            task.spawn(function()
+                local parryRemote = ReplicatedStorage:FindFirstChild("ParryEvent") or ReplicatedStorage:FindFirstChild("Combat")
+                while parryState do
+                    pcall(function()
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                                local dist = (Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                                if dist < 20 then
+                                    if parryRemote then parryRemote:FireServer("Parry") 
+                                    else VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, nil)
+                                        task.wait(0.03)
+                                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, nil)
+                                    end
+                                    break
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.12)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(combatFrame, "Auto Combo", false, function(s)
+        if s then
+            task.spawn(function()
+                local comboRemote = ReplicatedStorage:FindFirstChild("ComboEvent") or ReplicatedStorage:FindFirstChild("Attack")
+                while s do
+                    pcall(function()
+                        local keys = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R}
+                        for _, k in ipairs(keys) do
+                            if comboRemote then comboRemote:FireServer("Combo")
+                            else 
+                                VirtualInputManager:SendKeyEvent(true, k, false, nil)
+                                task.wait(0.04)
+                                VirtualInputManager:SendKeyEvent(false, k, false, nil)
+                            end
+                            task.wait(0.08)
+                        end
+                    end)
+                    task.wait(0.3)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(combatFrame, "Auto Block", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        local blockRemote = ReplicatedStorage:FindFirstChild("BlockEvent")
+                        if blockRemote then blockRemote:FireServer(true)
+                        else
+                            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, nil)
+                            task.wait(0.05)
+                            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, nil)
+                        end
+                    end)
+                    task.wait(0.2)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(combatFrame, "Auto Dodge", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        local dodgeRemote = ReplicatedStorage:FindFirstChild("DodgeEvent")
+                        if dodgeRemote then dodgeRemote:FireServer()
+                        else
+                            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftShift, false, nil)
+                            task.wait(0.03)
+                            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftShift, false, nil)
+                        end
+                    end)
+                    task.wait(0.25)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(combatFrame, "Auto Stun", false, function(s)
+        if s then
+            task.spawn(function()
+                local stunRemote = ReplicatedStorage:FindFirstChild("StunEvent")
+                while s do
+                    pcall(function()
+                        if stunRemote then stunRemote:FireServer() end
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end)
+
+    local fovVal, setFOV = CreateSlider(combatFrame, "Auto Aim FOV", 0, 180, 90, function(v)
+        _G.AimFOV = v
+    end)
+
+    CreateToggle(combatFrame, "Auto Aim", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        local target = nil
+                        local minDist = _G.AimFOV or 90
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                                local dist = (Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                                if dist < minDist * 2 then
+                                    target = p.Character.HumanoidRootPart
+                                    break
+                                end
+                            end
+                        end
+                        if target then
+                            local look = (target.Position - Character.HumanoidRootPart.Position).Unit
+                            Character.HumanoidRootPart.CFrame = CFrame.lookAt(Character.HumanoidRootPart.Position, Character.HumanoidRootPart.Position + look)
+                        end
+                    end)
+                    task.wait(0.03)
+                end
+            end)
+        end
+    end)
+
+    -- MOVEMENT
+    local moveFrame = TabFrames["MOVEMENT"]
+
+    local speedVal, setSpeed = CreateSlider(moveFrame, "Speed Bypass", 16, 100, 16, function(v)
+        if Humanoid then Humanoid.WalkSpeed = v end
+        _G.SpeedValue = v
+    end)
+
+    CreateToggle(moveFrame, "Fly Mode", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        if Character and Character:FindFirstChild("HumanoidRootPart") then
+                            local root = Character.HumanoidRootPart
+                            root.Velocity = Vector3.new(0, 0, 0)
+                            local dir = Vector3.new()
+                            if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + root.CFrame.LookVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - root.CFrame.LookVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - root.CFrame.RightVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + root.CFrame.RightVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0, 1, 0) end
+                            if dir.Magnitude > 0 then root.Velocity = dir.Unit * 50 end
+                        end
+                    end)
+                    task.wait()
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(moveFrame, "No Clip", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        if Character then
+                            for _, p in ipairs(Character:GetChildren()) do
+                                if p:IsA("BasePart") then p.CanCollide = false end
+                            end
+                        end
+                    end)
+                    task.wait(0.1)
+                end
+            end)
+        else
+            if Character then
+                for _, p in ipairs(Character:GetChildren()) do
+                    if p:IsA("BasePart") then p.CanCollide = true end
+                end
+            end
+        end
+    end)
+
+    CreateToggle(moveFrame, "Infinite Jump", false, function(s)
+        _G.InfiniteJump = s
+        if s then
+            task.spawn(function()
+                while _G.InfiniteJump do
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) and Humanoid then
+                        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
+                    task.wait()
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(moveFrame, "Anti Stun", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        if Humanoid and (Humanoid:GetState() == Enum.HumanoidStateType.Freefall or Humanoid:GetState() == Enum.HumanoidStateType.Stunned) then
+                            Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                        end
+                    end)
+                    task.wait(0.08)
+                end
+            end)
+        end
+    end)
+
+    -- VISUALS
+    local visFrame = TabFrames["VISUALS"]
+
+    CreateToggle(visFrame, "ESP Box", false, function(s)
+        _G.ESPBox = s
+        if s then
+            task.spawn(function()
+                while _G.ESPBox do
+                    pcall(function()
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                                local root = p.Character.HumanoidRootPart
+                                local pos, on = Camera:WorldToScreenPoint(root.Position)
+                                if on then
+                                    local box = p:FindFirstChild("ESP_Box")
+                                    if not box then
+                                        box = Instance.new("Frame")
+                                        box.Name = "ESP_Box"
+                                        box.Size = UDim2.new(0, 60, 0, 120)
+                                        box.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+                                        box.BackgroundTransparency = 0.4
+                                        box.BorderSizePixel = 2
+                                        box.BorderColor3 = Color3.fromRGB(0, 255, 0)
+                                        box.Parent = ScreenGui
+                                    end
+                                    box.Position = UDim2.new(0, pos.X - 30, 0, pos.Y - 60)
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.1)
+                end
+            end)
+        else
+            for _, v in ipairs(ScreenGui:GetChildren()) do
+                if v.Name == "ESP_Box" then v:Destroy() end
+            end
+        end
+    end)
+
+    CreateToggle(visFrame, "ESP Line", false, function(s) _G.ESPLine = s end)
+    CreateToggle(visFrame, "ESP Skeleton", false, function(s) _G.ESPSkeleton = s end)
+    CreateToggle(visFrame, "ESP Health", false, function(s) _G.ESPHealth = s end)
+    CreateToggle(visFrame, "ESP Distance", false, function(s) _G.ESPDistance = s end)
+    CreateToggle(visFrame, "ESP Name", false, function(s) _G.ESPName = s end)
+    CreateToggle(visFrame, "ESP Weapon", false, function(s) _G.ESPWeapon = s end)
+
+    CreateToggle(visFrame, "Hit Effect", false, function(s)
+        if s then
+            local he = ReplicatedStorage:FindFirstChild("HitEvent")
+            if he then
+                he.OnClientEvent:Connect(function()
+                    local flash = Instance.new("Frame")
+                    flash.Size = UDim2.new(1, 0, 1, 0)
+                    flash.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                    flash.BackgroundTransparency = 0.6
+                    flash.ZIndex = 999
+                    flash.Parent = ScreenGui
+                    TweenService:Create(flash, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+                    task.wait(0.3)
+                    flash:Destroy()
+                end)
+            end
+        end
+    end)
+
+    CreateToggle(visFrame, "Visualiser", false, function(s) end)
+    CreateToggle(visFrame, "No Fog", false, function(s)
+        Lighting.FogEnd = s and 100000 or 1000
+    end)
+    CreateToggle(visFrame, "Full Bright", false, function(s)
+        if s then
+            Lighting.Brightness = 2
+            Lighting.ClockTime = 12
+            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        else
+            Lighting.Brightness = 1
+            Lighting.ClockTime = 0
+            Lighting.Ambient = Color3.fromRGB(128, 128, 128)
+        end
+    end)
+    CreateToggle(visFrame, "Chams", false, function(s)
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character then
+                for _, part in ipairs(p.Character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.Transparency = s and 0.35 or 0
+                        part.Reflectance = s and 0.3 or 0
+                    end
+                end
+            end
+        end
+    end)
+
+    -- MISC
+    local miscFrame = TabFrames["MISC"]
+
+    CreateToggle(miscFrame, "Auto Farm (NPC/Quest)", false, function(s)
+        if s then
+            task.spawn(function()
+                local farmRemote = ReplicatedStorage:FindFirstChild("FarmEvent")
+                while s do
+                    pcall(function()
+                        if farmRemote then farmRemote:FireServer()
+                        else
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, nil, 1)
+                            task.wait(0.04)
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, nil, 1)
+                        end
+                    end)
+                    task.wait(0.4)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscFrame, "Auto Collect", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        for _, item in ipairs(Workspace:GetChildren()) do
+                            if item:IsA("BasePart") and item:FindFirstChild("Collectible") then
+                                local dist = (Character.HumanoidRootPart.Position - item.Position).Magnitude
+                                if dist < 30 then
+                                    Character.HumanoidRootPart.CFrame = CFrame.new(item.Position)
+                                    task.wait(0.1)
+                                    local collectRemote = ReplicatedStorage:FindFirstChild("CollectEvent")
+                                    if collectRemote then collectRemote:FireServer(item) end
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.3)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscFrame, "Auto Rebirth", false, function(s)
+        if s then
+            task.spawn(function()
+                local rebirthRemote = ReplicatedStorage:FindFirstChild("RebirthEvent")
+                while s do
+                    pcall(function()
+                        if rebirthRemote then rebirthRemote:FireServer() end
+                    end)
+                    task.wait(60)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscFrame, "Auto Skill", false, function(s)
+        if s then
+            task.spawn(function()
+                local keys = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R, Enum.KeyCode.T}
+                while s do
+                    for _, k in ipairs(keys) do
+                        pcall(function()
+                            VirtualInputManager:SendKeyEvent(true, k, false, nil)
+                            task.wait(0.04)
+                            VirtualInputManager:SendKeyEvent(false, k, false, nil)
+                            task.wait(0.2)
+                        end)
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscFrame, "Auto Potion", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        if Humanoid and Humanoid.Health < 50 then
+                            local potionRemote = ReplicatedStorage:FindFirstChild("PotionEvent")
+                            if potionRemote then potionRemote:FireServer()
+                            else
+                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Number1, false, nil)
+                                task.wait(0.04)
+                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Number1, false, nil)
+                            end
+                        end
+                    end)
+                    task.wait(1.5)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscFrame, "Auto Respawn", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        if Humanoid and Humanoid.Health <= 0 then
+                            local respawnRemote = ReplicatedStorage:FindFirstChild("RespawnEvent")
+                            if respawnRemote then respawnRemote:FireServer() end
+                        end
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end)
+
+    CreateToggle(miscFrame, "Anti AFK", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, nil)
+                        task.wait(0.05)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, nil)
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.A, false, nil)
+                        task.wait(0.05)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.A, false, nil)
+                    end)
+                    task.wait(25)
+                end
+            end)
+        end
+    end)
+
+    -- SETTINGS
+    local settingsFrame = TabFrames["SETTINGS"]
+
+    local menuSizeVal, setMenuSize = CreateSlider(settingsFrame, "Menu Size", 400, 1200, 900, function(v)
+        MenuSize = v
+        local half = v / 2
+        MainFrame.Size = UDim2.new(0, v, 0, v * 0.67)
+        MainFrame.Position = UDim2.new(0.5, -half, 0.5, -v * 0.335)
+    end)
+
+    CreateSlider(settingsFrame, "Blur Intensity", 0, 10, 5, function(v)
+        local blur = ScreenGui:FindFirstChild("BlurEffect")
+        if not blur then
+            blur = Instance.new("BlurEffect")
+            blur.Name = "BlurEffect"
+            blur.Parent = ScreenGui
+        end
+        blur.Size = v
+    end)
+
+    CreateSlider(settingsFrame, "Particle Count", 10, 100, 50, function(v)
+        _G.ParticleCount = v
+    end)
+
+    local resetBtn = Instance.new("TextButton")
+    resetBtn.Size = UDim2.new(0.4, 0, 0, 42)
+    resetBtn.Position = UDim2.new(0.3, 0, 0.85, 0)
+    resetBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    resetBtn.BorderSizePixel = 0
+    resetBtn.Text = "Reset Settings"
+    resetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    resetBtn.TextSize = 16
+    resetBtn.Font = Enum.Font.GothamBold
+    resetBtn.Parent = settingsFrame
+
+    local resetCorner = Instance.new("UICorner")
+    resetCorner.CornerRadius = UDim.new(0, 8)
+    resetCorner.Parent = resetBtn
+
+    resetBtn.MouseButton1Click:Connect(function()
+        setMenuSize(900)
+        setSpeed(16)
+        setFOV(90)
+        for _, frame in pairs(TabFrames) do
+            for _, child in ipairs(frame:GetChildren()) do
+                if child:IsA("Frame") then
+                    for _, btn in ipairs(child:GetChildren()) do
+                        if btn:IsA("TextButton") and btn.Size.X.Offset == 56 then
+                            btn:FireClick()
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    -- ===================== ДРАГ МЕНЮ =====================
+    local isDragging = false
+    local dragStartPos = nil
+    local dragOffsetPos = nil
+
+    TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = true
+            dragStartPos = input.Position
+            dragOffsetPos = Vector2.new(MainFrame.Position.X.Offset, MainFrame.Position.Y.Offset)
+        end
+    end)
+
+    TitleBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStartPos
+            MainFrame.Position = UDim2.new(0, dragOffsetPos.X + delta.X, 0, dragOffsetPos.Y + delta.Y)
+        end
+    end)
+
+    -- ===================== АНИМАЦИЯ ОТКРЫТИЯ =====================
+    local function SpawnParticles(from, to, count)
+        count = count or (_G.ParticleCount or 50)
+        for i = 1, count do
+            local p = Instance.new("Frame")
+            p.Size = UDim2.new(0, math.random(3, 8), 0, math.random(3, 8))
+            p.Position = UDim2.new(0, from.X + math.random(-15, 15), 0, from.Y + math.random(-15, 15))
+            p.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+            p.BackgroundTransparency = 0.8
+            p.BorderSizePixel = 0
+            p.Parent = ScreenGui
+            
+            local cor = Instance.new("UICorner")
+            cor.CornerRadius = UDim.new(0, 10)
+            cor.Parent = p
+            
+            local tween = TweenService:Create(p, TweenInfo.new(math.random(3, 6), Enum.EasingStyle.Quad), {
+                Position = UDim2.new(0, to.X + math.random(-60, 60), 0, to.Y + math.random(-60, 60)),
+                BackgroundTransparency = 1,
+                Size = UDim2.new(0, math.random(10, 30), 0, math.random(10, 30))
+            })
+            tween:Play()
+            tween.Completed:Connect(function() p:Destroy() end)
+            table.insert(particles, p)
+        end
+    end
+
+    local function ToggleMenu()
+        menuOpen = not menuOpen
+        local wmPos = WatermarkHolder.AbsolutePosition
+        local wmSize = WatermarkHolder.AbsoluteSize
+        local cx = wmPos.X + wmSize.X / 2
+        local cy = wmPos.Y + wmSize.Y / 2
+        
+        if menuOpen then
+            MainFrame.Visible = true
+            MainFrame.Position = UDim2.new(0, cx - 20, 0, cy - 20)
+            MainFrame.Size = UDim2.new(0, 40, 0, 40)
+            MainFrame.BackgroundTransparency = 0.2
+            
+            SpawnParticles(Vector2.new(cx, cy), Vector2.new(MainFrame.AbsolutePosition.X + MenuSize/2, MainFrame.AbsolutePosition.Y + MenuSize*0.335))
+            
+            local half = MenuSize / 2
+            TweenService:Create(MainFrame, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Position = UDim2.new(0.5, -half, 0.5, -MenuSize * 0.335),
+                Size = UDim2.new(0, MenuSize, 0, MenuSize * 0.67),
+                BackgroundTransparency = 0
+            }):Play()
+            
+            TweenService:Create(MainGlow, TweenInfo.new(1, Enum.EasingStyle.Sine), {
+                BackgroundTransparency = 0.85,
+                Size = UDim2.new(1, 70, 1, 70),
+                Position = UDim2.new(0, -35, 0, -35)
+            }):Play()
+            
+            task.wait(0.4)
+            ContentContainer.Visible = true
+            TabContainer.Visible = true
+            TitleBar.Visible = true
+        else
+            ContentContainer.Visible = false
+            TabContainer.Visible = false
+            TitleBar.Visible = false
+            
+            local curPos = MainFrame.AbsolutePosition
+            local curSize = MainFrame.AbsoluteSize
+            
+            TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Position = UDim2.new(0, cx - 20, 0, cy - 20),
+                Size = UDim2.new(0, 40, 0, 40),
+                BackgroundTransparency = 0.8
+            }):Play()
+            
+            SpawnParticles(Vector2.new(curPos.X + curSize.X/2, curPos.Y + curSize.Y/2), Vector2.new(cx, cy))
+            
+            task.wait(0.6)
+            MainFrame.Visible = false
+        end
+    end
+
+    WMButton.MouseButton1Click:Connect(ToggleMenu)
+
+    -- ===================== ОБНОВЛЕНИЕ ПЕРСОНАЖА =====================
+    LocalPlayer.CharacterAdded:Connect(function(char)
+        Character = char
+        Humanoid = char:WaitForChild("Humanoid")
+        if _G.SpeedValue then Humanoid.WalkSpeed = _G.SpeedValue end
+    end)
+
+    setMenuSize(900)
+    setSpeed(16)
+    setFOV(90)
 end
 
-local function ToggleMenu()
-    menuOpen = not menuOpen
-    local watermarkPos = WatermarkLabel.AbsolutePosition
-    local watermarkSize = WatermarkLabel.AbsoluteSize
-    local centerX = watermarkPos.X + watermarkSize.X / 2
-    local centerY = watermarkPos.Y + watermarkSize.Y / 2
-    
-    if menuOpen then
-        -- Открытие: пузырь из ватермарка
-        MainFrame.Visible = true
-        MainFrame.Position = UDim2.new(0, centerX - 20, 0, centerY - 20)
-        MainFrame.Size = UDim2.new(0, 40, 0, 40)
-        MainFrame.BackgroundTransparency = 0.2
-        
-        -- Создаем эффект частиц
-        CreateBubbleEffect(Vector2.new(centerX, centerY), Vector2.new(MainFrame.AbsolutePosition.X + MenuSize/2, MainFrame.AbsolutePosition.Y + MenuSize*0.335))
-        
-        -- Анимация появления
-        local half = MenuSize / 2
-        local targetPos = UDim2.new(0.5, -half, 0.5, -MenuSize * 0.335)
-        local targetSize = UDim2.new(0, MenuSize, 0, MenuSize * 0.67)
-        
-        TweenService:Create(MainFrame, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Position = targetPos,
-            Size = targetSize,
-            BackgroundTransparency = 0
-        }):Play()
-        
-        TweenService:Create(MainGlow, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-            BackgroundTransparency = 0.85,
-            Size = UDim2.new(1, 60, 1, 60),
-            Position = UDim2.new(0, -30, 0, -30)
-        }):Play()
-        
-        -- Показываем содержимое после анимации
-        task.wait(0.4)
-        ContentContainer.Visible = true
-        TabContainer.Visible = true
-        TitleBar.Visible = true
-    else
-        -- Закрытие: сворачиваем обратно в ватермарк
-        ContentContainer.Visible = false
-        TabContainer.Visible = false
-        TitleBar.Visible = false
-        
-        local currentPos = MainFrame.AbsolutePosition
-        local currentSize = MainFrame.AbsoluteSize
-        
-        TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Position = UDim2.new(0, centerX - 20, 0, centerY - 20),
-            Size = UDim2.new(0, 40, 0, 40),
-            BackgroundTransparency = 0.8
-        }):Play()
-        
-        -- Эффект втягивания
-        CreateBubbleEffect(Vector2.new(currentPos.X + currentSize.X/2, currentPos.Y + currentSize.Y/2), Vector2.new(centerX, centerY))
-        
-        task.wait(0.6)
-        MainFrame.Visible = false
-    end
-end
-
--- ===================== ПЕРЕТАСКИВАНИЕ МЕНЮ =====================
-local dragging = false
-local dragStart = nil
-local dragOffset = nil
-
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        dragOffset = Vector2.new(MainFrame.Position.X.Offset, MainFrame.Position.Y.Offset)
-    end
+-- ===================== ЗАПУСК =====================
+task.spawn(function()
+    AnimateLoading()
 end)
 
-TitleBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        local newX = dragOffset.X + delta.X
-        local newY = dragOffset.Y + delta.Y
-        MainFrame.Position = UDim2.new(0, newX, 0, newY)
-    end
-end)
-
--- ===================== ОБРАБОТЧИК ОТКРЫТИЯ ПО ВАТЕРМАРКУ =====================
-WatermarkButton.MouseButton1Click:Connect(ToggleMenu)
-
--- ===================== ИНИЦИАЛИЗАЦИЯ =====================
-local Camera = workspace.CurrentCamera
-local Lighting = game:GetService("Lighting")
-
--- Обработка смены персонажа
-LocalPlayer.CharacterAdded:Connect(function(char)
-    Character = char
-    Humanoid = char:WaitForChild("Humanoid")
-    -- Обновляем скорость если установлена
-    if _G.SpeedValue then
-        Humanoid.WalkSpeed = _G.SpeedValue
-    end
-end)
-
--- Применяем начальные настройки
-setSpeed(16)
-setFOV(90)
-setMenuSize(900)
-setBlur(5)
-setParticles(50)
-
-print("SeraphiCA Menu Loaded Successfully!")
+print("SeraphiCA V4.0 with Loading & Welcome loaded!")

@@ -1,6 +1,6 @@
 -- ============================================================
---  SERAPHICA MENU V7.0 - AUT (A Universal Time)
---  ULTIMATE EDITION - FIXED DRAG, WATERMARK, SECRET
+--  SERAPHICA MENU V8.0 - AUT (A Universal Time)
+--  FULL FIX - DRAG, SECRET OVERLAY, PASSWORD MENU
 -- ============================================================
 
 -- ОЧИСТКА
@@ -22,7 +22,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
-local HttpService = game:GetService("HttpService")
 
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
@@ -342,15 +341,18 @@ local CRASH_ACTIVE = false
 
 -- ===================== МЕНЮ =====================
 local MenuSize = 900
-local MainFrame, MainGlow, WatermarkHolder, WMLabel, WMButton, WMGlow, WMInnerGlow
+local MainFrame, MainGlow, WatermarkHolder, WMLabel, WMButton
 local MoonImage, MoonGlow, MoonGlow2
 local TabButtons = {}
 local TabFrames = {}
 local CurrentTab = "COMBAT"
 local menuOpen = false
+local SecretUnlockFrame = nil
+local SecretInput = nil
+local SecretStatus = nil
 
 function CreateMenu()
-    -- ===== ВАТЕРМАРК (УМЕНЬШЕННЫЙ) =====
+    -- ===== ВАТЕРМАРК =====
     WatermarkHolder = Instance.new("Frame")
     WatermarkHolder.Name = "WatermarkHolder"
     WatermarkHolder.Size = UDim2.new(0, 260, 0, 42)
@@ -366,7 +368,7 @@ function CreateMenu()
     WMCorner.CornerRadius = UDim.new(0, 12)
     WMCorner.Parent = WatermarkHolder
 
-    WMInnerGlow = Instance.new("Frame")
+    local WMInnerGlow = Instance.new("Frame")
     WMInnerGlow.Size = UDim2.new(1, 8, 1, 8)
     WMInnerGlow.Position = UDim2.new(0, -4, 0, -4)
     WMInnerGlow.BackgroundColor3 = Color3.fromRGB(100, 180, 255)
@@ -422,7 +424,6 @@ function CreateMenu()
         TextTransparency = 0
     }):Play()
 
-    -- Анимация
     task.spawn(function()
         while WatermarkHolder.Parent do
             TweenService:Create(WatermarkHolder, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
@@ -436,7 +437,6 @@ function CreateMenu()
         end
     end)
 
-    -- Время
     local function GetKyivTime()
         local now = os.time()
         local date = os.date("*t", now)
@@ -493,6 +493,7 @@ function CreateMenu()
     MainFrame.BorderColor3 = Color3.fromRGB(80, 160, 255)
     MainFrame.Visible = false
     MainFrame.ClipsDescendants = true
+    MainFrame.ZIndex = 50
     MainFrame.Parent = ScreenGui
 
     local MainCorner = Instance.new("UICorner")
@@ -1050,7 +1051,6 @@ function CreateMenu()
     -- ===== SECRET ВКЛАДКА =====
     local secretFrame = TabFrames["SECRET"]
     
-    -- Краш панель
     local CrashPanel = Instance.new("Frame")
     CrashPanel.Size = UDim2.new(1, -20, 0, 460)
     CrashPanel.Position = UDim2.new(0, 10, 0, 10)
@@ -1086,7 +1086,6 @@ function CreateMenu()
     CrashTitle.TextStrokeColor3 = Color3.fromRGB(200, 0, 0)
     CrashTitle.Parent = CrashPanel
     
-    -- Список игроков
     local PlayerList = Instance.new("ScrollingFrame")
     PlayerList.Size = UDim2.new(1, -20, 0, 280)
     PlayerList.Position = UDim2.new(0, 10, 0, 55)
@@ -1111,7 +1110,6 @@ function CreateMenu()
     local SelectedPlayer = nil
     local PlayerButtons = {}
     
-    -- Кнопка ACCEPT
     local AcceptBtn = Instance.new("TextButton")
     AcceptBtn.Size = UDim2.new(0.45, 0, 0, 40)
     AcceptBtn.Position = UDim2.new(0.03, 0, 0.88, 0)
@@ -1134,7 +1132,6 @@ function CreateMenu()
         CrashPlayer(SelectedPlayer)
     end)
     
-    -- Кнопка MASS CRASH (отдельно)
     local MassCrashBtn = Instance.new("TextButton")
     MassCrashBtn.Size = UDim2.new(0.45, 0, 0, 40)
     MassCrashBtn.Position = UDim2.new(0.52, 0, 0.88, 0)
@@ -1171,23 +1168,20 @@ function CreateMenu()
         MassCrashBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 200)
     end)
     
-    -- Новая функция: Anti-Crash Shield (защита от краша)
-    local AntiCrashToggle = CreateToggle(secretFrame, "🛡️ Anti-Crash Shield", false, function(s)
+    -- Anti-Crash Shield
+    CreateToggle(secretFrame, "🛡️ Anti-Crash Shield", false, function(s)
         if s then
             task.spawn(function()
                 while s do
                     pcall(function()
-                        -- Защита от ударов и стана
                         if Humanoid then
                             Humanoid:ChangeState(Enum.HumanoidStateType.Running)
                         end
-                        -- Очистка спама от других игроков
                         for _, obj in ipairs(Workspace:GetChildren()) do
                             if obj:IsA("RemoteEvent") and obj.Parent == ReplicatedStorage then
                                 obj:Destroy()
                             end
                         end
-                        -- Защита от фризов
                         if Character and Character:FindFirstChild("HumanoidRootPart") then
                             Character.HumanoidRootPart.Velocity = Character.HumanoidRootPart.Velocity * 0.5
                         end
@@ -1198,7 +1192,6 @@ function CreateMenu()
         end
     end)
     
-    -- Статус
     local StatusLabel = Instance.new("TextLabel")
     StatusLabel.Size = UDim2.new(1, 0, 0, 30)
     StatusLabel.Position = UDim2.new(0, 0, 0.78, 0)
@@ -1210,7 +1203,6 @@ function CreateMenu()
     StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
     StatusLabel.Parent = CrashPanel
     
-    -- Функция обновления списка игроков
     local function UpdatePlayerList()
         for _, btn in ipairs(PlayerButtons) do
             btn:Destroy()
@@ -1273,7 +1265,6 @@ function CreateMenu()
         end
     end
     
-    -- Функция краша (улучшенная)
     local function CrashPlayer(player)
         if not player then
             StatusLabel.Text = "❌ No player selected!"
@@ -1376,7 +1367,6 @@ function CreateMenu()
         end
     end
     
-    -- Активация краш системы
     local function ActivateCrashSystem()
         CRASH_ACTIVE = true
         CrashPanel.Visible = true
@@ -1392,11 +1382,7 @@ function CreateMenu()
         end)
     end
 
-    -- ===== ФУНКЦИЯ РАЗБЛОКИРОВКИ SECRET (НЕПРОЗРАЧНАЯ) =====
-    local SecretUnlockFrame = nil
-    local SecretInput = nil
-    local SecretStatus = nil
-    
+    -- ===== ФУНКЦИЯ РАЗБЛОКИРОВКИ SECRET (ПОВЕРХ МЕНЮ) =====
     function ShowSecretUnlock()
         if SecretUnlockFrame then return end
         
@@ -1407,7 +1393,7 @@ function CreateMenu()
         SecretUnlockFrame.BackgroundTransparency = 0
         SecretUnlockFrame.BorderSizePixel = 3
         SecretUnlockFrame.BorderColor3 = Color3.fromRGB(200, 100, 255)
-        SecretUnlockFrame.ZIndex = 100
+        SecretUnlockFrame.ZIndex = 200
         SecretUnlockFrame.Parent = ScreenGui
         
         local corner = Instance.new("UICorner")
@@ -1448,15 +1434,28 @@ function CreateMenu()
         title.TextStrokeColor3 = Color3.fromRGB(150, 0, 255)
         title.Parent = SecretUnlockFrame
         
+        -- Подзаголовок
+        local subTitle = Instance.new("TextLabel")
+        subTitle.Size = UDim2.new(1, 0, 0, 30)
+        subTitle.Position = UDim2.new(0, 0, 0.2, 0)
+        subTitle.BackgroundTransparency = 1
+        subTitle.Text = "Enter the secret key to unlock hidden features"
+        subTitle.TextColor3 = Color3.fromRGB(180, 160, 200)
+        subTitle.TextSize = 14
+        subTitle.Font = Enum.Font.Gotham
+        subTitle.TextXAlignment = Enum.TextXAlignment.Center
+        subTitle.Parent = SecretUnlockFrame
+        
         SecretInput = Instance.new("TextBox")
         SecretInput.Size = UDim2.new(0.8, 0, 0, 50)
-        SecretInput.Position = UDim2.new(0.1, 0, 0.3, 0)
+        SecretInput.Position = UDim2.new(0.1, 0, 0.35, 0)
         SecretInput.BackgroundColor3 = Color3.fromRGB(25, 15, 50)
         SecretInput.BackgroundTransparency = 0
         SecretInput.BorderSizePixel = 2
         SecretInput.BorderColor3 = Color3.fromRGB(200, 100, 255)
         SecretInput.Text = ""
         SecretInput.PlaceholderText = "Enter access key..."
+        SecretInput.PlaceholderColor3 = Color3.fromRGB(150, 130, 180)
         SecretInput.TextColor3 = Color3.fromRGB(255, 255, 255)
         SecretInput.TextSize = 20
         SecretInput.Font = Enum.Font.Gotham
@@ -1468,7 +1467,7 @@ function CreateMenu()
         
         local submitBtn = Instance.new("TextButton")
         submitBtn.Size = UDim2.new(0.4, 0, 0, 45)
-        submitBtn.Position = UDim2.new(0.3, 0, 0.6, 0)
+        submitBtn.Position = UDim2.new(0.3, 0, 0.62, 0)
         submitBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 255)
         submitBtn.BackgroundTransparency = 0
         submitBtn.BorderSizePixel = 0
@@ -2039,7 +2038,9 @@ function CreateMenu()
     UserInputService.InputChanged:Connect(function(input)
         if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStartPos
-            MainFrame.Position = UDim2.new(0, dragOffsetPos.X + delta.X, 0, dragOffsetPos.Y + delta.Y)
+            local newX = dragOffsetPos.X + delta.X
+            local newY = dragOffsetPos.Y + delta.Y
+            MainFrame.Position = UDim2.new(0, newX, 0, newY)
         end
     end)
 
@@ -2139,4 +2140,4 @@ task.spawn(function()
     AnimateLoading()
 end)
 
-print("SeraphiCA V7.0 ULTIMATE loaded - ALL FIXED!")
+print("SeraphiCA V8.0 ULTIMATE loaded - ALL FIXED!")

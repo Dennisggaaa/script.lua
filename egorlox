@@ -1,6 +1,6 @@
 -- ============================================================
---  SERAPHICA MENU V9.0 - AUT (A Universal Time)
---  FULL REWRITE - ALL WORKING, CRASH SYSTEM FIXED
+--  SERAPHICA MENU V10.0 - AUT (A Universal Time)
+--  FINAL FIX - TABS WORKING
 -- ============================================================
 
 -- ОЧИСТКА
@@ -633,7 +633,6 @@ function CreateMenu()
         end)
     end
 
-    -- Создаем красивые фрагменты разных форм
     CreateFragment(-25, -25, 35, Color3.fromRGB(100, 200, 255), Color3.fromRGB(80, 180, 255), "circle")
     CreateFragment(-35, 100, 25, Color3.fromRGB(200, 150, 255), Color3.fromRGB(180, 130, 255), "diamond")
     CreateFragment(-20, 250, 30, Color3.fromRGB(255, 200, 150), Color3.fromRGB(255, 180, 130), "circle")
@@ -642,10 +641,7 @@ function CreateMenu()
     CreateFragment(920, 320, 32, Color3.fromRGB(200, 200, 255), Color3.fromRGB(180, 180, 255), "diamond")
     CreateFragment(450, -40, 22, Color3.fromRGB(255, 255, 200), Color3.fromRGB(255, 255, 180), "circle")
     CreateFragment(450, 655, 22, Color3.fromRGB(200, 255, 255), Color3.fromRGB(180, 255, 255), "diamond")
-    CreateFragment(100, 100, 18, Color3.fromRGB(255, 150, 200), Color3.fromRGB(255, 130, 180), "circle")
-    CreateFragment(800, 500, 20, Color3.fromRGB(150, 200, 255), Color3.fromRGB(130, 180, 255), "diamond")
 
-    -- Звезды
     for i = 1, 40 do
         local star = Instance.new("Frame")
         star.Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5))
@@ -768,21 +764,27 @@ function CreateMenu()
     function SwitchTab(tabName)
         CurrentTab = tabName
         for name, frame in pairs(TabFrames) do
-            frame.Visible = (name == tabName)
+            if frame then
+                frame.Visible = (name == tabName)
+            end
         end
         for name, btn in pairs(TabButtons) do
-            local isActive = (name == tabName)
-            btn.BackgroundColor3 = isActive and Color3.fromRGB(60, 120, 255) or Color3.fromRGB(30, 30, 70)
-            btn.TextColor3 = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 255)
-            btn.BackgroundTransparency = isActive and 0.2 or 0.4
+            if btn then
+                local isActive = (name == tabName)
+                btn.BackgroundColor3 = isActive and Color3.fromRGB(60, 120, 255) or Color3.fromRGB(30, 30, 70)
+                btn.TextColor3 = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 255)
+                btn.BackgroundTransparency = isActive and 0.2 or 0.4
+            end
         end
     end
 
     for i, tabName in ipairs(Tabs) do
-        TabButtons[tabName] = CreateTabButton(tabName, tabSpacing)
+        local btn = CreateTabButton(tabName, tabSpacing)
+        TabButtons[tabName] = btn
         tabSpacing = tabSpacing + 122
         
         local frame = Instance.new("ScrollingFrame")
+        frame.Name = tabName .. "Content"
         frame.Size = UDim2.new(1, -10, 1, -10)
         frame.Position = UDim2.new(0, 5, 0, 5)
         frame.BackgroundTransparency = 1
@@ -801,6 +803,7 @@ function CreateMenu()
         TabFrames[tabName] = frame
     end
 
+    -- Показываем первую вкладку
     SwitchTab("COMBAT")
 
     -- ===== UI ЭЛЕМЕНТЫ =====
@@ -1853,7 +1856,7 @@ function CreateMenu()
         end)
     end
 
-    -- ===== ФУНКЦИЯ РАЗБЛОКИРОВКИ SECRET (ПОВЕРХ МЕНЮ) =====
+    -- ===== ФУНКЦИЯ РАЗБЛОКИРОВКИ SECRET =====
     function ShowSecretUnlock()
         if SecretUnlockFrame then return end
         
@@ -2159,4 +2162,4 @@ task.spawn(function()
     AnimateLoading()
 end)
 
-print("SeraphiCA V9.0 ULTIMATE loaded - FULL REWRITE!")
+print("SeraphiCA V10.0 ULTIMATE loaded - TABS FIXED!")

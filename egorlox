@@ -1,6 +1,6 @@
 -- ============================================================
---  SERAPHICA MENU V5.0 - AUT (A Universal Time)
---  SECRET TAB WITH CRASH SYSTEM
+--  SERAPHICA MENU V6.0 - AUT (A Universal Time)
+--  ULTIMATE EDITION WITH NPC ESP & IMPROVED SECRET
 -- ============================================================
 
 -- ОЧИСТКА
@@ -134,11 +134,11 @@ PercentLabel.Font = Enum.Font.Gotham
 PercentLabel.TextXAlignment = Enum.TextXAlignment.Center
 PercentLabel.Parent = LoadingFrame
 
--- ===================== WELCOME =====================
+-- ===================== WELCOME (БЕЗ ЧЕРНОГО ФОНА) =====================
 local WelcomeFrame = Instance.new("Frame")
 WelcomeFrame.Size = UDim2.new(1, 0, 1, 0)
 WelcomeFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 20)
-WelcomeFrame.BackgroundTransparency = 1
+WelcomeFrame.BackgroundTransparency = 0.95
 WelcomeFrame.BorderSizePixel = 0
 WelcomeFrame.Visible = false
 WelcomeFrame.Parent = ScreenGui
@@ -153,12 +153,12 @@ WelcomeGradient.Rotation = 45
 WelcomeGradient.Parent = WelcomeFrame
 
 local WelcomeMoon = Instance.new("ImageLabel")
-WelcomeMoon.Size = UDim2.new(0, 150, 0, 150)
-WelcomeMoon.Position = UDim2.new(0.5, -75, 0.25, -75)
+WelcomeMoon.Size = UDim2.new(0, 120, 0, 120)
+WelcomeMoon.Position = UDim2.new(0.5, -60, 0.2, -60)
 WelcomeMoon.BackgroundTransparency = 1
 WelcomeMoon.Image = "rbxassetid://1313579923"
 WelcomeMoon.ImageColor3 = Color3.fromRGB(200, 220, 255)
-WelcomeMoon.ImageTransparency = 0.3
+WelcomeMoon.ImageTransparency = 0.2
 WelcomeMoon.Parent = WelcomeFrame
 
 task.spawn(function()
@@ -171,52 +171,75 @@ end)
 task.spawn(function()
     while WelcomeMoon.Parent and WelcomeFrame.Visible do
         TweenService:Create(WelcomeMoon, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Size = UDim2.new(0, 160, 0, 160),
-            Position = UDim2.new(0.5, -80, 0.25, -80)
+            Size = UDim2.new(0, 130, 0, 130),
+            Position = UDim2.new(0.5, -65, 0.2, -65)
         }):Play()
         task.wait(2)
         TweenService:Create(WelcomeMoon, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Size = UDim2.new(0, 140, 0, 140),
-            Position = UDim2.new(0.5, -70, 0.25, -70)
+            Size = UDim2.new(0, 110, 0, 110),
+            Position = UDim2.new(0.5, -55, 0.2, -55)
         }):Play()
         task.wait(2)
     end
 end)
 
+-- Текст WELCOME
 local WelcomeText = Instance.new("TextLabel")
-WelcomeText.Size = UDim2.new(1, 0, 0, 80)
-WelcomeText.Position = UDim2.new(0, 0, 0.38, 0)
+WelcomeText.Size = UDim2.new(1, 0, 0, 70)
+WelcomeText.Position = UDim2.new(0, 0, 0.32, 0)
 WelcomeText.BackgroundTransparency = 1
 WelcomeText.Text = "WELCOME"
-WelcomeText.TextColor3 = Color3.fromRGB(180, 220, 255)
-WelcomeText.TextSize = 52
+WelcomeText.TextColor3 = Color3.fromRGB(200, 230, 255)
+WelcomeText.TextSize = 48
 WelcomeText.Font = Enum.Font.GothamBold
 WelcomeText.TextXAlignment = Enum.TextXAlignment.Center
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Center
+WelcomeText.TextStrokeTransparency = 0
+WelcomeText.TextStrokeColor3 = Color3.fromRGB(80, 150, 255)
 WelcomeText.Parent = WelcomeFrame
 
+-- Имя игрока (без фона)
 local PlayerNameLabel = Instance.new("TextLabel")
-PlayerNameLabel.Size = UDim2.new(1, 0, 0, 55)
-PlayerNameLabel.Position = UDim2.new(0, 0, 0.48, 0)
+PlayerNameLabel.Size = UDim2.new(1, 0, 0, 50)
+PlayerNameLabel.Position = UDim2.new(0, 0, 0.45, 0)
 PlayerNameLabel.BackgroundTransparency = 1
 PlayerNameLabel.Text = LocalPlayer.Name
-PlayerNameLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-PlayerNameLabel.TextSize = 34
+PlayerNameLabel.TextColor3 = Color3.fromRGB(100, 220, 255)
+PlayerNameLabel.TextSize = 32
 PlayerNameLabel.Font = Enum.Font.GothamSemibold
 PlayerNameLabel.TextXAlignment = Enum.TextXAlignment.Center
 PlayerNameLabel.TextYAlignment = Enum.TextYAlignment.Center
+PlayerNameLabel.TextStrokeTransparency = 0.3
+PlayerNameLabel.TextStrokeColor3 = Color3.fromRGB(0, 100, 255)
 PlayerNameLabel.Parent = WelcomeFrame
 
+-- Admin Telegram (новая надпись)
+local AdminLabel = Instance.new("TextLabel")
+AdminLabel.Size = UDim2.new(1, 0, 0, 35)
+AdminLabel.Position = UDim2.new(0, 0, 0.55, 0)
+AdminLabel.BackgroundTransparency = 1
+AdminLabel.Text = "Admin Telegram: @Mpmtww"
+AdminLabel.TextColor3 = Color3.fromRGB(200, 180, 255)
+AdminLabel.TextSize = 18
+AdminLabel.Font = Enum.Font.Gotham
+AdminLabel.TextXAlignment = Enum.TextXAlignment.Center
+AdminLabel.TextYAlignment = Enum.TextYAlignment.Center
+AdminLabel.TextStrokeTransparency = 0.5
+AdminLabel.TextStrokeColor3 = Color3.fromRGB(150, 100, 255)
+AdminLabel.Parent = WelcomeFrame
+
+-- Подпись
 local SubText = Instance.new("TextLabel")
 SubText.Size = UDim2.new(1, 0, 0, 30)
-SubText.Position = UDim2.new(0, 0, 0.56, 0)
+SubText.Position = UDim2.new(0, 0, 0.62, 0)
 SubText.BackgroundTransparency = 1
 SubText.Text = "SeraphiCA System Activated"
 SubText.TextColor3 = Color3.fromRGB(150, 180, 220)
-SubText.TextSize = 18
+SubText.TextSize = 16
 SubText.Font = Enum.Font.Gotham
 SubText.TextXAlignment = Enum.TextXAlignment.Center
 SubText.TextYAlignment = Enum.TextYAlignment.Center
+SubText.TextStrokeTransparency = 0.7
 SubText.Parent = WelcomeFrame
 
 -- ===================== АНИМАЦИЯ ЗАГРУЗКИ =====================
@@ -248,13 +271,13 @@ local function AnimateLoading()
     WelcomeFrame.BackgroundTransparency = 1
     
     TweenService:Create(WelcomeFrame, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-        BackgroundTransparency = 0
+        BackgroundTransparency = 0.95
     }):Play()
     
     WelcomeText.TextTransparency = 1
     TweenService:Create(WelcomeText, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
         TextTransparency = 0,
-        TextSize = 56
+        TextSize = 52
     }):Play()
     
     task.wait(0.3)
@@ -262,10 +285,17 @@ local function AnimateLoading()
     PlayerNameLabel.TextTransparency = 1
     TweenService:Create(PlayerNameLabel, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
         TextTransparency = 0,
-        TextSize = 36
+        TextSize = 35
     }):Play()
     
-    task.wait(0.3)
+    task.wait(0.2)
+    
+    AdminLabel.TextTransparency = 1
+    TweenService:Create(AdminLabel, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        TextTransparency = 0
+    }):Play()
+    
+    task.wait(0.2)
     
     SubText.TextTransparency = 1
     TweenService:Create(SubText, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
@@ -288,7 +318,7 @@ local function AnimateLoading()
     CreateMenu()
 end
 
--- ===================== СИСТЕМА ШИФРОВАНИЯ КЛЮЧА =====================
+-- ===================== СИСТЕМА ШИФРОВАНИЯ =====================
 local function EncryptKey()
     local key = "081324"
     local encoded = ""
@@ -327,67 +357,79 @@ function CreateMenu()
     -- ===== ВАТЕРМАРК УЛУЧШЕННЫЙ =====
     WatermarkHolder = Instance.new("Frame")
     WatermarkHolder.Name = "WatermarkHolder"
-    WatermarkHolder.Size = UDim2.new(0, 340, 0, 60)
+    WatermarkHolder.Size = UDim2.new(0, 380, 0, 65)
     WatermarkHolder.Position = UDim2.new(0, 15, 0, 15)
-    WatermarkHolder.BackgroundColor3 = Color3.fromRGB(10, 10, 25)
+    WatermarkHolder.BackgroundColor3 = Color3.fromRGB(12, 12, 30)
     WatermarkHolder.BackgroundTransparency = 1
-    WatermarkHolder.BorderSizePixel = 0
+    WatermarkHolder.BorderSizePixel = 2
+    WatermarkHolder.BorderColor3 = Color3.fromRGB(100, 180, 255)
     WatermarkHolder.ClipsDescendants = true
     WatermarkHolder.Parent = ScreenGui
 
     local WMCorner = Instance.new("UICorner")
-    WMCorner.CornerRadius = UDim.new(0, 16)
+    WMCorner.CornerRadius = UDim.new(0, 18)
     WMCorner.Parent = WatermarkHolder
 
-    local WMBorder = Instance.new("Frame")
-    WMBorder.Size = UDim2.new(1, 6, 1, 6)
-    WMBorder.Position = UDim2.new(0, -3, 0, -3)
-    WMBorder.BackgroundColor3 = Color3.fromRGB(140, 180, 255)
-    WMBorder.BackgroundTransparency = 0.5
-    WMBorder.BorderSizePixel = 0
-    WMBorder.ZIndex = 0
-    WMBorder.Parent = WatermarkHolder
+    -- Градиентный бордер
+    local WMBorderGradient = Instance.new("UIGradient")
+    WMBorderGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(100, 180, 255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 100, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 180, 255))
+    })
+    WMBorderGradient.Rotation = 45
+    WMBorderGradient.Parent = WatermarkHolder
 
-    local WMBorderCorner = Instance.new("UICorner")
-    WMBorderCorner.CornerRadius = UDim.new(0, 18)
-    WMBorderCorner.Parent = WMBorder
+    local WMInnerGlow = Instance.new("Frame")
+    WMInnerGlow.Size = UDim2.new(1, 10, 1, 10)
+    WMInnerGlow.Position = UDim2.new(0, -5, 0, -5)
+    WMInnerGlow.BackgroundColor3 = Color3.fromRGB(80, 160, 255)
+    WMInnerGlow.BackgroundTransparency = 0.85
+    WMInnerGlow.BorderSizePixel = 0
+    WMInnerGlow.ZIndex = -1
+    WMInnerGlow.Parent = WatermarkHolder
 
-    WMGlow = Instance.new("Frame")
-    WMGlow.Size = UDim2.new(1, 40, 1, 40)
-    WMGlow.Position = UDim2.new(0, -20, 0, -20)
-    WMGlow.BackgroundColor3 = Color3.fromRGB(120, 180, 255)
-    WMGlow.BackgroundTransparency = 0.92
-    WMGlow.BorderSizePixel = 0
-    WMGlow.ZIndex = -1
-    WMGlow.Parent = WatermarkHolder
-
-    local WMGlowCorner = Instance.new("UICorner")
-    WMGlowCorner.CornerRadius = UDim.new(0, 28)
-    WMGlowCorner.Parent = WMGlow
+    local WMInnerGlowCorner = Instance.new("UICorner")
+    WMInnerGlowCorner.CornerRadius = UDim.new(0, 24)
+    WMInnerGlowCorner.Parent = WMInnerGlow
 
     -- Иконка слева
     local WMIcon = Instance.new("TextLabel")
-    WMIcon.Size = UDim2.new(0, 40, 1, 0)
+    WMIcon.Size = UDim2.new(0, 50, 1, 0)
     WMIcon.BackgroundTransparency = 1
     WMIcon.Text = "✦"
     WMIcon.TextColor3 = Color3.fromRGB(100, 200, 255)
-    WMIcon.TextSize = 28
+    WMIcon.TextSize = 30
     WMIcon.Font = Enum.Font.GothamBold
     WMIcon.TextXAlignment = Enum.TextXAlignment.Center
     WMIcon.Parent = WatermarkHolder
 
     WMLabel = Instance.new("TextLabel")
-    WMLabel.Size = UDim2.new(1, -40, 1, 0)
-    WMLabel.Position = UDim2.new(0, 40, 0, 0)
+    WMLabel.Size = UDim2.new(1, -50, 1, 0)
+    WMLabel.Position = UDim2.new(0, 50, 0, 0)
     WMLabel.BackgroundTransparency = 1
-    WMLabel.Text = "SeraphiCA  |  00:00:00"
-    WMLabel.TextColor3 = Color3.fromRGB(160, 210, 255)
-    WMLabel.TextSize = 20
+    WMLabel.Text = "SERAPHICA  |  00:00:00"
+    WMLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
+    WMLabel.TextSize = 22
     WMLabel.Font = Enum.Font.GothamBold
     WMLabel.TextXAlignment = Enum.TextXAlignment.Left
     WMLabel.TextYAlignment = Enum.TextYAlignment.Center
     WMLabel.TextTransparency = 1
+    WMLabel.TextStrokeTransparency = 0.2
+    WMLabel.TextStrokeColor3 = Color3.fromRGB(0, 100, 255)
     WMLabel.Parent = WatermarkHolder
+
+    -- Маленький статус
+    local WMStatus = Instance.new("TextLabel")
+    WMStatus.Size = UDim2.new(0, 120, 0, 20)
+    WMStatus.Position = UDim2.new(1, -130, 0.5, -10)
+    WMStatus.BackgroundTransparency = 1
+    WMStatus.Text = "● ONLINE"
+    WMStatus.TextColor3 = Color3.fromRGB(0, 255, 100)
+    WMStatus.TextSize = 12
+    WMStatus.Font = Enum.Font.GothamBold
+    WMStatus.TextXAlignment = Enum.TextXAlignment.Center
+    WMStatus.Parent = WatermarkHolder
 
     WMButton = Instance.new("TextButton")
     WMButton.Size = UDim2.new(1, 0, 1, 0)
@@ -395,7 +437,7 @@ function CreateMenu()
     WMButton.Text = ""
     WMButton.Parent = WatermarkHolder
     
-    WatermarkHolder.Position = UDim2.new(0, 15, 0, -70)
+    WatermarkHolder.Position = UDim2.new(0, 15, 0, -80)
     WatermarkHolder.BackgroundTransparency = 1
     
     TweenService:Create(WatermarkHolder, TweenInfo.new(0.9, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
@@ -408,6 +450,20 @@ function CreateMenu()
     TweenService:Create(WMLabel, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
         TextTransparency = 0
     }):Play()
+
+    -- Анимация пульсации
+    task.spawn(function()
+        while WatermarkHolder.Parent do
+            TweenService:Create(WatermarkHolder, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BorderColor3 = Color3.fromRGB(150, 200, 255)
+            }):Play()
+            task.wait(2)
+            TweenService:Create(WatermarkHolder, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BorderColor3 = Color3.fromRGB(200, 150, 255)
+            }):Play()
+            task.wait(2)
+        end
+    end)
 
     -- Обновление времени
     local function GetKyivTime()
@@ -426,7 +482,7 @@ function CreateMenu()
 
     local function UpdateWatermark()
         if WMLabel then
-            WMLabel.Text = "SeraphiCA  |  " .. GetKyivTime()
+            WMLabel.Text = "SERAPHICA  |  " .. GetKyivTime()
         end
     end
 
@@ -441,16 +497,16 @@ function CreateMenu()
     task.spawn(function()
         while true do
             task.wait(2.5)
-            TweenService:Create(WMGlow, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            TweenService:Create(WMInnerGlow, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
                 BackgroundTransparency = 0.6,
-                Size = UDim2.new(1, 50, 1, 50),
-                Position = UDim2.new(0, -25, 0, -25)
+                Size = UDim2.new(1, 20, 1, 20),
+                Position = UDim2.new(0, -10, 0, -10)
             }):Play()
             task.wait(1.8)
-            TweenService:Create(WMGlow, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.92,
-                Size = UDim2.new(1, 40, 1, 40),
-                Position = UDim2.new(0, -20, 0, -20)
+            TweenService:Create(WMInnerGlow, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BackgroundTransparency = 0.85,
+                Size = UDim2.new(1, 10, 1, 10),
+                Position = UDim2.new(0, -5, 0, -5)
             }):Play()
         end
     end)
@@ -462,7 +518,8 @@ function CreateMenu()
     MainFrame.Position = UDim2.new(0.5, -450, 0.5, -300)
     MainFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 28)
     MainFrame.BackgroundTransparency = 1
-    MainFrame.BorderSizePixel = 0
+    MainFrame.BorderSizePixel = 2
+    MainFrame.BorderColor3 = Color3.fromRGB(80, 160, 255)
     MainFrame.Visible = false
     MainFrame.ClipsDescendants = true
     MainFrame.Parent = ScreenGui
@@ -471,9 +528,18 @@ function CreateMenu()
     MainCorner.CornerRadius = UDim.new(0, 20)
     MainCorner.Parent = MainFrame
 
+    local MainBorderGradient = Instance.new("UIGradient")
+    MainBorderGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 160, 255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 100, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 160, 255))
+    })
+    MainBorderGradient.Rotation = 45
+    MainBorderGradient.Parent = MainFrame
+
     MainGlow = Instance.new("Frame")
-    MainGlow.Size = UDim2.new(1, 60, 1, 60)
-    MainGlow.Position = UDim2.new(0, -30, 0, -30)
+    MainGlow.Size = UDim2.new(1, 80, 1, 80)
+    MainGlow.Position = UDim2.new(0, -40, 0, -40)
     MainGlow.BackgroundColor3 = Color3.fromRGB(80, 170, 255)
     MainGlow.BackgroundTransparency = 0.92
     MainGlow.BorderSizePixel = 0
@@ -481,7 +547,7 @@ function CreateMenu()
     MainGlow.Parent = MainFrame
 
     local MainGlowCorner = Instance.new("UICorner")
-    MainGlowCorner.CornerRadius = UDim.new(0, 35)
+    MainGlowCorner.CornerRadius = UDim.new(0, 40)
     MainGlowCorner.Parent = MainGlow
 
     -- ===== ЛУНА =====
@@ -630,7 +696,7 @@ function CreateMenu()
 
     -- ===== ЗАГОЛОВОК =====
     local TitleBar = Instance.new("Frame")
-    TitleBar.Size = UDim2.new(1, 0, 0, 48)
+    TitleBar.Size = UDim2.new(1, 0, 0, 52)
     TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 50)
     TitleBar.BackgroundTransparency = 0.15
     TitleBar.BorderSizePixel = 0
@@ -654,24 +720,26 @@ function CreateMenu()
     TitleText.BackgroundTransparency = 1
     TitleText.Text = "✦ SERAPHICA MENU ✦"
     TitleText.TextColor3 = Color3.fromRGB(180, 220, 255)
-    TitleText.TextSize = 22
+    TitleText.TextSize = 24
     TitleText.Font = Enum.Font.GothamBold
     TitleText.TextXAlignment = Enum.TextXAlignment.Center
     TitleText.TextYAlignment = Enum.TextYAlignment.Center
+    TitleText.TextStrokeTransparency = 0.3
+    TitleText.TextStrokeColor3 = Color3.fromRGB(0, 100, 255)
     TitleText.Parent = TitleBar
 
-    -- ===== ВКЛАДКИ (включая SECRET) =====
+    -- ===== ВКЛАДКИ =====
     local TabContainer = Instance.new("Frame")
-    TabContainer.Size = UDim2.new(1, 0, 0, 44)
-    TabContainer.Position = UDim2.new(0, 0, 0, 48)
+    TabContainer.Size = UDim2.new(1, 0, 0, 46)
+    TabContainer.Position = UDim2.new(0, 0, 0, 52)
     TabContainer.BackgroundTransparency = 1
     TabContainer.Parent = MainFrame
 
     local ContentContainer = Instance.new("Frame")
-    ContentContainer.Size = UDim2.new(1, -20, 1, -112)
-    ContentContainer.Position = UDim2.new(0, 10, 0, 92)
+    ContentContainer.Size = UDim2.new(1, -20, 1, -118)
+    ContentContainer.Position = UDim2.new(0, 10, 0, 98)
     ContentContainer.BackgroundColor3 = Color3.fromRGB(5, 5, 20)
-    ContentContainer.BackgroundTransparency = 0.2
+    ContentContainer.BackgroundTransparency = 0.15
     ContentContainer.BorderSizePixel = 0
     ContentContainer.ClipsDescendants = true
     ContentContainer.Parent = MainFrame
@@ -689,18 +757,19 @@ function CreateMenu()
     ContentGradient.Rotation = 45
     ContentGradient.Parent = ContentContainer
 
-    local Tabs = {"COMBAT", "MOVEMENT", "VISUALS", "MISC", "SETTINGS", "SECRET"}
+    local Tabs = {"COMBAT", "MOVEMENT", "VISUALS", "NPC", "MISC", "SETTINGS", "SECRET"}
     local tabSpacing = 0
 
     local function CreateTabButton(tabName, position)
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0, 140, 1, 0)
+        btn.Size = UDim2.new(0, 120, 1, 0)
         btn.Position = UDim2.new(0, position, 0, 0)
         btn.BackgroundColor3 = Color3.fromRGB(30, 30, 70)
         btn.BackgroundTransparency = 0.4
         btn.BorderSizePixel = 0
-        btn.Text = tabName        btn.TextColor3 = Color3.fromRGB(200, 200, 255)
-        btn.TextSize = 14
+        btn.Text = tabName
+        btn.TextColor3 = Color3.fromRGB(200, 200, 255)
+        btn.TextSize = 13
         btn.Font = Enum.Font.GothamSemibold
         btn.Parent = TabContainer
         
@@ -734,7 +803,7 @@ function CreateMenu()
 
     for i, tabName in ipairs(Tabs) do
         TabButtons[tabName] = CreateTabButton(tabName, tabSpacing)
-        tabSpacing = tabSpacing + 144
+        tabSpacing = tabSpacing + 124
         
         local frame = Instance.new("ScrollingFrame")
         frame.Size = UDim2.new(1, -10, 1, -10)
@@ -760,7 +829,7 @@ function CreateMenu()
     -- ===== UI ЭЛЕМЕНТЫ =====
     function CreateToggle(parent, text, default, callback)
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(1, -10, 0, 34)
+        frame.Size = UDim2.new(1, -10, 0, 36)
         frame.BackgroundTransparency = 1
         frame.Parent = parent
         
@@ -775,26 +844,26 @@ function CreateMenu()
         label.Parent = frame
         
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0, 56, 0, 28)
-        btn.Position = UDim2.new(0.84, 0, 0.5, -14)
+        btn.Size = UDim2.new(0, 58, 0, 30)
+        btn.Position = UDim2.new(0.84, 0, 0.5, -15)
         btn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
         btn.BorderSizePixel = 0
         btn.Text = ""
         btn.Parent = frame
         
         local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 14)
+        btnCorner.CornerRadius = UDim.new(0, 15)
         btnCorner.Parent = btn
         
         local dot = Instance.new("Frame")
-        dot.Size = UDim2.new(0, 22, 0, 22)
-        dot.Position = UDim2.new(0, 3, 0.5, -11)
+        dot.Size = UDim2.new(0, 24, 0, 24)
+        dot.Position = UDim2.new(0, 3, 0.5, -12)
         dot.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
         dot.BorderSizePixel = 0
         dot.Parent = btn
         
         local dotCorner = Instance.new("UICorner")
-        dotCorner.CornerRadius = UDim.new(0, 11)
+        dotCorner.CornerRadius = UDim.new(0, 12)
         dotCorner.Parent = dot
         
         local state = default or false
@@ -802,11 +871,11 @@ function CreateMenu()
         local function Update()
             if state then
                 btn.BackgroundColor3 = Color3.fromRGB(60, 200, 100)
-                dot.Position = UDim2.new(0, 31, 0.5, -11)
+                dot.Position = UDim2.new(0, 31, 0.5, -12)
                 dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             else
                 btn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
-                dot.Position = UDim2.new(0, 3, 0.5, -11)
+                dot.Position = UDim2.new(0, 3, 0.5, -12)
                 dot.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
             end
         end
@@ -821,7 +890,7 @@ function CreateMenu()
 
     function CreateSlider(parent, text, min, max, default, callback)
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(1, -10, 0, 48)
+        frame.Size = UDim2.new(1, -10, 0, 52)
         frame.BackgroundTransparency = 1
         frame.Parent = parent
         
@@ -920,42 +989,159 @@ function CreateMenu()
         end)
     end
 
+    -- ===== NPC ESP =====
+    local npcFrame = TabFrames["NPC"]
+    
+    CreateToggle(npcFrame, "NPC ESP (Box)", false, function(s)
+        _G.NPCESP = s
+        if s then
+            task.spawn(function()
+                while _G.NPCESP do
+                    pcall(function()
+                        for _, obj in ipairs(Workspace:GetChildren()) do
+                            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
+                                if not obj:FindFirstChild("NPC_Tag") and not obj:FindFirstChild("PlayerReplicated") then
+                                    local root = obj.HumanoidRootPart
+                                    local pos, on = Camera:WorldToScreenPoint(root.Position)
+                                    if on then
+                                        local box = obj:FindFirstChild("NPC_ESP")
+                                        if not box then
+                                            box = Instance.new("Frame")
+                                            box.Name = "NPC_ESP"
+                                            box.Size = UDim2.new(0, 50, 0, 100)
+                                            box.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
+                                            box.BackgroundTransparency = 0.4
+                                            box.BorderSizePixel = 2
+                                            box.BorderColor3 = Color3.fromRGB(255, 200, 0)
+                                            box.Parent = ScreenGui
+                                        end
+                                        box.Position = UDim2.new(0, pos.X - 25, 0, pos.Y - 50)
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.08)
+                end
+            end)
+        else
+            for _, v in ipairs(ScreenGui:GetChildren()) do
+                if v.Name == "NPC_ESP" then v:Destroy() end
+            end
+        end
+    end)
+    
+    CreateToggle(npcFrame, "NPC ESP (Line)", false, function(s)
+        _G.NPCESPLine = s
+    end)
+    
+    CreateToggle(npcFrame, "NPC ESP (Distance)", false, function(s)
+        _G.NPCESPDist = s
+    end)
+    
+    CreateToggle(npcFrame, "NPC ESP (Name)", false, function(s)
+        _G.NPCESPName = s
+    end)
+    
+    CreateToggle(npcFrame, "Auto Farm NPC", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        local nearest = nil
+                        local minDist = 100
+                        for _, obj in ipairs(Workspace:GetChildren()) do
+                            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
+                                if not obj:FindFirstChild("NPC_Tag") then
+                                    local dist = (Character.HumanoidRootPart.Position - obj.HumanoidRootPart.Position).Magnitude
+                                    if dist < minDist then
+                                        nearest = obj
+                                        minDist = dist
+                                    end
+                                end
+                            end
+                        end
+                        if nearest then
+                            Character.HumanoidRootPart.CFrame = nearest.HumanoidRootPart.CFrame + Vector3.new(0, 0, 5)
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, nil, 1)
+                            task.wait(0.05)
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, nil, 1)
+                        end
+                    end)
+                    task.wait(0.3)
+                end
+            end)
+        end
+    end)
+    
+    CreateToggle(npcFrame, "Auto Attack NPC", false, function(s)
+        if s then
+            task.spawn(function()
+                while s do
+                    pcall(function()
+                        local keys = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R}
+                        for _, k in ipairs(keys) do
+                            VirtualInputManager:SendKeyEvent(true, k, false, nil)
+                            task.wait(0.05)
+                            VirtualInputManager:SendKeyEvent(false, k, false, nil)
+                            task.wait(0.1)
+                        end
+                    end)
+                    task.wait(0.2)
+                end
+            end)
+        end
+    end)
+
     -- ===== SECRET ВКЛАДКА =====
     local secretFrame = TabFrames["SECRET"]
     
     -- Секретная панель для краша
     local CrashPanel = Instance.new("Frame")
-    CrashPanel.Size = UDim2.new(1, -20, 0, 400)
+    CrashPanel.Size = UDim2.new(1, -20, 0, 450)
     CrashPanel.Position = UDim2.new(0, 10, 0, 10)
     CrashPanel.BackgroundColor3 = Color3.fromRGB(20, 5, 30)
-    CrashPanel.BackgroundTransparency = 0.3
+    CrashPanel.BackgroundTransparency = 0.2
     CrashPanel.BorderSizePixel = 2
-    CrashPanel.BorderColor3 = Color3.fromRGB(200, 50, 100)
+    CrashPanel.BorderColor3 = Color3.fromRGB(255, 50, 100)
     CrashPanel.Visible = false
     CrashPanel.Parent = secretFrame
     
     local CrashCorner = Instance.new("UICorner")
-    CrashCorner.CornerRadius = UDim.new(0, 12)
+    CrashCorner.CornerRadius = UDim.new(0, 14)
     CrashCorner.Parent = CrashPanel
     
-    -- Заголовок краш панели
+    -- Градиент краш панели
+    local CrashGradient = Instance.new("UIGradient")
+    CrashGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 10, 50)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(50, 10, 30)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 10, 50))
+    })
+    CrashGradient.Rotation = 45
+    CrashGradient.Parent = CrashPanel
+    
+    -- Заголовок
     local CrashTitle = Instance.new("TextLabel")
-    CrashTitle.Size = UDim2.new(1, 0, 0, 40)
+    CrashTitle.Size = UDim2.new(1, 0, 0, 45)
     CrashTitle.BackgroundTransparency = 1
     CrashTitle.Text = "⚡ PLAYER CRASH SYSTEM ⚡"
     CrashTitle.TextColor3 = Color3.fromRGB(255, 80, 80)
-    CrashTitle.TextSize = 20
+    CrashTitle.TextSize = 22
     CrashTitle.Font = Enum.Font.GothamBold
     CrashTitle.TextXAlignment = Enum.TextXAlignment.Center
+    CrashTitle.TextStrokeTransparency = 0.3
+    CrashTitle.TextStrokeColor3 = Color3.fromRGB(200, 0, 0)
     CrashTitle.Parent = CrashPanel
     
     -- Список игроков
     local PlayerList = Instance.new("ScrollingFrame")
-    PlayerList.Size = UDim2.new(1, -20, 0, 250)
-    PlayerList.Position = UDim2.new(0, 10, 0, 50)
+    PlayerList.Size = UDim2.new(1, -20, 0, 280)
+    PlayerList.Position = UDim2.new(0, 10, 0, 55)
     PlayerList.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
-    PlayerList.BackgroundTransparency = 0.5
-    PlayerList.BorderSizePixel = 0
+    PlayerList.BackgroundTransparency = 0.4
+    PlayerList.BorderSizePixel = 1
+    PlayerList.BorderColor3 = Color3.fromRGB(200, 50, 100)
     PlayerList.ScrollBarThickness = 4
     PlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
     PlayerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -975,11 +1161,11 @@ function CreateMenu()
     
     -- Кнопка ACCEPT
     local AcceptBtn = Instance.new("TextButton")
-    AcceptBtn.Size = UDim2.new(0.4, 0, 0, 40)
+    AcceptBtn.Size = UDim2.new(0.4, 0, 0, 42)
     AcceptBtn.Position = UDim2.new(0.3, 0, 0.88, 0)
     AcceptBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
     AcceptBtn.BorderSizePixel = 0
-    AcceptBtn.Text = "ACCEPT"
+    AcceptBtn.Text = "⚡ ACCEPT"
     AcceptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     AcceptBtn.TextSize = 18
     AcceptBtn.Font = Enum.Font.GothamBold
@@ -989,10 +1175,17 @@ function CreateMenu()
     AcceptCorner.CornerRadius = UDim.new(0, 8)
     AcceptCorner.Parent = AcceptBtn
     
+    AcceptBtn.MouseButton1Click:Connect(function()
+        AcceptBtn.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+        task.wait(0.1)
+        AcceptBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        CrashPlayer(SelectedPlayer)
+    end)
+    
     -- Статус
     local StatusLabel = Instance.new("TextLabel")
     StatusLabel.Size = UDim2.new(1, 0, 0, 30)
-    StatusLabel.Position = UDim2.new(0, 0, 0.78, 0)
+    StatusLabel.Position = UDim2.new(0, 0, 0.76, 0)
     StatusLabel.BackgroundTransparency = 1
     StatusLabel.Text = "Select a player..."
     StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -1000,6 +1193,43 @@ function CreateMenu()
     StatusLabel.Font = Enum.Font.Gotham
     StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
     StatusLabel.Parent = CrashPanel
+    
+    -- ИМБОВАЯ ФУНКЦИЯ: Mass Crash
+    local MassCrashBtn = Instance.new("TextButton")
+    MassCrashBtn.Size = UDim2.new(0.3, 0, 0, 35)
+    MassCrashBtn.Position = UDim2.new(0.05, 0, 0.88, 0)
+    MassCrashBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 200)
+    MassCrashBtn.BorderSizePixel = 0
+    MassCrashBtn.Text = "🔥 MASS CRASH"
+    MassCrashBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MassCrashBtn.TextSize = 14
+    MassCrashBtn.Font = Enum.Font.GothamBold
+    MassCrashBtn.Parent = CrashPanel
+    
+    local MassCorner = Instance.new("UICorner")
+    MassCorner.CornerRadius = UDim.new(0, 8)
+    MassCorner.Parent = MassCrashBtn
+    
+    MassCrashBtn.MouseButton1Click:Connect(function()
+        MassCrashBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 255)
+        StatusLabel.Text = "🔥 MASS CRASH INITIATED..."
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
+        
+        local players = Players:GetPlayers()
+        local crashed = 0
+        for _, p in ipairs(players) do
+            if p ~= LocalPlayer then
+                SelectedPlayer = p
+                CrashPlayer(p)
+                crashed = crashed + 1
+                task.wait(0.3)
+            end
+        end
+        
+        StatusLabel.Text = "✅ Mass crash completed! Crashed: " .. crashed .. " players"
+        StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        MassCrashBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 200)
+    end)
     
     -- Функция обновления списка игроков
     local function UpdatePlayerList()
@@ -1015,10 +1245,11 @@ function CreateMenu()
         for _, player in ipairs(players) do
             if player ~= LocalPlayer then
                 local btn = Instance.new("TextButton")
-                btn.Size = UDim2.new(1, -10, 0, 30)
+                btn.Size = UDim2.new(1, -10, 0, 32)
                 btn.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
                 btn.BackgroundTransparency = 0.5
-                btn.BorderSizePixel = 0
+                btn.BorderSizePixel = 1
+                btn.BorderColor3 = Color3.fromRGB(100, 50, 150)
                 btn.Text = player.Name
                 btn.TextColor3 = Color3.fromRGB(200, 200, 255)
                 btn.TextSize = 14
@@ -1038,9 +1269,11 @@ function CreateMenu()
                     for _, b in ipairs(PlayerButtons) do
                         b.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
                         b.BackgroundTransparency = 0.5
+                        b.BorderColor3 = Color3.fromRGB(100, 50, 150)
                     end
                     btn.BackgroundColor3 = Color3.fromRGB(60, 60, 120)
                     btn.BackgroundTransparency = 0.3
+                    btn.BorderColor3 = Color3.fromRGB(200, 100, 255)
                 end)
                 
                 table.insert(PlayerButtons, btn)
@@ -1061,27 +1294,27 @@ function CreateMenu()
         end
     end
     
-    -- Функция краша
+    -- Функция краша (улучшенная)
     local function CrashPlayer(player)
         if not player then
-            StatusLabel.Text = "No player selected!"
+            StatusLabel.Text = "❌ No player selected!"
             StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
             return
         end
         
-        StatusLabel.Text = "Attempting to crash " .. player.Name .. "..."
+        StatusLabel.Text = "💥 Attempting to crash " .. player.Name .. "..."
         StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
         
         local success = false
         
         -- Множество методов краша
         pcall(function()
-            -- Метод 1: Огромное количество ремов
-            for i = 1, 500 do
+            -- Метод 1: Огромное количество ремов с данными
+            for i = 1, 800 do
                 local remote = Instance.new("RemoteEvent")
-                remote.Name = "Crash_" .. i
+                remote.Name = "Crash_X" .. i
                 remote.Parent = ReplicatedStorage
-                remote:FireServer(player, {})
+                remote:FireServer(player, {string.rep("A", 5000), i, player})
                 task.wait()
                 remote:Destroy()
             end
@@ -1089,29 +1322,37 @@ function CreateMenu()
             -- Метод 2: Спам анимаций
             if player.Character and player.Character:FindFirstChild("Humanoid") then
                 local hum = player.Character.Humanoid
-                for i = 1, 100 do
+                for i = 1, 150 do
                     hum:ChangeState(Enum.HumanoidStateType.Jumping)
                     task.wait()
                     hum:ChangeState(Enum.HumanoidStateType.Freefall)
                     task.wait()
                     hum:ChangeState(Enum.HumanoidStateType.Stunned)
                     task.wait()
+                    hum:ChangeState(Enum.HumanoidStateType.Running)
+                    task.wait()
                 end
             end
             
-            -- Метод 3: Спам партиклов на игроке
-            for i = 1, 200 do
+            -- Метод 3: Спам партиклов
+            for i = 1, 300 do
                 local att = Instance.new("Attachment")
-                att.Parent = player.Character and player.Character:FindFirstChild("HumanoidRootPart") or workspace
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    att.Parent = player.Character.HumanoidRootPart
+                else
+                    att.Parent = workspace
+                end
                 task.wait()
                 att:Destroy()
             end
             
-            -- Метод 4: Создание огромного количества объектов
-            for i = 1, 300 do
+            -- Метод 4: Огромное количество объектов
+            for i = 1, 500 do
                 local part = Instance.new("Part")
                 part.Size = Vector3.new(50, 50, 50)
-                part.Position = player.Character and player.Character.HumanoidRootPart.Position or Vector3.new(0, 0, 0)
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    part.Position = player.Character.HumanoidRootPart.Position
+                end
                 part.Transparency = 1
                 part.CanCollide = false
                 part.Parent = workspace
@@ -1119,34 +1360,28 @@ function CreateMenu()
                 part:Destroy()
             end
             
+            -- Метод 5: Крах через сеть
+            for i = 1, 200 do
+                local fakeRemote = Instance.new("RemoteEvent")
+                fakeRemote.Name = "Net_" .. i
+                fakeRemote.Parent = ReplicatedStorage
+                fakeRemote:FireServer(player, string.rep("X", 10000))
+                fakeRemote:Destroy()
+                task.wait()
+            end
+            
             success = true
         end)
-        
-        -- Дополнительные методы если основные не сработали
-        if not success then
-            pcall(function()
-                -- Метод 5: Через сетевые пакеты
-                for i = 1, 100 do
-                    local fakeRemote = Instance.new("RemoteEvent")
-                    fakeRemote.Name = "Network_" .. i
-                    fakeRemote.Parent = ReplicatedStorage
-                    fakeRemote:FireServer(player, string.rep("A", 10000))
-                    fakeRemote:Destroy()
-                    task.wait()
-                end
-                success = true
-            end)
-        end
         
         if success then
             StatusLabel.Text = "✅ " .. player.Name .. " crashed successfully!"
             StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
             
             -- Эффект успеха
-            for i = 1, 30 do
+            for i = 1, 50 do
                 local p = Instance.new("Frame")
-                p.Size = UDim2.new(0, math.random(3, 8), 0, math.random(3, 8))
-                p.Position = UDim2.new(0, math.random(0, 900), 0, math.random(0, 400))
+                p.Size = UDim2.new(0, math.random(3, 10), 0, math.random(3, 10))
+                p.Position = UDim2.new(0, math.random(0, 900), 0, math.random(0, 450))
                 p.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
                 p.BackgroundTransparency = 0.5
                 p.BorderSizePixel = 0
@@ -1158,7 +1393,7 @@ function CreateMenu()
                 
                 TweenService:Create(p, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(0, math.random(20, 50), 0, math.random(20, 50))
+                    Size = UDim2.new(0, math.random(30, 70), 0, math.random(30, 70))
                 }):Play()
                 task.wait(0.02)
                 p:Destroy()
@@ -1169,17 +1404,12 @@ function CreateMenu()
         end
     end
     
-    AcceptBtn.MouseButton1Click:Connect(function()
-        CrashPlayer(SelectedPlayer)
-    end)
-    
     -- Функция активации краш системы
     local function ActivateCrashSystem()
         CRASH_ACTIVE = true
         CrashPanel.Visible = true
         UpdatePlayerList()
         
-        -- Автообновление списка
         task.spawn(function()
             while CRASH_ACTIVE and CrashPanel.Visible do
                 task.wait(5)
@@ -1190,7 +1420,7 @@ function CreateMenu()
         end)
     end
 
-    -- ===== ФУНКЦИЯ РАЗБЛОКИРОВКИ SECRET =====
+    -- ===== ФУНКЦИЯ РАЗБЛОКИРОВКИ SECRET (УЛУЧШЕННАЯ) =====
     local SecretUnlockFrame = nil
     local SecretInput = nil
     local SecretStatus = nil
@@ -1199,72 +1429,98 @@ function CreateMenu()
         if SecretUnlockFrame then return end
         
         SecretUnlockFrame = Instance.new("Frame")
-        SecretUnlockFrame.Size = UDim2.new(0, 400, 0, 250)
-        SecretUnlockFrame.Position = UDim2.new(0.5, -200, 0.5, -125)
-        SecretUnlockFrame.BackgroundColor3 = Color3.fromRGB(10, 5, 25)
-        SecretUnlockFrame.BackgroundTransparency = 0.1
-        SecretUnlockFrame.BorderSizePixel = 2
-        SecretUnlockFrame.BorderColor3 = Color3.fromRGB(150, 50, 200)
+        SecretUnlockFrame.Size = UDim2.new(0, 450, 0, 300)
+        SecretUnlockFrame.Position = UDim2.new(0.5, -225, 0.5, -150)
+        SecretUnlockFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 30)
+        SecretUnlockFrame.BackgroundTransparency = 0.05
+        SecretUnlockFrame.BorderSizePixel = 3
+        SecretUnlockFrame.BorderColor3 = Color3.fromRGB(200, 100, 255)
         SecretUnlockFrame.ZIndex = 100
         SecretUnlockFrame.Parent = ScreenGui
         
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 16)
+        corner.CornerRadius = UDim.new(0, 18)
         corner.Parent = SecretUnlockFrame
+        
+        -- Бэкграунд градиент
+        local unlockGrad = Instance.new("UIGradient")
+        unlockGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 10, 60)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 5, 40)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 10, 60))
+        })
+        unlockGrad.Rotation = 45
+        unlockGrad.Parent = SecretUnlockFrame
+        
+        -- Свечение
+        local unlockGlow = Instance.new("Frame")
+        unlockGlow.Size = UDim2.new(1, 30, 1, 30)
+        unlockGlow.Position = UDim2.new(0, -15, 0, -15)
+        unlockGlow.BackgroundColor3 = Color3.fromRGB(200, 100, 255)
+        unlockGlow.BackgroundTransparency = 0.9
+        unlockGlow.BorderSizePixel = 0
+        unlockGlow.ZIndex = -1
+        unlockGlow.Parent = SecretUnlockFrame
+        
+        local unlockGlowCorner = Instance.new("UICorner")
+        unlockGlowCorner.CornerRadius = UDim.new(0, 30)
+        unlockGlowCorner.Parent = unlockGlow
         
         -- Заголовок
         local title = Instance.new("TextLabel")
-        title.Size = UDim2.new(1, 0, 0, 50)
+        title.Size = UDim2.new(1, 0, 0, 55)
         title.BackgroundTransparency = 1
         title.Text = "🔐 SECRET ACCESS"
         title.TextColor3 = Color3.fromRGB(200, 150, 255)
-        title.TextSize = 24
+        title.TextSize = 26
         title.Font = Enum.Font.GothamBold
         title.TextXAlignment = Enum.TextXAlignment.Center
+        title.TextStrokeTransparency = 0.3
+        title.TextStrokeColor3 = Color3.fromRGB(150, 0, 255)
         title.Parent = SecretUnlockFrame
         
         -- Поле ввода
         SecretInput = Instance.new("TextBox")
-        SecretInput.Size = UDim2.new(0.8, 0, 0, 45)
+        SecretInput.Size = UDim2.new(0.8, 0, 0, 50)
         SecretInput.Position = UDim2.new(0.1, 0, 0.3, 0)
-        SecretInput.BackgroundColor3 = Color3.fromRGB(20, 20, 50)
+        SecretInput.BackgroundColor3 = Color3.fromRGB(25, 15, 50)
         SecretInput.BorderSizePixel = 2
-        SecretInput.BorderColor3 = Color3.fromRGB(150, 50, 200)
+        SecretInput.BorderColor3 = Color3.fromRGB(200, 100, 255)
         SecretInput.Text = ""
         SecretInput.PlaceholderText = "Enter access key..."
         SecretInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-        SecretInput.TextSize = 18
+        SecretInput.TextSize = 20
         SecretInput.Font = Enum.Font.Gotham
         SecretInput.Parent = SecretUnlockFrame
         
         local inputCorner = Instance.new("UICorner")
-        inputCorner.CornerRadius = UDim.new(0, 8)
+        inputCorner.CornerRadius = UDim.new(0, 10)
         inputCorner.Parent = SecretInput
         
-        -- Кнопка подтверждения
+        -- Кнопка
         local submitBtn = Instance.new("TextButton")
-        submitBtn.Size = UDim2.new(0.4, 0, 0, 40)
+        submitBtn.Size = UDim2.new(0.4, 0, 0, 45)
         submitBtn.Position = UDim2.new(0.3, 0, 0.6, 0)
-        submitBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 200)
+        submitBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 255)
         submitBtn.BorderSizePixel = 0
-        submitBtn.Text = "UNLOCK"
+        submitBtn.Text = "🔓 UNLOCK"
         submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        submitBtn.TextSize = 16
+        submitBtn.TextSize = 18
         submitBtn.Font = Enum.Font.GothamBold
         submitBtn.Parent = SecretUnlockFrame
         
         local submitCorner = Instance.new("UICorner")
-        submitCorner.CornerRadius = UDim.new(0, 8)
+        submitCorner.CornerRadius = UDim.new(0, 10)
         submitCorner.Parent = submitBtn
         
         -- Статус
         SecretStatus = Instance.new("TextLabel")
-        SecretStatus.Size = UDim2.new(1, 0, 0, 30)
-        SecretStatus.Position = UDim2.new(0, 0, 0.8, 0)
+        SecretStatus.Size = UDim2.new(1, 0, 0, 35)
+        SecretStatus.Position = UDim2.new(0, 0, 0.82, 0)
         SecretStatus.BackgroundTransparency = 1
         SecretStatus.Text = "Attempts: " .. ATTEMPTS .. "/" .. MAX_ATTEMPTS
-        SecretStatus.TextColor3 = Color3.fromRGB(150, 150, 200)
-        SecretStatus.TextSize = 14
+        SecretStatus.TextColor3 = Color3.fromRGB(200, 200, 255)
+        SecretStatus.TextSize = 16
         SecretStatus.Font = Enum.Font.Gotham
         SecretStatus.TextXAlignment = Enum.TextXAlignment.Center
         SecretStatus.Parent = SecretUnlockFrame
@@ -1272,7 +1528,6 @@ function CreateMenu()
         submitBtn.MouseButton1Click:Connect(function()
             local input = SecretInput.Text
             
-            -- Проверка через зашифрованный ключ
             local isValid = false
             if input == DecryptKey(ENCRYPTED_KEY) then
                 isValid = true
@@ -1287,18 +1542,15 @@ function CreateMenu()
                 SecretInput = nil
                 SecretStatus = nil
                 
-                -- Активация краш системы
                 ActivateCrashSystem()
-                
-                -- Вкладка становится доступной
                 SwitchTab("SECRET")
                 
-                -- Анимация успеха
-                for i = 1, 40 do
+                -- Эффект успеха
+                for i = 1, 50 do
                     local p = Instance.new("Frame")
-                    p.Size = UDim2.new(0, math.random(2, 6), 0, math.random(2, 6))
+                    p.Size = UDim2.new(0, math.random(2, 8), 0, math.random(2, 8))
                     p.Position = UDim2.new(0, math.random(0, 900), 0, math.random(0, 600))
-                    p.BackgroundColor3 = Color3.fromRGB(150, 50, 200)
+                    p.BackgroundColor3 = Color3.fromRGB(200, 100, 255)
                     p.BackgroundTransparency = 0.6
                     p.BorderSizePixel = 0
                     p.Parent = ScreenGui
@@ -1307,9 +1559,9 @@ function CreateMenu()
                     cor.CornerRadius = UDim.new(0, 10)
                     cor.Parent = p
                     
-                    TweenService:Create(p, TweenInfo.new(1, Enum.EasingStyle.Quad), {
+                    TweenService:Create(p, TweenInfo.new(1.2, Enum.EasingStyle.Quad), {
                         BackgroundTransparency = 1,
-                        Size = UDim2.new(0, math.random(15, 40), 0, math.random(15, 40)),
+                        Size = UDim2.new(0, math.random(20, 50), 0, math.random(20, 50)),
                         Position = UDim2.new(0, math.random(0, 900), 0, math.random(0, 600))
                     }):Play()
                     task.wait(0.02)
@@ -1336,7 +1588,6 @@ function CreateMenu()
             end
         end)
         
-        -- Закрытие по клавише Escape
         local connection
         connection = UserInputService.InputBegan:Connect(function(input, processed)
             if processed then return end
@@ -1348,7 +1599,7 @@ function CreateMenu()
         end)
     end
 
-    -- ===== ОСТАЛЬНОЙ ФУНКЦИОНАЛ (сокращен) =====
+    -- ===== ОСТАЛЬНОЙ ФУНКЦИОНАЛ =====
     -- COMBAT
     local combatFrame = TabFrames["COMBAT"]
     CreateToggle(combatFrame, "Auto Parry", false, function(s)
@@ -1877,8 +2128,8 @@ function CreateMenu()
             
             TweenService:Create(MainGlow, TweenInfo.new(1, Enum.EasingStyle.Sine), {
                 BackgroundTransparency = 0.85,
-                Size = UDim2.new(1, 70, 1, 70),
-                Position = UDim2.new(0, -35, 0, -35)
+                Size = UDim2.new(1, 80, 1, 80),
+                Position = UDim2.new(0, -40, 0, -40)
             }):Play()
             
             task.wait(0.4)
@@ -1921,4 +2172,4 @@ task.spawn(function()
     AnimateLoading()
 end)
 
-print("SeraphiCA V5.0 loaded - SECRET tab with crash system!")
+print("SeraphiCA V6.0 ULTIMATE loaded!")

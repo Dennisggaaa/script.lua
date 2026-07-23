@@ -1,9 +1,23 @@
 -- ============================================================
---  SERAPHICA MENU V4.0 - AUT (A Universal Time)
---  WITH LOADING SCREEN & WELCOME
+--  SERAPHICA MENU V4.1 - AUT (A Universal Time)
+--  FULL CLEAN & RELOAD FIX
 -- ============================================================
 
+-- ===================== ОЧИСТКА СТАРЫХ GUI =====================
 local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Удаляем все старые GUI
+for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
+    if gui.Name == "SeraphiCA_GUI" then
+        gui:Destroy()
+    end
+end
+
+-- Пауза для полной очистки
+task.wait(0.2)
+
+-- ===================== ПОВТОРНЫЙ ИМПОРТ =====================
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -12,7 +26,6 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 
-local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local Mouse = LocalPlayer:GetMouse()
@@ -36,7 +49,6 @@ local LoadingCorner = Instance.new("UICorner")
 LoadingCorner.CornerRadius = UDim.new(0, 0)
 LoadingCorner.Parent = LoadingFrame
 
--- Фон с градиентом
 local LoadingGradient = Instance.new("UIGradient")
 LoadingGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 5, 30)),
@@ -46,7 +58,6 @@ LoadingGradient.Color = ColorSequence.new({
 LoadingGradient.Rotation = 45
 LoadingGradient.Parent = LoadingFrame
 
--- Звёзды на загрузке
 for i = 1, 50 do
     local star = Instance.new("Frame")
     star.Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5))
@@ -71,7 +82,6 @@ for i = 1, 50 do
     end)
 end
 
--- Маленькая луна на загрузке
 local LoadMoon = Instance.new("ImageLabel")
 LoadMoon.Size = UDim2.new(0, 80, 0, 80)
 LoadMoon.Position = UDim2.new(0.5, -40, 0.3, -40)
@@ -88,7 +98,6 @@ task.spawn(function()
     end
 end)
 
--- Текст загрузки
 local LoadText = Instance.new("TextLabel")
 LoadText.Size = UDim2.new(1, 0, 0, 60)
 LoadText.Position = UDim2.new(0, 0, 0.5, 40)
@@ -101,7 +110,6 @@ LoadText.TextXAlignment = Enum.TextXAlignment.Center
 LoadText.TextYAlignment = Enum.TextYAlignment.Center
 LoadText.Parent = LoadingFrame
 
--- Прогресс бар
 local ProgressBar = Instance.new("Frame")
 ProgressBar.Size = UDim2.new(0.4, 0, 0, 6)
 ProgressBar.Position = UDim2.new(0.3, 0, 0.6, 0)
@@ -123,7 +131,6 @@ local ProgressCornerFill = Instance.new("UICorner")
 ProgressCornerFill.CornerRadius = UDim.new(0, 3)
 ProgressCornerFill.Parent = ProgressFill
 
--- Процент
 local PercentLabel = Instance.new("TextLabel")
 PercentLabel.Size = UDim2.new(0.4, 0, 0, 30)
 PercentLabel.Position = UDim2.new(0.3, 0, 0.63, 0)
@@ -154,7 +161,6 @@ WelcomeGradient.Color = ColorSequence.new({
 WelcomeGradient.Rotation = 45
 WelcomeGradient.Parent = WelcomeFrame
 
--- Большая луна на Welcome
 local WelcomeMoon = Instance.new("ImageLabel")
 WelcomeMoon.Size = UDim2.new(0, 150, 0, 150)
 WelcomeMoon.Position = UDim2.new(0.5, -75, 0.3, -75)
@@ -171,7 +177,6 @@ task.spawn(function()
     end
 end)
 
--- Пульсация луны
 task.spawn(function()
     while WelcomeMoon.Parent and WelcomeFrame.Visible do
         TweenService:Create(WelcomeMoon, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
@@ -187,7 +192,6 @@ task.spawn(function()
     end
 end)
 
--- Текст WELCOME
 local WelcomeText = Instance.new("TextLabel")
 WelcomeText.Size = UDim2.new(1, 0, 0, 80)
 WelcomeText.Position = UDim2.new(0, 0, 0.4, 0)
@@ -200,7 +204,6 @@ WelcomeText.TextXAlignment = Enum.TextXAlignment.Center
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Center
 WelcomeText.Parent = WelcomeFrame
 
--- Имя игрока
 local PlayerNameLabel = Instance.new("TextLabel")
 PlayerNameLabel.Size = UDim2.new(1, 0, 0, 50)
 PlayerNameLabel.Position = UDim2.new(0, 0, 0.52, 0)
@@ -213,7 +216,6 @@ PlayerNameLabel.TextXAlignment = Enum.TextXAlignment.Center
 PlayerNameLabel.TextYAlignment = Enum.TextYAlignment.Center
 PlayerNameLabel.Parent = WelcomeFrame
 
--- Подпись
 local SubText = Instance.new("TextLabel")
 SubText.Size = UDim2.new(1, 0, 0, 30)
 SubText.Position = UDim2.new(0, 0, 0.6, 0)
@@ -236,7 +238,6 @@ local function AnimateLoading()
         ProgressFill.Size = UDim2.new(progress / 100, 0, 1, 0)
         PercentLabel.Text = math.floor(progress) .. "%"
         
-        -- Меняем цвет при 100%
         if progress >= 100 then
             ProgressFill.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
         end
@@ -244,7 +245,6 @@ local function AnimateLoading()
         task.wait(0.05 + math.random() * 0.03)
     end
     
-    -- Анимация завершения
     TweenService:Create(ProgressFill, TweenInfo.new(0.3), {
         Size = UDim2.new(1, 0, 1, 0)
     }):Play()
@@ -252,7 +252,6 @@ local function AnimateLoading()
     
     task.wait(0.3)
     
-    -- Показываем Welcome
     LoadingFrame.Visible = false
     WelcomeFrame.Visible = true
     WelcomeFrame.BackgroundTransparency = 1
@@ -261,7 +260,6 @@ local function AnimateLoading()
         BackgroundTransparency = 0
     }):Play()
     
-    -- Анимация появления текста
     WelcomeText.TextTransparency = 1
     TweenService:Create(WelcomeText, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
         TextTransparency = 0,
@@ -282,10 +280,8 @@ local function AnimateLoading()
         TextTransparency = 0
     }):Play()
     
-    -- Ждём 1.5 секунды на Welcome
     task.wait(1.8)
     
-    -- Анимация исчезновения Welcome
     TweenService:Create(WelcomeFrame, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
         BackgroundTransparency = 1
     }):Play()
@@ -297,7 +293,6 @@ local function AnimateLoading()
     task.wait(0.6)
     WelcomeFrame.Visible = false
     
-    -- Активация ватермарка
     CreateWatermark()
 end
 
@@ -366,7 +361,6 @@ function CreateWatermark()
     WMButton.Text = ""
     WMButton.Parent = WatermarkHolder
     
-    -- Анимация появления ватермарка
     WatermarkHolder.Position = UDim2.new(0, 15, 0, -60)
     WatermarkHolder.BackgroundTransparency = 1
     
@@ -381,7 +375,26 @@ function CreateWatermark()
         TextTransparency = 0
     }):Play()
     
-    -- Активация обновления времени
+    local function GetKyivTime()
+        local now = os.time()
+        local date = os.date("*t", now)
+        local year = date.year
+        local marchLastSunday = 31 - (os.date("*t", os.time{year=year, month=3, day=31}).wday % 7)
+        local octLastSunday = 31 - (os.date("*t", os.time{year=year, month=10, day=31}).wday % 7)
+        local dstStart = os.time{year=year, month=3, day=marchLastSunday, hour=3}
+        local dstEnd = os.time{year=year, month=10, day=octLastSunday, hour=4}
+        local isDST = (now >= dstStart and now < dstEnd)
+        local kyivOffset = isDST and 3 or 2
+        local kyivTime = now + kyivOffset * 3600
+        return os.date("!%H:%M:%S", kyivTime)
+    end
+
+    local function UpdateWatermark()
+        if WMLabel then
+            WMLabel.Text = "⏱ SeraphiCA  |  " .. GetKyivTime()
+        end
+    end
+
     UpdateWatermark()
     task.spawn(function()
         while true do
@@ -390,7 +403,6 @@ function CreateWatermark()
         end
     end)
     
-    -- Анимация свечения
     task.spawn(function()
         while true do
             task.wait(2)
@@ -408,29 +420,9 @@ function CreateWatermark()
         end
     end)
     
-    -- Активация основного меню
+    WMButton.MouseButton1Click:Connect(ToggleMenu)
+    
     CreateMainMenu()
-end
-
--- ===================== ВРЕМЯ КИЕВА =====================
-local function GetKyivTime()
-    local now = os.time()
-    local date = os.date("*t", now)
-    local year = date.year
-    local marchLastSunday = 31 - (os.date("*t", os.time{year=year, month=3, day=31}).wday % 7)
-    local octLastSunday = 31 - (os.date("*t", os.time{year=year, month=10, day=31}).wday % 7)
-    local dstStart = os.time{year=year, month=3, day=marchLastSunday, hour=3}
-    local dstEnd = os.time{year=year, month=10, day=octLastSunday, hour=4}
-    local isDST = (now >= dstStart and now < dstEnd)
-    local kyivOffset = isDST and 3 or 2
-    local kyivTime = now + kyivOffset * 3600
-    return os.date("!%H:%M:%S", kyivTime)
-end
-
-local function UpdateWatermark()
-    if WMLabel then
-        WMLabel.Text = "⏱ SeraphiCA  |  " .. GetKyivTime()
-    end
 end
 
 -- ===================== ОСНОВНОЕ МЕНЮ =====================
@@ -476,7 +468,6 @@ function CreateMainMenu()
     MainGlowCorner.CornerRadius = UDim.new(0, 35)
     MainGlowCorner.Parent = MainGlow
 
-    -- ===================== ЛУНА =====================
     local MoonContainer = Instance.new("Frame")
     MoonContainer.Size = UDim2.new(1, 0, 1, 0)
     MoonContainer.BackgroundTransparency = 1
@@ -535,7 +526,6 @@ function CreateMainMenu()
         end
     end)
 
-    -- ===================== ФРАГМЕНТЫ =====================
     local function CreateFragment(x, y, size, color, glowColor)
         local frag = Instance.new("Frame")
         frag.Size = UDim2.new(0, size, 0, size)
@@ -624,7 +614,6 @@ function CreateMainMenu()
         end)
     end
 
-    -- ===================== ЗАГОЛОВОК =====================
     local TitleBar = Instance.new("Frame")
     TitleBar.Size = UDim2.new(1, 0, 0, 48)
     TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 50)
@@ -656,7 +645,6 @@ function CreateMainMenu()
     TitleText.TextYAlignment = Enum.TextYAlignment.Center
     TitleText.Parent = TitleBar
 
-    -- ===================== ВКЛАДКИ =====================
     local TabContainer = Instance.new("Frame")
     TabContainer.Size = UDim2.new(1, 0, 0, 44)
     TabContainer.Position = UDim2.new(0, 0, 0, 48)
@@ -685,7 +673,6 @@ function CreateMainMenu()
     ContentGradient.Rotation = 45
     ContentGradient.Parent = ContentContainer
 
-    -- ===================== ВКЛАДКИ =====================
     local Tabs = {"COMBAT", "MOVEMENT", "VISUALS", "MISC", "SETTINGS"}
     local tabSpacing = 0
 
@@ -934,7 +921,6 @@ function CreateMainMenu()
     end
 
     -- ===================== ФУНКЦИОНАЛ AUT =====================
-    -- COMBAT
     local combatFrame = TabFrames["COMBAT"]
 
     local parryState = false
@@ -1071,7 +1057,6 @@ function CreateMainMenu()
         end
     end)
 
-    -- MOVEMENT
     local moveFrame = TabFrames["MOVEMENT"]
 
     local speedVal, setSpeed = CreateSlider(moveFrame, "Speed Bypass", 16, 100, 16, function(v)
@@ -1155,7 +1140,6 @@ function CreateMainMenu()
         end
     end)
 
-    -- VISUALS
     local visFrame = TabFrames["VISUALS"]
 
     CreateToggle(visFrame, "ESP Box", false, function(s)
@@ -1249,7 +1233,6 @@ function CreateMainMenu()
         end
     end)
 
-    -- MISC
     local miscFrame = TabFrames["MISC"]
 
     CreateToggle(miscFrame, "Auto Farm (NPC/Quest)", false, function(s)
@@ -1382,7 +1365,6 @@ function CreateMainMenu()
         end
     end)
 
-    -- SETTINGS
     local settingsFrame = TabFrames["SETTINGS"]
 
     local menuSizeVal, setMenuSize = CreateSlider(settingsFrame, "Menu Size", 400, 1200, 900, function(v)
@@ -1491,7 +1473,7 @@ function CreateMainMenu()
         end
     end
 
-    local function ToggleMenu()
+    function ToggleMenu()
         menuOpen = not menuOpen
         local wmPos = WatermarkHolder.AbsolutePosition
         local wmSize = WatermarkHolder.AbsoluteSize
@@ -1544,8 +1526,6 @@ function CreateMainMenu()
         end
     end
 
-    WMButton.MouseButton1Click:Connect(ToggleMenu)
-
     -- ===================== ОБНОВЛЕНИЕ ПЕРСОНАЖА =====================
     LocalPlayer.CharacterAdded:Connect(function(char)
         Character = char
@@ -1563,4 +1543,4 @@ task.spawn(function()
     AnimateLoading()
 end)
 
-print("SeraphiCA V4.0 with Loading & Welcome loaded!")
+print("SeraphiCA V4.1 loaded with full cleanup!")

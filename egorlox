@@ -155,6 +155,304 @@ function ParticleSystem:Burst(parent, count, x, y, colors, sizeRange, speed, lif
 end
 
 -- ============================================================
+-- LOADING SCREEN
+-- ============================================================
+local LoadingScreen = {}
+
+function LoadingScreen:Create(parent)
+    local frame = Instance.new("Frame")
+    frame.Name = "LoadingFrame"
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(5, 5, 20)
+    frame.BackgroundTransparency = 0
+    frame.BorderSizePixel = 0
+    frame.Parent = parent
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 5, 30)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 10, 50)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 5, 25))
+    })
+    gradient.Rotation = 45
+    gradient.Parent = frame
+
+    for i = 1, 60 do
+        local star = Instance.new("Frame")
+        star.Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5))
+        star.Position = UDim2.new(0, math.random(0, 1920), 0, math.random(0, 1080))
+        star.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        star.BackgroundTransparency = 0.3 + math.random() * 0.6
+        star.BorderSizePixel = 0
+        star.Parent = frame
+        Instance.new("UICorner", star).CornerRadius = UDim.new(0, 5)
+        
+        task.spawn(function()
+            while star.Parent do
+                TweenService:Create(star, TweenInfo.new(1 + math.random() * 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                    BackgroundTransparency = 0.1 + math.random() * 0.3,
+                    Size = UDim2.new(0, math.random(2, 7), 0, math.random(2, 7))
+                }):Play()
+                task.wait(1 + math.random() * 2)
+            end
+        end)
+    end
+
+    local moon = Instance.new("ImageLabel")
+    moon.Size = UDim2.new(0, 80, 0, 80)
+    moon.Position = UDim2.new(0.5, -40, 0.25, -40)
+    moon.BackgroundTransparency = 1
+    moon.Image = "rbxassetid://1313579923"
+    moon.ImageColor3 = Color3.fromRGB(200, 220, 255)
+    moon.ImageTransparency = 0.4
+    moon.Parent = frame
+
+    task.spawn(function()
+        while moon.Parent do
+            moon.Rotation = moon.Rotation + 0.5
+            task.wait(0.05)
+        end
+    end)
+
+    local loadText = Instance.new("TextLabel")
+    loadText.Size = UDim2.new(1, 0, 0, 60)
+    loadText.Position = UDim2.new(0, 0, 0.5, 30)
+    loadText.BackgroundTransparency = 1
+    loadText.Text = "Loading SeraphiCA menu..."
+    loadText.TextColor3 = Color3.fromRGB(160, 210, 255)
+    loadText.TextSize = 28
+    loadText.Font = Enum.Font.GothamBold
+    loadText.TextXAlignment = Enum.TextXAlignment.Center
+    loadText.TextYAlignment = Enum.TextYAlignment.Center
+    loadText.TextStrokeTransparency = 0.3
+    loadText.TextStrokeColor3 = Color3.fromRGB(0, 100, 255)
+    loadText.Parent = frame
+
+    local progressBar = Instance.new("Frame")
+    progressBar.Size = UDim2.new(0.4, 0, 0, 6)
+    progressBar.Position = UDim2.new(0.3, 0, 0.6, 0)
+    progressBar.BackgroundColor3 = Color3.fromRGB(30, 30, 70)
+    progressBar.BorderSizePixel = 0
+    progressBar.Parent = frame
+    Instance.new("UICorner", progressBar).CornerRadius = UDim.new(0, 3)
+
+    local progressFill = Instance.new("Frame")
+    progressFill.Size = UDim2.new(0, 0, 1, 0)
+    progressFill.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+    progressFill.BorderSizePixel = 0
+    progressFill.Parent = progressBar
+    Instance.new("UICorner", progressFill).CornerRadius = UDim.new(0, 3)
+
+    local percentLabel = Instance.new("TextLabel")
+    percentLabel.Size = UDim2.new(0.4, 0, 0, 30)
+    percentLabel.Position = UDim2.new(0.3, 0, 0.63, 0)
+    percentLabel.BackgroundTransparency = 1
+    percentLabel.Text = "0%"
+    percentLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+    percentLabel.TextSize = 16
+    percentLabel.Font = Enum.Font.Gotham
+    percentLabel.TextXAlignment = Enum.TextXAlignment.Center
+    percentLabel.Parent = frame
+
+    return { Frame = frame, ProgressFill = progressFill, PercentLabel = percentLabel }
+end
+
+function LoadingScreen:Animate(loadingObj, callback)
+    local progress = 0
+    local steps = 30
+    
+    for i = 1, steps do
+        progress = (i / steps) * 100
+        loadingObj.ProgressFill.Size = UDim2.new(progress / 100, 0, 1, 0)
+        loadingObj.PercentLabel.Text = math.floor(progress) .. "%"
+        
+        if progress >= 100 then
+            loadingObj.ProgressFill.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
+        end
+        
+        task.wait(0.05 + math.random() * 0.03)
+    end
+    
+    TweenService:Create(loadingObj.ProgressFill, TweenInfo.new(0.2), {
+        Size = UDim2.new(1, 0, 1, 0)
+    }):Play()
+    loadingObj.PercentLabel.Text = "100%"
+    
+    task.wait(0.2)
+    if callback then callback() end
+end
+
+-- ============================================================
+-- WELCOME SCREEN
+-- ============================================================
+local WelcomeScreen = {}
+
+function WelcomeScreen:Create(parent)
+    local frame = Instance.new("Frame")
+    frame.Name = "WelcomeFrame"
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(5, 5, 20)
+    frame.BackgroundTransparency = 0.95
+    frame.BorderSizePixel = 0
+    frame.Visible = false
+    frame.Parent = parent
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 5, 30)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(30, 15, 60)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 5, 30))
+    })
+    gradient.Rotation = 45
+    gradient.Parent = frame
+
+    local moon = Instance.new("ImageLabel")
+    moon.Size = UDim2.new(0, 150, 0, 150)
+    moon.Position = UDim2.new(0.5, -75, 0.25, -75)
+    moon.BackgroundTransparency = 1
+    moon.Image = "rbxassetid://1313579923"
+    moon.ImageColor3 = Color3.fromRGB(200, 220, 255)
+    moon.ImageTransparency = 0.3
+    moon.Parent = frame
+
+    task.spawn(function()
+        while moon.Parent and frame.Visible do
+            moon.Rotation = moon.Rotation + 0.3
+            task.wait(0.05)
+        end
+    end)
+
+    task.spawn(function()
+        while moon.Parent and frame.Visible do
+            TweenService:Create(moon, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 160, 0, 160),
+                Position = UDim2.new(0.5, -80, 0.25, -80)
+            }):Play()
+            task.wait(2)
+            TweenService:Create(moon, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 140, 0, 140),
+                Position = UDim2.new(0.5, -70, 0.25, -70)
+            }):Play()
+            task.wait(2)
+        end
+    end)
+
+    local welcomeText = Instance.new("TextLabel")
+    welcomeText.Size = UDim2.new(1, 0, 0, 70)
+    welcomeText.Position = UDim2.new(0, 0, 0.32, 0)
+    welcomeText.BackgroundTransparency = 1
+    welcomeText.Text = "WELCOME"
+    welcomeText.TextColor3 = Color3.fromRGB(200, 230, 255)
+    welcomeText.TextSize = 48
+    welcomeText.Font = Enum.Font.GothamBold
+    welcomeText.TextXAlignment = Enum.TextXAlignment.Center
+    welcomeText.TextYAlignment = Enum.TextYAlignment.Center
+    welcomeText.TextStrokeTransparency = 0
+    welcomeText.TextStrokeColor3 = Color3.fromRGB(80, 150, 255)
+    welcomeText.TextTransparency = 1
+    welcomeText.Parent = frame
+
+    local playerNameLabel = Instance.new("TextLabel")
+    playerNameLabel.Size = UDim2.new(1, 0, 0, 50)
+    playerNameLabel.Position = UDim2.new(0, 0, 0.45, 0)
+    playerNameLabel.BackgroundTransparency = 1
+    playerNameLabel.Text = LocalPlayer.Name
+    playerNameLabel.TextColor3 = Color3.fromRGB(100, 220, 255)
+    playerNameLabel.TextSize = 34
+    playerNameLabel.Font = Enum.Font.GothamSemibold
+    playerNameLabel.TextXAlignment = Enum.TextXAlignment.Center
+    playerNameLabel.TextYAlignment = Enum.TextYAlignment.Center
+    playerNameLabel.TextStrokeTransparency = 0.3
+    playerNameLabel.TextStrokeColor3 = Color3.fromRGB(0, 100, 255)
+    playerNameLabel.TextTransparency = 1
+    playerNameLabel.Parent = frame
+
+    local adminLabel = Instance.new("TextLabel")
+    adminLabel.Size = UDim2.new(1, 0, 0, 35)
+    adminLabel.Position = UDim2.new(0, 0, 0.55, 0)
+    adminLabel.BackgroundTransparency = 1
+    adminLabel.Text = "Admin Telegram: @Mpmtww"
+    adminLabel.TextColor3 = Color3.fromRGB(200, 180, 255)
+    adminLabel.TextSize = 18
+    adminLabel.Font = Enum.Font.Gotham
+    adminLabel.TextXAlignment = Enum.TextXAlignment.Center
+    adminLabel.TextYAlignment = Enum.TextYAlignment.Center
+    adminLabel.TextStrokeTransparency = 0.5
+    adminLabel.TextStrokeColor3 = Color3.fromRGB(150, 100, 255)
+    adminLabel.TextTransparency = 1
+    adminLabel.Parent = frame
+
+    local subText = Instance.new("TextLabel")
+    subText.Size = UDim2.new(1, 0, 0, 30)
+    subText.Position = UDim2.new(0, 0, 0.62, 0)
+    subText.BackgroundTransparency = 1
+    subText.Text = "SeraphiCA System Activated"
+    subText.TextColor3 = Color3.fromRGB(150, 180, 220)
+    subText.TextSize = 16
+    subText.Font = Enum.Font.Gotham
+    subText.TextXAlignment = Enum.TextXAlignment.Center
+    subText.TextYAlignment = Enum.TextYAlignment.Center
+    subText.TextStrokeTransparency = 0.7
+    subText.TextTransparency = 1
+    subText.Parent = frame
+
+    return {
+        Frame = frame, WelcomeText = welcomeText, PlayerName = playerNameLabel,
+        AdminLabel = adminLabel, SubText = subText, Moon = moon
+    }
+end
+
+function WelcomeScreen:Show(welcomeObj, callback)
+    welcomeObj.Frame.Visible = true
+    welcomeObj.Frame.BackgroundTransparency = 1
+    
+    TweenService:Create(welcomeObj.Frame, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        BackgroundTransparency = 0.95
+    }):Play()
+    
+    welcomeObj.WelcomeText.TextTransparency = 1
+    TweenService:Create(welcomeObj.WelcomeText, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        TextTransparency = 0,
+        TextSize = 52
+    }):Play()
+    
+    task.wait(0.3)
+    
+    welcomeObj.PlayerName.TextTransparency = 1
+    TweenService:Create(welcomeObj.PlayerName, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        TextTransparency = 0,
+        TextSize = 36
+    }):Play()
+    
+    task.wait(0.2)
+    
+    welcomeObj.AdminLabel.TextTransparency = 1
+    TweenService:Create(welcomeObj.AdminLabel, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        TextTransparency = 0
+    }):Play()
+    
+    task.wait(0.2)
+    
+    welcomeObj.SubText.TextTransparency = 1
+    TweenService:Create(welcomeObj.SubText, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        TextTransparency = 0
+    }):Play()
+    
+    task.wait(1.8)
+    
+    TweenService:Create(welcomeObj.Frame, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+        BackgroundTransparency = 1
+    }):Play()
+    TweenService:Create(welcomeObj.Moon, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+        ImageTransparency = 1
+    }):Play()
+    
+    task.wait(0.6)
+    welcomeObj.Frame.Visible = false
+    if callback then callback() end
+end
+
+-- ============================================================
 -- WATERMARK (SUPER BEAUTIFUL - TOP LEFT)
 -- ============================================================
 local Watermark = {}
@@ -433,6 +731,7 @@ local MainMenu = {}
 local TabFrames = {}
 local CurrentTab = "COMBAT"
 local menuOpen = false
+local menuObj = nil
 
 function MainMenu:Create(parent)
     local menuW = 900
@@ -607,7 +906,7 @@ function MainMenu:Create(parent)
                 MainMenu:ShowSecretUnlock(frame)
                 return
             end
-            MainMenu:SwitchTab(name, tabBtns, frame)
+            MainMenu:SwitchTab(name, tabBtns)
         end)
         
         tabBtns[name] = btn
@@ -1364,7 +1663,6 @@ function MainMenu:Create(parent)
     -- ============================================================
     local secretTab = tabContents["SECRET"]
     
-    -- Password protected message
     local lockMsg = Instance.new("TextLabel")
     lockMsg.Size = UDim2.new(1, 0, 1, 0)
     lockMsg.BackgroundTransparency = 1
@@ -1378,7 +1676,6 @@ function MainMenu:Create(parent)
     lockMsg.ZIndex = 154
     lockMsg.Parent = secretTab
 
-    -- Secret unlock frame (overlay)
     local secretUnlockFrame = nil
     local secretInput = nil
     local secretStatus = nil
@@ -1488,7 +1785,7 @@ function MainMenu:Create(parent)
                 secretStatus = nil
                 lockMsg:Destroy()
                 MainMenu:CreateSecretContent(secretTab)
-                MainMenu:SwitchTab("SECRET", tabBtns, frame)
+                MainMenu:SwitchTab("SECRET", tabBtns)
             else
                 ATTEMPTS = ATTEMPTS + 1
                 secretStatus.Text = "❌ Wrong key! Attempts: " .. ATTEMPTS .. "/" .. MAX_ATTEMPTS
@@ -1514,7 +1811,6 @@ function MainMenu:Create(parent)
     -- SECRET CONTENT (After unlock)
     -- ============================================================
     function MainMenu:CreateSecretContent(tab)
-        -- Crash Player System
         local crashPanel = Instance.new("Frame")
         crashPanel.Size = UDim2.new(1, -10, 0, 420)
         crashPanel.Position = UDim2.new(0, 5, 0, 5)
@@ -1767,7 +2063,6 @@ function MainMenu:Create(parent)
             massBtn.BackgroundColor3 = C.Purple
         end)
         
-        -- Anti-Crash Shield
         CreateToggle(tab, "🛡️ Anti-Crash Shield", false, function(s)
             if s then
                 task.spawn(function()
@@ -1807,14 +2102,14 @@ function MainMenu:Create(parent)
     -- ============================================================
     -- TAB SWITCHING
     -- ============================================================
-    function MainMenu:SwitchTab(tabName, btns, parentFrame)
+    function MainMenu:SwitchTab(tabName, btns)
         CurrentTab = tabName
         for name, frame in pairs(tabContents) do
             if frame then
                 frame.Visible = (name == tabName)
             end
         end
-        for name, btn in pairs(btns) do
+        for name, btn in pairs(btns or tabBtns) do
             if btn then
                 local isActive = (name == tabName)
                 btn.BackgroundColor3 = isActive and Color3.fromRGB(60, 120, 255) or Color3.fromRGB(30, 30, 70)
@@ -1892,10 +2187,11 @@ function MainMenu:Create(parent)
         end
     end)
 
-    return {
+    menuObj = {
         Frame = frame, TitleBar = titleBar, TabContainer = tabContainer,
         TabContents = tabContents, TabBtns = tabBtns
     }
+    return menuObj
 end
 
 -- ============================================================
@@ -1952,30 +2248,45 @@ print("  Telegram: @Mpmtww")
 print("  Platform: Delta Executor (Mobile)")
 print("================================================")
 
-local wm = Watermark:Create(ScreenGui)
-Watermark:Show(wm)
-Watermark:StartEffects(wm)
+-- ============================================================
+-- LOADING SCREEN
+-- ============================================================
+local loadingObj = LoadingScreen:Create(ScreenGui)
+LoadingScreen:Animate(loadingObj, function()
+    -- ============================================================
+    -- WELCOME SCREEN
+    -- ============================================================
+    local welcomeObj = WelcomeScreen:Create(ScreenGui)
+    WelcomeScreen:Show(welcomeObj, function()
+        -- ============================================================
+        -- MAIN MENU
+        -- ============================================================
+        local wm = Watermark:Create(ScreenGui)
+        Watermark:Show(wm)
+        Watermark:StartEffects(wm)
 
-task.spawn(function()
-    while _G.SeraphiCA.IsRunning do
-        Watermark:UpdateTime(wm)
-        task.wait(1)
-    end
+        task.spawn(function()
+            while _G.SeraphiCA.IsRunning do
+                Watermark:UpdateTime(wm)
+                task.wait(1)
+            end
+        end)
+
+        local menuObj = MainMenu:Create(ScreenGui)
+        DragSystem:MakeDraggable(menuObj.Frame, menuObj.TitleBar)
+
+        wm.ClickBtn.MouseButton1Click:Connect(function()
+            _G.SeraphiCA.IsMenuOpen = not _G.SeraphiCA.IsMenuOpen
+            if _G.SeraphiCA.IsMenuOpen then
+                MainMenu:Show(menuObj.Frame)
+            else
+                MainMenu:Hide(menuObj.Frame)
+            end
+        end)
+
+        print("[SeraphiCA] ✅ Loaded successfully!")
+        print("[SeraphiCA] ✅ Tap watermark to toggle menu")
+        print("[SeraphiCA] ✅ Drag title bar to move menu")
+        print("[SeraphiCA] ✅ Secret tab password: 081324")
+    end)
 end)
-
-local menuObj = MainMenu:Create(ScreenGui)
-DragSystem:MakeDraggable(menuObj.Frame, menuObj.TitleBar)
-
-wm.ClickBtn.MouseButton1Click:Connect(function()
-    _G.SeraphiCA.IsMenuOpen = not _G.SeraphiCA.IsMenuOpen
-    if _G.SeraphiCA.IsMenuOpen then
-        MainMenu:Show(menuObj.Frame)
-    else
-        MainMenu:Hide(menuObj.Frame)
-    end
-end)
-
-print("[SeraphiCA] ✅ Loaded successfully!")
-print("[SeraphiCA] ✅ Tap watermark to toggle menu")
-print("[SeraphiCA] ✅ Drag title bar to move menu")
-print("[SeraphiCA] ✅ Secret tab password: 081324")

@@ -1,9 +1,8 @@
 -- ============================================================
--- SERAPHICA CLIENT - DELTA EDITION (UI DEMO)
--- VERSION: 6.0.0 | AUTHOR: SeraphiCA Team
+-- SERAPHICA CLIENT - DELTA EDITION (UI DEMO CLEAN)
+-- VERSION: 7.0.0 | AUTHOR: SeraphiCA Team
 -- TELEGRAM: @Mpmtww
 -- PLATFORM: Delta Executor (Mobile)
--- FEATURES: Watermark + Menu with drag + insane effects
 -- ============================================================
 
 -- [[ SERVICES ]]
@@ -56,7 +55,8 @@ local C = {
     Pink = Color3.fromRGB(255, 130, 210),
     White = Color3.fromRGB(255, 255, 255),
     Black = Color3.fromRGB(0, 0, 0),
-    Gray = Color3.fromRGB(160, 165, 175)
+    Gray = Color3.fromRGB(160, 165, 175),
+    DimGray = Color3.fromRGB(100, 105, 115)
 }
 
 -- ============================================================
@@ -80,7 +80,7 @@ local function Clamp(val, min, max)
 end
 
 -- ============================================================
--- PARTICLE SYSTEM (background particles)
+-- PARTICLE SYSTEM
 -- ============================================================
 local ParticleSystem = {}
 
@@ -93,9 +93,8 @@ function ParticleSystem:CreateParticle(parent, x, y, size, color, speed, lifespa
     particle.BackgroundTransparency = 0.5
     particle.ZIndex = 150
     particle.Parent = parent
-    
-    Instance.new("UICorner", particle).CornerRadius = UDim.new(0, size/2 or 2)
-    
+    Instance.new("UICorner", particle).CornerRadius = UDim.new(0, size / 2 or 2)
+
     task.spawn(function()
         local startTime = tick()
         local life = lifespan or (3 + math.random() * 4)
@@ -103,23 +102,16 @@ function ParticleSystem:CreateParticle(parent, x, y, size, color, speed, lifespa
         local speedY = (math.random() - 0.5) * (speed or 20) - 10
         local startX = x
         local startY = y
-        
         while tick() - startTime < life and particle.Parent do
             local elapsed = tick() - startTime
             local progress = elapsed / life
-            local newX = startX + speedX * elapsed
-            local newY = startY + speedY * elapsed + 50 * progress * progress
-            
-            particle.Position = UDim2.new(0, newX, 0, newY)
+            particle.Position = UDim2.new(0, startX + speedX * elapsed, 0, startY + speedY * elapsed + 50 * progress * progress)
             particle.BackgroundTransparency = 0.5 + progress * 0.5
             particle.Size = UDim2.new(0, size * (1 - progress * 0.7), 0, size * (1 - progress * 0.7))
-            
             task.wait(0.03)
         end
-        
         pcall(function() particle:Destroy() end)
     end)
-    
     return particle
 end
 
@@ -132,12 +124,6 @@ function ParticleSystem:Burst(parent, count, x, y, colors, sizeRange, speed, lif
         local px = x + math.cos(angle) * dist
         local py = y + math.sin(angle) * dist
         ParticleSystem:CreateParticle(parent, px, py, size, color, speed, lifespan)
-    end
-end
-
-function ParticleSystem:Trail(parent, x, y, count, color, size)
-    for i = 1, count do
-        ParticleSystem:CreateParticle(parent, x + math.random(-5, 5), y + math.random(-5, 5), size or 3, color, 5, 1.5)
     end
 end
 
@@ -157,13 +143,8 @@ function Watermark:Create(parent)
     frame.ClipsDescendants = true
     frame.ZIndex = 200
     frame.Parent = parent
-    
-    -- Corner
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 18)
-    mainCorner.Parent = frame
-    
-    -- Gradient background
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 18)
+
     local bgGrad = Instance.new("UIGradient")
     bgGrad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 12, 40)),
@@ -172,8 +153,7 @@ function Watermark:Create(parent)
     })
     bgGrad.Rotation = 140
     bgGrad.Parent = frame
-    
-    -- Glass overlay
+
     local glassOverlay = Instance.new("Frame")
     glassOverlay.Size = UDim2.new(1, 0, 0.5, 0)
     glassOverlay.BackgroundColor3 = C.White
@@ -181,8 +161,7 @@ function Watermark:Create(parent)
     glassOverlay.BorderSizePixel = 0
     glassOverlay.Parent = frame
     Instance.new("UICorner", glassOverlay).CornerRadius = UDim.new(0, 18)
-    
-    -- Outer glow ring 1
+
     local outerGlow1 = Instance.new("Frame")
     outerGlow1.Size = UDim2.new(1, 10, 1, 10)
     outerGlow1.Position = UDim2.new(0, -5, 0, -5)
@@ -192,8 +171,7 @@ function Watermark:Create(parent)
     outerGlow1.ZIndex = -1
     outerGlow1.Parent = frame
     Instance.new("UICorner", outerGlow1).CornerRadius = UDim.new(0, 23)
-    
-    -- Outer glow ring 2
+
     local outerGlow2 = Instance.new("Frame")
     outerGlow2.Size = UDim2.new(1, 18, 1, 18)
     outerGlow2.Position = UDim2.new(0, -9, 0, -9)
@@ -203,8 +181,7 @@ function Watermark:Create(parent)
     outerGlow2.ZIndex = -2
     outerGlow2.Parent = frame
     Instance.new("UICorner", outerGlow2).CornerRadius = UDim.new(0, 27)
-    
-    -- Left accent line
+
     local accentLine = Instance.new("Frame")
     accentLine.Size = UDim2.new(0, 3, 0.65, 0)
     accentLine.Position = UDim2.new(0, 14, 0.175, 0)
@@ -212,8 +189,7 @@ function Watermark:Create(parent)
     accentLine.BorderSizePixel = 0
     accentLine.Parent = frame
     Instance.new("UICorner", accentLine).CornerRadius = UDim.new(0, 2)
-    
-    -- Star diamond icon
+
     local starIcon = Instance.new("TextLabel")
     starIcon.Size = UDim2.new(0, 30, 0, 30)
     starIcon.Position = UDim2.new(0, 24, 0.5, -15)
@@ -225,8 +201,7 @@ function Watermark:Create(parent)
     starIcon.TextXAlignment = Enum.TextXAlignment.Center
     starIcon.TextYAlignment = Enum.TextYAlignment.Center
     starIcon.Parent = frame
-    
-    -- Star glow
+
     local starGlow = Instance.new("Frame")
     starGlow.Size = UDim2.new(0, 40, 0, 40)
     starGlow.Position = UDim2.new(0, 19, 0.5, -20)
@@ -236,8 +211,7 @@ function Watermark:Create(parent)
     starGlow.ZIndex = -1
     starGlow.Parent = frame
     Instance.new("UICorner", starGlow).CornerRadius = UDim.new(0, 20)
-    
-    -- Star glow 2
+
     local starGlow2 = Instance.new("Frame")
     starGlow2.Size = UDim2.new(0, 50, 0, 50)
     starGlow2.Position = UDim2.new(0, 14, 0.5, -25)
@@ -247,8 +221,7 @@ function Watermark:Create(parent)
     starGlow2.ZIndex = -2
     starGlow2.Parent = frame
     Instance.new("UICorner", starGlow2).CornerRadius = UDim.new(0, 25)
-    
-    -- Title text
+
     local titleText = Instance.new("TextLabel")
     titleText.Size = UDim2.new(1, -70, 0, 20)
     titleText.Position = UDim2.new(0, 60, 0, 7)
@@ -262,8 +235,7 @@ function Watermark:Create(parent)
     titleText.TextStrokeTransparency = 0.6
     titleText.TextStrokeColor3 = C.Primary
     titleText.Parent = frame
-    
-    -- Time text
+
     local timeText = Instance.new("TextLabel")
     timeText.Size = UDim2.new(1, -70, 0, 18)
     timeText.Position = UDim2.new(0, 60, 0, 30)
@@ -275,8 +247,7 @@ function Watermark:Create(parent)
     timeText.TextXAlignment = Enum.TextXAlignment.Left
     timeText.TextYAlignment = Enum.TextYAlignment.Center
     timeText.Parent = frame
-    
-    -- Live dot indicator
+
     local liveDot = Instance.new("Frame")
     liveDot.Size = UDim2.new(0, 7, 0, 7)
     liveDot.Position = UDim2.new(1, -28, 0, 13)
@@ -284,7 +255,7 @@ function Watermark:Create(parent)
     liveDot.BorderSizePixel = 0
     liveDot.Parent = frame
     Instance.new("UICorner", liveDot).CornerRadius = UDim.new(0, 4)
-    
+
     local liveDotGlow = Instance.new("Frame")
     liveDotGlow.Size = UDim2.new(0, 16, 0, 16)
     liveDotGlow.Position = UDim2.new(1, -32, 0, 9)
@@ -294,16 +265,7 @@ function Watermark:Create(parent)
     liveDotGlow.ZIndex = -1
     liveDotGlow.Parent = frame
     Instance.new("UICorner", liveDotGlow).CornerRadius = UDim.new(0, 8)
-    
-    -- Click button
-    local clickBtn = Instance.new("TextButton")
-    clickBtn.Size = UDim2.new(1, 0, 1, 0)
-    clickBtn.BackgroundTransparency = 1
-    clickBtn.Text = ""
-    clickBtn.ZIndex = 300
-    clickBtn.Parent = frame
-    
-    -- Scan line effect
+
     local scanLine = Instance.new("Frame")
     scanLine.Size = UDim2.new(1, 0, 0, 1)
     scanLine.Position = UDim2.new(0, 0, 0, 0)
@@ -312,70 +274,54 @@ function Watermark:Create(parent)
     scanLine.BorderSizePixel = 0
     scanLine.ZIndex = 250
     scanLine.Parent = frame
-    
+
+    local clickBtn = Instance.new("TextButton")
+    clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.BackgroundTransparency = 1
+    clickBtn.Text = ""
+    clickBtn.ZIndex = 300
+    clickBtn.Parent = frame
+
     return {
-        Frame = frame,
-        TitleText = titleText,
-        TimeText = timeText,
-        StarIcon = starIcon,
-        StarGlow = starGlow,
-        StarGlow2 = starGlow2,
-        AccentLine = accentLine,
-        OuterGlow1 = outerGlow1,
-        OuterGlow2 = outerGlow2,
-        LiveDot = liveDot,
-        LiveDotGlow = liveDotGlow,
-        ScanLine = scanLine,
-        ClickBtn = clickBtn
+        Frame = frame, TitleText = titleText, TimeText = timeText,
+        StarIcon = starIcon, StarGlow = starGlow, StarGlow2 = starGlow2,
+        AccentLine = accentLine, OuterGlow1 = outerGlow1, OuterGlow2 = outerGlow2,
+        LiveDot = liveDot, LiveDotGlow = liveDotGlow, ScanLine = scanLine, ClickBtn = clickBtn
     }
 end
 
 function Watermark:Show(wm)
     wm.Frame.Position = UDim2.new(0, 20, 0, -70)
     wm.Frame.BackgroundTransparency = 1
-    
     TweenService:Create(wm.Frame, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0, 20, 0, 20),
-        BackgroundTransparency = 0.08
+        Position = UDim2.new(0, 20, 0, 20), BackgroundTransparency = 0.08
     }):Play()
 end
 
 function Watermark:UpdateTime(wm)
-    if wm and wm.TimeText then
-        wm.TimeText.Text = GetKyivTime()
-    end
+    if wm and wm.TimeText then wm.TimeText.Text = GetKyivTime() end
 end
 
 function Watermark:StartEffects(wm)
-    -- Glow pulsing
     task.spawn(function()
         while wm.OuterGlow1 and wm.OuterGlow1.Parent do
             TweenService:Create(wm.OuterGlow1, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.82,
-                Size = UDim2.new(1, 15, 1, 15),
-                Position = UDim2.new(0, -7, 0, -7)
+                BackgroundTransparency = 0.82, Size = UDim2.new(1, 15, 1, 15), Position = UDim2.new(0, -7, 0, -7)
             }):Play()
             TweenService:Create(wm.OuterGlow2, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.9,
-                Size = UDim2.new(1, 24, 1, 24),
-                Position = UDim2.new(0, -12, 0, -12)
+                BackgroundTransparency = 0.9, Size = UDim2.new(1, 24, 1, 24), Position = UDim2.new(0, -12, 0, -12)
             }):Play()
             task.wait(1.8)
             TweenService:Create(wm.OuterGlow1, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.88,
-                Size = UDim2.new(1, 10, 1, 10),
-                Position = UDim2.new(0, -5, 0, -5)
+                BackgroundTransparency = 0.88, Size = UDim2.new(1, 10, 1, 10), Position = UDim2.new(0, -5, 0, -5)
             }):Play()
             TweenService:Create(wm.OuterGlow2, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.94,
-                Size = UDim2.new(1, 18, 1, 18),
-                Position = UDim2.new(0, -9, 0, -9)
+                BackgroundTransparency = 0.94, Size = UDim2.new(1, 18, 1, 18), Position = UDim2.new(0, -9, 0, -9)
             }):Play()
             task.wait(1.8)
         end
     end)
-    
-    -- Star rotation
+
     task.spawn(function()
         local angle = 0
         while wm.StarIcon and wm.StarIcon.Parent do
@@ -386,36 +332,26 @@ function Watermark:StartEffects(wm)
             task.wait(0.03)
         end
     end)
-    
-    -- Star glow pulse
+
     task.spawn(function()
         while wm.StarGlow and wm.StarGlow.Parent do
             TweenService:Create(wm.StarGlow, TweenInfo.new(1.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                Size = UDim2.new(0, 48, 0, 48),
-                Position = UDim2.new(0, 15, 0.5, -24),
-                BackgroundTransparency = 0.83
+                Size = UDim2.new(0, 48, 0, 48), Position = UDim2.new(0, 15, 0.5, -24), BackgroundTransparency = 0.83
             }):Play()
             TweenService:Create(wm.StarGlow2, TweenInfo.new(1.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                Size = UDim2.new(0, 60, 0, 60),
-                Position = UDim2.new(0, 9, 0.5, -30),
-                BackgroundTransparency = 0.9
+                Size = UDim2.new(0, 60, 0, 60), Position = UDim2.new(0, 9, 0.5, -30), BackgroundTransparency = 0.9
             }):Play()
             task.wait(1.3)
             TweenService:Create(wm.StarGlow, TweenInfo.new(1.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                Size = UDim2.new(0, 40, 0, 40),
-                Position = UDim2.new(0, 19, 0.5, -20),
-                BackgroundTransparency = 0.88
+                Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 19, 0.5, -20), BackgroundTransparency = 0.88
             }):Play()
             TweenService:Create(wm.StarGlow2, TweenInfo.new(1.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                Size = UDim2.new(0, 50, 0, 50),
-                Position = UDim2.new(0, 14, 0.5, -25),
-                BackgroundTransparency = 0.94
+                Size = UDim2.new(0, 50, 0, 50), Position = UDim2.new(0, 14, 0.5, -25), BackgroundTransparency = 0.94
             }):Play()
             task.wait(1.3)
         end
     end)
-    
-    -- Accent line color shift
+
     task.spawn(function()
         while wm.AccentLine and wm.AccentLine.Parent do
             for hue = 0.54, 0.66, 0.0015 do
@@ -424,26 +360,20 @@ function Watermark:StartEffects(wm)
             end
         end
     end)
-    
-    -- Live dot pulse
+
     task.spawn(function()
         while wm.LiveDot and wm.LiveDot.Parent do
             TweenService:Create(wm.LiveDotGlow, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                Size = UDim2.new(0, 22, 0, 22),
-                Position = UDim2.new(1, -35, 0, 6),
-                BackgroundTransparency = 0.7
+                Size = UDim2.new(0, 22, 0, 22), Position = UDim2.new(1, -35, 0, 6), BackgroundTransparency = 0.7
             }):Play()
             task.wait(1)
             TweenService:Create(wm.LiveDotGlow, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                Size = UDim2.new(0, 16, 0, 16),
-                Position = UDim2.new(1, -32, 0, 9),
-                BackgroundTransparency = 0.78
+                Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(1, -32, 0, 9), BackgroundTransparency = 0.78
             }):Play()
             task.wait(1)
         end
     end)
-    
-    -- Scan line animation
+
     task.spawn(function()
         while wm.ScanLine and wm.ScanLine.Parent do
             TweenService:Create(wm.ScanLine, TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
@@ -454,8 +384,7 @@ function Watermark:StartEffects(wm)
             task.wait(0.5)
         end
     end)
-    
-    -- Title text subtle glow pulse
+
     task.spawn(function()
         while wm.TitleText and wm.TitleText.Parent do
             TweenService:Create(wm.TitleText, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
@@ -471,19 +400,18 @@ function Watermark:StartEffects(wm)
 end
 
 -- ============================================================
--- MAIN MENU (900px - SUPER BEAUTIFUL WITH DRAG)
+-- MAIN MENU (900px - ONE GEAR TAB)
 -- ============================================================
 local MainMenu = {}
 
 function MainMenu:Create(parent)
     local menuW = 900
     local menuH = 580
-    
-    -- Main frame
+
     local frame = Instance.new("Frame")
     frame.Name = "SeraphiCA_Menu"
     frame.Size = UDim2.new(0, menuW, 0, menuH)
-    frame.Position = UDim2.new(0.5, -menuW/2, 0.5, -menuH/2)
+    frame.Position = UDim2.new(0.5, -menuW / 2, 0.5, -menuH / 2)
     frame.BackgroundColor3 = C.Dark
     frame.BackgroundTransparency = 0.04
     frame.BorderSizePixel = 1
@@ -492,11 +420,8 @@ function MainMenu:Create(parent)
     frame.ClipsDescendants = true
     frame.ZIndex = 150
     frame.Parent = parent
-    
-    -- Corner
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 22)
-    
-    -- Main gradient
+
     local mainGrad = Instance.new("UIGradient")
     mainGrad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 38)),
@@ -506,8 +431,7 @@ function MainMenu:Create(parent)
     })
     mainGrad.Rotation = 140
     mainGrad.Parent = frame
-    
-    -- Glass overlay top
+
     local glassTop = Instance.new("Frame")
     glassTop.Size = UDim2.new(1, 0, 0.35, 0)
     glassTop.BackgroundColor3 = C.White
@@ -516,8 +440,7 @@ function MainMenu:Create(parent)
     glassTop.ZIndex = 151
     glassTop.Parent = frame
     Instance.new("UICorner", glassTop).CornerRadius = UDim.new(0, 22)
-    
-    -- Outer glow
+
     local outerGlow = Instance.new("Frame")
     outerGlow.Size = UDim2.new(1, 30, 1, 30)
     outerGlow.Position = UDim2.new(0, -15, 0, -15)
@@ -527,8 +450,7 @@ function MainMenu:Create(parent)
     outerGlow.ZIndex = -1
     outerGlow.Parent = frame
     Instance.new("UICorner", outerGlow).CornerRadius = UDim.new(0, 37)
-    
-    -- Outer glow 2
+
     local outerGlow2 = Instance.new("Frame")
     outerGlow2.Size = UDim2.new(1, 50, 1, 50)
     outerGlow2.Position = UDim2.new(0, -25, 0, -25)
@@ -538,20 +460,15 @@ function MainMenu:Create(parent)
     outerGlow2.ZIndex = -2
     outerGlow2.Parent = frame
     Instance.new("UICorner", outerGlow2).CornerRadius = UDim.new(0, 47)
-    
-    -- Floating particles container
+
     local particlesContainer = Instance.new("Frame")
     particlesContainer.Size = UDim2.new(1, 0, 1, 0)
     particlesContainer.BackgroundTransparency = 1
     particlesContainer.ZIndex = 155
     particlesContainer.Parent = frame
-    
-    -- Corner decorations
+
     local corners = {}
-    local cornerPositions = {
-        {0, 0}, {1, 0}, {0, 1}, {1, 1}
-    }
-    
+    local cornerPositions = { {0, 0}, {1, 0}, {0, 1}, {1, 1} }
     for i, pos in ipairs(cornerPositions) do
         local cornerDeco = Instance.new("Frame")
         cornerDeco.Size = UDim2.new(0, 40, 0, 40)
@@ -564,8 +481,7 @@ function MainMenu:Create(parent)
         cornerDeco.Parent = frame
         table.insert(corners, cornerDeco)
     end
-    
-    -- Title bar (drag handle)
+
     local titleBar = Instance.new("Frame")
     titleBar.Name = "TitleBar"
     titleBar.Size = UDim2.new(1, 0, 0, 52)
@@ -575,8 +491,7 @@ function MainMenu:Create(parent)
     titleBar.ZIndex = 160
     titleBar.Parent = frame
     Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 22)
-    
-    -- Title gradient
+
     local titleGrad = Instance.new("UIGradient")
     titleGrad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, C.Primary),
@@ -586,8 +501,7 @@ function MainMenu:Create(parent)
     titleGrad.Rotation = 90
     titleGrad.Transparency = NumberSequence.new(0.65, 0.65)
     titleGrad.Parent = titleBar
-    
-    -- Title text
+
     local titleText = Instance.new("TextLabel")
     titleText.Size = UDim2.new(1, -60, 1, 0)
     titleText.Position = UDim2.new(0, 30, 0, 0)
@@ -601,8 +515,7 @@ function MainMenu:Create(parent)
     titleText.TextStrokeTransparency = 0.25
     titleText.TextStrokeColor3 = C.Primary
     titleText.Parent = titleBar
-    
-    -- Close button
+
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 36, 0, 36)
     closeBtn.Position = UDim2.new(1, -46, 0, 8)
@@ -616,8 +529,7 @@ function MainMenu:Create(parent)
     closeBtn.ZIndex = 165
     closeBtn.Parent = frame
     Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 18)
-    
-    -- Close button glow
+
     local closeGlow = Instance.new("Frame")
     closeGlow.Size = UDim2.new(1, 8, 1, 8)
     closeGlow.Position = UDim2.new(0, -4, 0, -4)
@@ -627,58 +539,40 @@ function MainMenu:Create(parent)
     closeGlow.ZIndex = -1
     closeGlow.Parent = closeBtn
     Instance.new("UICorner", closeGlow).CornerRadius = UDim.new(0, 22)
-    
-    closeBtn.MouseButton1Click:Connect(function()
-        MainMenu:Hide(frame)
+
+    closeBtn.MouseButton1Click:Connect(function() MainMenu:Hide(frame) end)
+
+    -- Single gear tab button centered
+    local tabBtn = Instance.new("TextButton")
+    tabBtn.Size = UDim2.new(0, 60, 0, 40)
+    tabBtn.Position = UDim2.new(0.5, -30, 0, 58)
+    tabBtn.BackgroundColor3 = C.Primary
+    tabBtn.BorderSizePixel = 0
+    tabBtn.Text = "🔧"
+    tabBtn.TextColor3 = C.Light
+    tabBtn.TextSize = 20
+    tabBtn.Font = Enum.Font.GothamBold
+    tabBtn.ZIndex = 160
+    tabBtn.Parent = frame
+    Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 10)
+
+    local tabGlow = Instance.new("Frame")
+    tabGlow.Size = UDim2.new(1, 6, 1, 6)
+    tabGlow.Position = UDim2.new(0, -3, 0, -3)
+    tabGlow.BackgroundColor3 = C.Primary
+    tabGlow.BackgroundTransparency = 0.88
+    tabGlow.BorderSizePixel = 0
+    tabGlow.ZIndex = -1
+    tabGlow.Parent = tabBtn
+    Instance.new("UICorner", tabGlow).CornerRadius = UDim.new(0, 13)
+
+    tabBtn.MouseButton1Click:Connect(function()
+        local absPos = tabBtn.AbsolutePosition
+        local absSize = tabBtn.AbsoluteSize
+        ParticleSystem:Burst(particlesContainer, 20, absPos.X + absSize.X / 2, absPos.Y + absSize.Y / 2, {C.Primary, C.Cyan, C.Purple}, {2, 5}, 30, 1.5)
     end)
-    
-    -- Tab buttons
-    local tabs = {"⚔", "🏃", "👁", "🤖", "🎒", "⚙", "🔧"}
-    local tabNames = {"COMBAT", "MOVE", "VISUALS", "FARM", "ITEMS", "MISC", "SETTINGS"}
-    local tabButtons = {}
-    local tabW = (menuW - 30) / #tabs
-    
-    for i, tabName in ipairs(tabs) do
-        local tabBtn = Instance.new("TextButton")
-        tabBtn.Size = UDim2.new(0, tabW - 3, 0, 40)
-        tabBtn.Position = UDim2.new(0, 15 + (i-1) * tabW, 0, 58)
-        tabBtn.BackgroundColor3 = i == 1 and C.Primary or Color3.fromRGB(28, 28, 58)
-        tabBtn.BorderSizePixel = 0
-        tabBtn.Text = tabName
-        tabBtn.TextColor3 = C.Light
-        tabBtn.TextSize = 18
-        tabBtn.Font = Enum.Font.GothamBold
-        tabBtn.ZIndex = 160
-        tabBtn.Parent = frame
-        Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 10)
-        
-        -- Tab glow
-        local tabGlow = Instance.new("Frame")
-        tabGlow.Size = UDim2.new(1, 6, 1, 6)
-        tabGlow.Position = UDim2.new(0, -3, 0, -3)
-        tabGlow.BackgroundColor3 = C.Primary
-        tabGlow.BackgroundTransparency = 0.88
-        tabGlow.BorderSizePixel = 0
-        tabGlow.ZIndex = -1
-        tabGlow.Parent = tabBtn
-        Instance.new("UICorner", tabGlow).CornerRadius = UDim.new(0, 13)
-        
-        tabBtn.MouseButton1Click:Connect(function()
-            for _, btn in ipairs(tabButtons) do
-                btn.BackgroundColor3 = Color3.fromRGB(28, 28, 58)
-            end
-            tabBtn.BackgroundColor3 = C.Primary
-            
-            -- Burst particles on click
-            local absPos = tabBtn.AbsolutePosition
-            local absSize = tabBtn.AbsoluteSize
-            ParticleSystem:Burst(particlesContainer, 20, absPos.X + absSize.X/2, absPos.Y + absSize.Y/2, {C.Primary, C.Cyan, C.Purple}, {2, 5}, 30, 1.5)
-        end)
-        
-        table.insert(tabButtons, tabBtn)
-    end
-    
-    -- Content area (empty - just visual)
+
+    -- Content area with message
     local contentFrame = Instance.new("Frame")
     contentFrame.Size = UDim2.new(1, -40, 1, -115)
     contentFrame.Position = UDim2.new(0, 20, 0, 105)
@@ -688,48 +582,50 @@ function MainMenu:Create(parent)
     contentFrame.ZIndex = 152
     contentFrame.Parent = frame
     Instance.new("UICorner", contentFrame).CornerRadius = UDim.new(0, 14)
-    
-    -- Content placeholder text
-    local placeholderText = Instance.new("TextLabel")
-    placeholderText.Size = UDim2.new(1, 0, 1, 0)
-    placeholderText.BackgroundTransparency = 1
-    placeholderText.Text = "TAP WATERMARK TO TOGGLE MENU\nDRAG TITLE BAR TO MOVE"
-    placeholderText.TextColor3 = C.Gray
-    placeholderText.TextSize = 16
-    placeholderText.Font = Enum.Font.GothamBold
-    placeholderText.TextXAlignment = Enum.TextXAlignment.Center
-    placeholderText.TextYAlignment = Enum.TextYAlignment.Center
-    placeholderText.TextWrapped = true
-    placeholderText.ZIndex = 153
-    placeholderText.Parent = contentFrame
-    
+
+    -- Message text
+    local msgText = Instance.new("TextLabel")
+    msgText.Size = UDim2.new(1, 0, 1, 0)
+    msgText.BackgroundTransparency = 1
+    msgText.Text = "Все функции и вкладки удалены."
+    msgText.TextColor3 = C.DimGray
+    msgText.TextSize = 20
+    msgText.Font = Enum.Font.GothamBold
+    msgText.TextXAlignment = Enum.TextXAlignment.Center
+    msgText.TextYAlignment = Enum.TextYAlignment.Center
+    msgText.TextWrapped = true
+    msgText.ZIndex = 153
+    msgText.Parent = contentFrame
+
+    -- Sub message
+    local subMsg = Instance.new("TextLabel")
+    subMsg.Size = UDim2.new(1, 0, 0, 30)
+    subMsg.Position = UDim2.new(0, 0, 0.55, 0)
+    subMsg.BackgroundTransparency = 1
+    subMsg.Text = "TAP WATERMARK TO TOGGLE | DRAG TITLE TO MOVE"
+    subMsg.TextColor3 = C.Gray
+    subMsg.TextSize = 12
+    subMsg.Font = Enum.Font.Gotham
+    subMsg.TextXAlignment = Enum.TextXAlignment.Center
+    subMsg.TextYAlignment = Enum.TextYAlignment.Center
+    subMsg.ZIndex = 153
+    subMsg.Parent = contentFrame
+
     return {
-        Frame = frame,
-        TitleBar = titleBar,
-        Content = contentFrame,
-        OuterGlow = outerGlow,
-        OuterGlow2 = outerGlow2,
-        Corners = corners,
-        ParticlesContainer = particlesContainer,
-        GlassTop = glassTop,
-        TitleText = titleText,
-        CloseBtn = closeBtn,
-        CloseGlow = closeGlow,
-        TabButtons = tabButtons,
-        PlaceholderText = placeholderText
+        Frame = frame, TitleBar = titleBar, Content = contentFrame,
+        OuterGlow = outerGlow, OuterGlow2 = outerGlow2, Corners = corners,
+        ParticlesContainer = particlesContainer, GlassTop = glassTop,
+        TitleText = titleText, CloseBtn = closeBtn, CloseGlow = closeGlow,
+        TabBtn = tabBtn, TabGlow = tabGlow, MsgText = msgText
     }
 end
 
 function MainMenu:Show(menuObj)
     menuObj.Frame.Visible = true
-    
-    -- Scale in from 0
     menuObj.Frame.Size = UDim2.new(0, 0, 0, 0)
     TweenService:Create(menuObj.Frame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.new(0, 900, 0, 580)
     }):Play()
-    
-    -- Fade in background
     menuObj.Frame.BackgroundTransparency = 1
     TweenService:Create(menuObj.Frame, TweenInfo.new(0.4), {
         BackgroundTransparency = 0.04
@@ -738,49 +634,36 @@ end
 
 function MainMenu:Hide(frame)
     TweenService:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-        Size = UDim2.new(0, 0, 0, 0),
-        BackgroundTransparency = 1
+        Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1
     }):Play()
-    
     task.wait(0.35)
     frame.Visible = false
 end
 
 function MainMenu:StartEffects(menuObj)
-    -- Glow pulsing
     task.spawn(function()
         while menuObj.OuterGlow and menuObj.OuterGlow.Parent do
             TweenService:Create(menuObj.OuterGlow, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.86,
-                Size = UDim2.new(1, 38, 1, 38),
-                Position = UDim2.new(0, -19, 0, -19)
+                BackgroundTransparency = 0.86, Size = UDim2.new(1, 38, 1, 38), Position = UDim2.new(0, -19, 0, -19)
             }):Play()
             TweenService:Create(menuObj.OuterGlow2, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.92,
-                Size = UDim2.new(1, 60, 1, 60),
-                Position = UDim2.new(0, -30, 0, -30)
+                BackgroundTransparency = 0.92, Size = UDim2.new(1, 60, 1, 60), Position = UDim2.new(0, -30, 0, -30)
             }):Play()
             task.wait(2)
             TweenService:Create(menuObj.OuterGlow, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.9,
-                Size = UDim2.new(1, 30, 1, 30),
-                Position = UDim2.new(0, -15, 0, -15)
+                BackgroundTransparency = 0.9, Size = UDim2.new(1, 30, 1, 30), Position = UDim2.new(0, -15, 0, -15)
             }):Play()
             TweenService:Create(menuObj.OuterGlow2, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.95,
-                Size = UDim2.new(1, 50, 1, 50),
-                Position = UDim2.new(0, -25, 0, -25)
+                BackgroundTransparency = 0.95, Size = UDim2.new(1, 50, 1, 50), Position = UDim2.new(0, -25, 0, -25)
             }):Play()
             task.wait(2)
         end
     end)
-    
-    -- Corner decorations rotation and pulse
+
     task.spawn(function()
         while menuObj.Corners and #menuObj.Corners > 0 and menuObj.Corners[1].Parent do
             for i, corner in ipairs(menuObj.Corners) do
                 corner.Rotation = corner.Rotation + 1.2
-                
                 TweenService:Create(corner, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
                     BackgroundTransparency = 0.5 + math.sin(tick() * 2 + i) * 0.2
                 }):Play()
@@ -788,8 +671,7 @@ function MainMenu:StartEffects(menuObj)
             task.wait(0.03)
         end
     end)
-    
-    -- Floating particles
+
     task.spawn(function()
         while menuObj.ParticlesContainer and menuObj.ParticlesContainer.Parent do
             if menuObj.Frame.Visible then
@@ -800,8 +682,7 @@ function MainMenu:StartEffects(menuObj)
             task.wait(0.15)
         end
     end)
-    
-    -- Title text glow
+
     task.spawn(function()
         while menuObj.TitleText and menuObj.TitleText.Parent do
             TweenService:Create(menuObj.TitleText, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
@@ -814,26 +695,20 @@ function MainMenu:StartEffects(menuObj)
             task.wait(2.5)
         end
     end)
-    
-    -- Close button glow
+
     task.spawn(function()
         while menuObj.CloseGlow and menuObj.CloseGlow.Parent do
             TweenService:Create(menuObj.CloseGlow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.78,
-                Size = UDim2.new(1, 14, 1, 14),
-                Position = UDim2.new(0, -7, 0, -7)
+                BackgroundTransparency = 0.78, Size = UDim2.new(1, 14, 1, 14), Position = UDim2.new(0, -7, 0, -7)
             }):Play()
             task.wait(1.2)
             TweenService:Create(menuObj.CloseGlow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.85,
-                Size = UDim2.new(1, 8, 1, 8),
-                Position = UDim2.new(0, -4, 0, -4)
+                BackgroundTransparency = 0.85, Size = UDim2.new(1, 8, 1, 8), Position = UDim2.new(0, -4, 0, -4)
             }):Play()
             task.wait(1.2)
         end
     end)
-    
-    -- Glass overlay shimmer
+
     task.spawn(function()
         while menuObj.GlassTop and menuObj.GlassTop.Parent do
             TweenService:Create(menuObj.GlassTop, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
@@ -846,10 +721,24 @@ function MainMenu:StartEffects(menuObj)
             task.wait(3)
         end
     end)
+
+    -- Message text fade pulse
+    task.spawn(function()
+        while menuObj.MsgText and menuObj.MsgText.Parent do
+            TweenService:Create(menuObj.MsgText, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                TextTransparency = 0.2
+            }):Play()
+            task.wait(2.5)
+            TweenService:Create(menuObj.MsgText, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                TextTransparency = 0.5
+            }):Play()
+            task.wait(2.5)
+        end
+    end)
 end
 
 -- ============================================================
--- DRAG SYSTEM (FINGER/MOUSE)
+-- DRAG SYSTEM
 -- ============================================================
 local DragSystem = {}
 
@@ -857,40 +746,32 @@ function DragSystem:MakeDraggable(frame, handle)
     local dragging = false
     local dragStart = nil
     local frameStart = nil
-    
+
     handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             frameStart = frame.Position
-            
-            -- Slightly lift frame
             TweenService:Create(frame, TweenInfo.new(0.15), {
                 Size = UDim2.new(0, 910, 0, 590)
             }):Play()
         end
     end)
-    
+
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
-            
             local newX = frameStart.X.Offset + delta.X
             local newY = frameStart.Y.Offset + delta.Y
-            
-            -- Clamp to screen
             newX = Clamp(newX, -frame.AbsoluteSize.X + 100, ScreenGui.AbsoluteSize.X - 100)
             newY = Clamp(newY, 0, ScreenGui.AbsoluteSize.Y - 60)
-            
             frame.Position = UDim2.new(0, newX, 0, newY)
         end
     end)
-    
+
     UserInputService.InputEnded:Connect(function(input)
         if dragging then
             dragging = false
-            
-            -- Restore size
             TweenService:Create(frame, TweenInfo.new(0.2), {
                 Size = UDim2.new(0, 900, 0, 580)
             }):Play()
@@ -904,19 +785,16 @@ end
 _G.SeraphiCA = { IsRunning = true, IsMenuOpen = false }
 
 print("================================================")
-print("  SERAPHICA CLIENT v6.0.0 - UI DEMO")
+print("  SERAPHICA CLIENT v7.0.0 - UI DEMO CLEAN")
 print("  Author: SeraphiCA Team")
 print("  Telegram: @Mpmtww")
 print("  Platform: Delta Executor (Mobile)")
-print("  Features: Watermark + Drag Menu + Effects")
 print("================================================")
 
--- Create Watermark
 local wm = Watermark:Create(ScreenGui)
 Watermark:Show(wm)
 Watermark:StartEffects(wm)
 
--- Update time
 task.spawn(function()
     while _G.SeraphiCA.IsRunning do
         Watermark:UpdateTime(wm)
@@ -924,14 +802,10 @@ task.spawn(function()
     end
 end)
 
--- Create Menu
 local menuObj = MainMenu:Create(ScreenGui)
 MainMenu:StartEffects(menuObj)
-
--- Make menu draggable
 DragSystem:MakeDraggable(menuObj.Frame, menuObj.TitleBar)
 
--- Watermark click = toggle menu with drip effect
 wm.ClickBtn.MouseButton1Click:Connect(function()
     _G.SeraphiCA.IsMenuOpen = not _G.SeraphiCA.IsMenuOpen
     if _G.SeraphiCA.IsMenuOpen then

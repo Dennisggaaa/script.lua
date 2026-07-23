@@ -1,15 +1,15 @@
 -- ============================================================
--- SERAPHICA CLIENT - A UNIVERSAL TIME EDITION
--- VERSION: 3.0.0 | AUTHOR: SeraphiCA Team
+-- SERAPHICA CLIENT - DELTA EXECUTOR EDITION
+-- VERSION: 5.0.0 | AUTHOR: SeraphiCA Team
 -- TELEGRAM: @Mpmtww
 -- TOTAL LINES: 10,000+
--- GAME: A Universal Time (AUT)
+-- PLATFORM: Delta Executor (Mobile)
 -- ============================================================
 
--- [[ CRITICAL: WAIT FOR GAME LOAD ]]
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
+-- [[ DELTA COMPATIBILITY ]]
+local ExecutorName = "Delta"
+pcall(function() ExecutorName = getexecutorname() or identifyexecutor() or "Delta" end)
+local IsMobile = true
 
 -- [[ SERVICES ]]
 local Players = game:GetService("Players")
@@ -34,18 +34,18 @@ local ContextActionService = game:GetService("ContextActionService")
 local CollectionService = game:GetService("CollectionService")
 local LocalizationService = game:GetService("LocalizationService")
 local PathfindingService = game:GetService("PathfindingService")
-local LocalPlayer = Players.LocalPlayer
 
--- [[ WAIT FOR LOCAL PLAYER ]]
-if not LocalPlayer then
-    LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
-end
+-- [[ WAIT FOR GAME LOAD ]]
+if not game:IsLoaded() then game.Loaded:Wait() end
+
+-- [[ PLAYER SETUP ]]
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Backpack = LocalPlayer:WaitForChild("Backpack")
 
 -- [[ CLEANUP OLD GUI ]]
 for _, gui in ipairs(PlayerGui:GetChildren()) do
-    if gui.Name == "SeraphiCA_GUI" or gui.Name:match("ESP_") or gui.Name:match("Particle_") or gui.Name:match("Notify_") then
+    if gui.Name == "SeraphiCA_GUI" or gui.Name:match("SeraphiCA_") or gui.Name:match("ESP_") or gui.Name:match("Notify_") or gui.Name:match("Particle_") then
         pcall(function() gui:Destroy() end)
     end
 end
@@ -61,43 +61,31 @@ ScreenGui.Parent = PlayerGui
 -- CONSTANTS & COLORS
 -- ============================================================
 local COLORS = {
-    Primary = Color3.fromRGB(100, 200, 255),
-    Secondary = Color3.fromRGB(200, 100, 255),
-    Success = Color3.fromRGB(100, 255, 100),
-    Error = Color3.fromRGB(255, 100, 100),
-    Warning = Color3.fromRGB(255, 200, 50),
-    Dark = Color3.fromRGB(8, 8, 28),
-    Darker = Color3.fromRGB(5, 5, 20),
-    Light = Color3.fromRGB(220, 230, 255),
-    Accent = Color3.fromRGB(120, 180, 255),
+    Primary = Color3.fromRGB(130, 200, 255),
+    PrimaryDark = Color3.fromRGB(60, 140, 220),
+    PrimaryLight = Color3.fromRGB(180, 225, 255),
+    Secondary = Color3.fromRGB(200, 130, 255),
+    Success = Color3.fromRGB(100, 255, 130),
+    Error = Color3.fromRGB(255, 90, 90),
+    Warning = Color3.fromRGB(255, 200, 60),
+    Dark = Color3.fromRGB(10, 10, 30),
+    Darker = Color3.fromRGB(6, 6, 22),
+    DarkMedium = Color3.fromRGB(15, 15, 40),
+    Light = Color3.fromRGB(225, 235, 255),
+    Accent = Color3.fromRGB(140, 200, 255),
     Gold = Color3.fromRGB(255, 215, 0),
-    Purple = Color3.fromRGB(180, 100, 255),
+    Purple = Color3.fromRGB(180, 120, 255),
     Cyan = Color3.fromRGB(0, 255, 255),
-    Orange = Color3.fromRGB(255, 150, 0),
-    Pink = Color3.fromRGB(255, 100, 200),
-    AUT_Red = Color3.fromRGB(255, 50, 50),
-    AUT_Blue = Color3.fromRGB(50, 100, 255),
-    AUT_Gold = Color3.fromRGB(255, 200, 0)
-}
-
-local AUT_REMOTES = {
-    Attack = ReplicatedStorage:FindFirstChild("Attack") or ReplicatedStorage:FindFirstChild("AttackEvent") or ReplicatedStorage:FindFirstChild("DamageEvent"),
-    Ability = ReplicatedStorage:FindFirstChild("Ability") or ReplicatedStorage:FindFirstChild("AbilityEvent") or ReplicatedStorage:FindFirstChild("SkillEvent"),
-    Item = ReplicatedStorage:FindFirstChild("ItemEvent") or ReplicatedStorage:FindFirstChild("UseItem"),
-    Stand = ReplicatedStorage:FindFirstChild("StandEvent") or ReplicatedStorage:FindFirstChild("SummonStand"),
-    Reset = ReplicatedStorage:FindFirstChild("ResetEvent") or ReplicatedStorage:FindFirstChild("Reset"),
-    Store = ReplicatedStorage:FindFirstChild("StoreEvent") or ReplicatedStorage:FindFirstChild("BuyItem"),
-    Quest = ReplicatedStorage:FindFirstChild("QuestEvent") or ReplicatedStorage:FindFirstChild("AcceptQuest"),
-    Dialogue = ReplicatedStorage:FindFirstChild("DialogueEvent") or ReplicatedStorage:FindFirstChild("NextDialogue"),
-    Arrow = ReplicatedStorage:FindFirstChild("ArrowEvent") or ReplicatedStorage:FindFirstChild("UseArrow"),
-    Rokakaka = ReplicatedStorage:FindFirstChild("RokakakaEvent") or ReplicatedStorage:FindFirstChild("UseRokakaka"),
-    StandArrow = ReplicatedStorage:FindFirstChild("StandArrowEvent") or ReplicatedStorage:FindFirstChild("UseStandArrow"),
-    Diary = ReplicatedStorage:FindFirstChild("DiaryEvent") or ReplicatedStorage:FindFirstChild("UseDiary"),
-    Bone = ReplicatedStorage:FindFirstChild("BoneEvent") or ReplicatedStorage:FindFirstChild("UseBone"),
-    Corpse = ReplicatedStorage:FindFirstChild("CorpseEvent") or ReplicatedStorage:FindFirstChild("UseCorpse"),
-    Soul = ReplicatedStorage:FindFirstChild("SoulEvent") or ReplicatedStorage:FindFirstChild("UseSoul"),
-    Requiem = ReplicatedStorage:FindFirstChild("RequiemEvent") or ReplicatedStorage:FindFirstChild("RequiemArrow"),
-    OverHeaven = ReplicatedStorage:FindFirstChild("OverHeavenEvent") or ReplicatedStorage:FindFirstChild("DIOOH")
+    Orange = Color3.fromRGB(255, 160, 30),
+    Pink = Color3.fromRGB(255, 120, 200),
+    White = Color3.fromRGB(255, 255, 255),
+    Black = Color3.fromRGB(0, 0, 0),
+    Gray = Color3.fromRGB(160, 160, 170),
+    DarkGray = Color3.fromRGB(50, 50, 60),
+    Glass = Color3.fromRGB(255, 255, 255),
+    NeonBlue = Color3.fromRGB(0, 180, 255),
+    NeonPink = Color3.fromRGB(255, 0, 180),
+    NeonGreen = Color3.fromRGB(0, 255, 180)
 }
 
 -- ============================================================
@@ -138,18 +126,6 @@ function Utils:Clamp(val, min, max)
     return math.max(min, math.min(max, val))
 end
 
-function Utils:FireRemote(remote, ...)
-    if remote then
-        pcall(function()
-            if remote:IsA("RemoteEvent") then
-                remote:FireServer(...)
-            elseif remote:IsA("RemoteFunction") then
-                remote:InvokeServer(...)
-            end
-        end)
-    end
-end
-
 function Utils:GetCharacter()
     local char = LocalPlayer.Character
     if not char then return nil end
@@ -158,18 +134,109 @@ end
 
 function Utils:GetHumanoid()
     local char = Utils:GetCharacter()
-    if char then
-        return char:FindFirstChild("Humanoid")
-    end
+    if char then return char:FindFirstChild("Humanoid") end
     return nil
 end
 
 function Utils:GetRoot()
     local char = Utils:GetCharacter()
+    if char then return char:FindFirstChild("HumanoidRootPart") end
+    return nil
+end
+
+function Utils:SendNotification(title, text, duration)
+    duration = duration or 3
+    local notif = Instance.new("Frame")
+    notif.Name = "Notify_" .. math.random(100000)
+    notif.Size = UDim2.new(0, 280, 0, 70)
+    notif.Position = UDim2.new(1, 300, 0.8, 0)
+    notif.BackgroundColor3 = COLORS.Dark
+    notif.BackgroundTransparency = 0.1
+    notif.BorderSizePixel = 1
+    notif.BorderColor3 = COLORS.Primary
+    notif.Parent = ScreenGui
+    
+    Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 10)
+    
+    local glowNotif = Instance.new("Frame")
+    glowNotif.Size = UDim2.new(1, 6, 1, 6)
+    glowNotif.Position = UDim2.new(0, -3, 0, -3)
+    glowNotif.BackgroundColor3 = COLORS.Primary
+    glowNotif.BackgroundTransparency = 0.9
+    glowNotif.BorderSizePixel = 0
+    glowNotif.ZIndex = -1
+    glowNotif.Parent = notif
+    Instance.new("UICorner", glowNotif).CornerRadius = UDim.new(0, 13)
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -10, 0, 22)
+    titleLabel.Position = UDim2.new(0, 5, 0, 4)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = COLORS.Light
+    titleLabel.TextSize = 14
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = notif
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, -10, 0, 30)
+    textLabel.Position = UDim2.new(0, 5, 0, 28)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = text
+    textLabel.TextColor3 = COLORS.Gray
+    textLabel.TextSize = 11
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextWrapped = true
+    textLabel.Parent = notif
+    
+    TweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(1, -300, 0.8, 0)
+    }):Play()
+    
+    task.wait(duration)
+    
+    TweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+        Position = UDim2.new(1, 300, 0.8, 0)
+    }):Play()
+    
+    task.wait(0.4)
+    notif:Destroy()
+end
+
+function Utils:FindItem(itemName)
+    local bp = LocalPlayer.Backpack
+    local char = Utils:GetCharacter()
+    if bp then
+        for _, item in ipairs(bp:GetChildren()) do
+            if item.Name:lower():find(itemName:lower()) then return item end
+        end
+    end
     if char then
-        return char:FindFirstChild("HumanoidRootPart")
+        for _, item in ipairs(char:GetChildren()) do
+            if item.Name:lower():find(itemName:lower()) then return item end
+        end
     end
     return nil
+end
+
+function Utils:EquipTool(toolName)
+    local tool = Utils:FindItem(toolName)
+    if tool and tool:IsA("Tool") then
+        local hum = Utils:GetHumanoid()
+        if hum then hum:EquipTool(tool) return true end
+    end
+    return false
+end
+
+function Utils:ClickTool(toolName)
+    local tool = Utils:FindItem(toolName)
+    if tool and tool:IsA("Tool") then
+        pcall(function() tool:Activate() end)
+        return true
+    end
+    return false
 end
 
 function Utils:GetNearestPlayer(range)
@@ -178,17 +245,10 @@ function Utils:GetNearestPlayer(range)
     local minDist = range
     local root = Utils:GetRoot()
     if not root then return nil end
-    
     for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
-            local plrRoot = plr.Character:FindFirstChild("HumanoidRootPart")
-            if plrRoot then
-                local dist = (root.Position - plrRoot.Position).Magnitude
-                if dist < minDist then
-                    minDist = dist
-                    nearest = plr
-                end
-            end
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local dist = (root.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+            if dist < minDist then minDist = dist nearest = plr end
         end
     end
     return nearest
@@ -200,14 +260,13 @@ function Utils:GetNearestNPC(range)
     local minDist = range
     local root = Utils:GetRoot()
     if not root then return nil end
-    
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
             if not Players:GetPlayerFromCharacter(obj) then
-                local dist = (root.Position - obj.HumanoidRootPart.Position).Magnitude
-                if dist < minDist then
-                    minDist = dist
-                    nearest = obj
+                local hum = obj.Humanoid
+                if hum.Health > 0 then
+                    local dist = (root.Position - obj.HumanoidRootPart.Position).Magnitude
+                    if dist < minDist then minDist = dist nearest = obj end
                 end
             end
         end
@@ -220,125 +279,57 @@ function Utils:GetAllNPCs(range)
     local npcs = {}
     local root = Utils:GetRoot()
     if not root then return npcs end
-    
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
             if not Players:GetPlayerFromCharacter(obj) then
-                local dist = (root.Position - obj.HumanoidRootPart.Position).Magnitude
-                if dist < range then
-                    table.insert(npcs, obj)
+                local hum = obj.Humanoid
+                if hum.Health > 0 then
+                    local dist = (root.Position - obj.HumanoidRootPart.Position).Magnitude
+                    if dist < range then table.insert(npcs, obj) end
                 end
             end
         end
     end
+    table.sort(npcs, function(a, b)
+        return (root.Position - a.HumanoidRootPart.Position).Magnitude < (root.Position - b.HumanoidRootPart.Position).Magnitude
+    end)
     return npcs
 end
 
-function Utils:FindItem(itemName)
-    local bp = LocalPlayer.Backpack
+function Utils:GetStandName()
     local char = Utils:GetCharacter()
-    
-    if bp then
-        for _, item in ipairs(bp:GetChildren()) do
-            if item.Name:lower():find(itemName:lower()) then
-                return item
-            end
-        end
-    end
-    
     if char then
-        for _, item in ipairs(char:GetChildren()) do
-            if item.Name:lower():find(itemName:lower()) then
-                return item
+        for _, child in ipairs(char:GetChildren()) do
+            if child:IsA("Model") and child ~= char then
+                local hum = child:FindFirstChild("Humanoid")
+                if hum and child.Name ~= "HumanoidRootPart" then return child.Name end
             end
         end
     end
-    
-    return nil
+    return "None"
 end
 
-function Utils:EquipTool(toolName)
-    local tool = Utils:FindItem(toolName)
-    if tool and tool:IsA("Tool") then
-        local hum = Utils:GetHumanoid()
-        if hum then
-            hum:EquipTool(tool)
-            return true
+function Utils:GetLevel()
+    local char = Utils:GetCharacter()
+    if char then
+        for _, child in ipairs(char:GetChildren()) do
+            if child:IsA("IntValue") and child.Name:lower():find("level") then return child.Value end
+            if child:IsA("NumberValue") and child.Name:lower():find("level") then return child.Value end
         end
     end
-    return false
+    return 0
 end
 
-function Utils:ClickTool(toolName)
-    local tool = Utils:FindItem(toolName)
-    if tool and tool:IsA("Tool") then
-        pcall(function()
-            tool:Activate()
-        end)
-        return true
+function Utils:GetMoney()
+    local char = Utils:GetCharacter()
+    if char then
+        for _, child in ipairs(char:GetChildren()) do
+            if child:IsA("IntValue") and (child.Name:lower():find("money") or child.Name:lower():find("gold") or child.Name:lower():find("cash")) then
+                return child.Value
+            end
+        end
     end
-    return false
-end
-
-function Utils:TeleportTo(position)
-    local root = Utils:GetRoot()
-    if root then
-        root.CFrame = CFrame.new(position)
-        return true
-    end
-    return false
-end
-
-function Utils:SendNotification(title, text, duration, icon)
-    duration = duration or 3
-    icon = icon or "rbxassetid://1313579923"
-    
-    local notif = Instance.new("Frame")
-    notif.Name = "Notify_" .. math.random(100000)
-    notif.Size = UDim2.new(0, 300, 0, 80)
-    notif.Position = UDim2.new(1, 320, 0.85, 0)
-    notif.BackgroundColor3 = COLORS.Dark
-    notif.BorderSizePixel = 2
-    notif.BorderColor3 = COLORS.Accent
-    notif.Parent = ScreenGui
-    
-    Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 12)
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -10, 0, 25)
-    titleLabel.Position = UDim2.new(0, 5, 0, 5)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
-    titleLabel.TextColor3 = COLORS.Light
-    titleLabel.TextSize = 16
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Parent = notif
-    
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1, -10, 0, 35)
-    textLabel.Position = UDim2.new(0, 5, 0, 35)
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = text
-    textLabel.TextColor3 = COLORS.Light
-    textLabel.TextSize = 13
-    textLabel.Font = Enum.Font.Gotham
-    textLabel.TextXAlignment = Enum.TextXAlignment.Left
-    textLabel.TextWrapped = true
-    textLabel.Parent = notif
-    
-    TweenService:Create(notif, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(1, -320, 0.85, 0)
-    }):Play()
-    
-    task.wait(duration)
-    
-    TweenService:Create(notif, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-        Position = UDim2.new(1, 320, 0.85, 0)
-    }):Play()
-    
-    task.wait(0.5)
-    notif:Destroy()
+    return 0
 end
 
 -- ============================================================
@@ -347,64 +338,35 @@ end
 _G.SeraphiCA = {
     IsRunning = false,
     IsMenuOpen = false,
-    IsSecretUnlocked = false,
-    IsCrashActive = false,
     CurrentTab = "COMBAT",
     Settings = {
-        MenuSize = 900,
-        BlurIntensity = 5,
-        ParticleCount = 50,
         SpeedValue = 16,
         AimFOV = 90,
-        FarmRange = 50,
-        AutoCollectRange = 30,
-        AutoAttackRange = 15
+        FarmRange = 100,
+        AutoAttackRange = 15,
+        AutoCollectRange = 50,
+        ESPRefreshRate = 0.1
     },
+    Combat = { ParryState = false, BlockState = false, DodgeState = false, AimState = false },
+    Movement = { FlyState = false, Noclip = false, InfiniteJumpState = false, SpeedBypass = false },
+    Visuals = { ESPBox = false, ESPLine = false, ESPName = false, ESPDistance = false, ESPHealth = false, FullBright = false, NoFog = false },
+    NPC = { AutoFarmNPC = false, AutoAttackNPC = false },
+    Misc = { AutoFarm = false, AutoCollect = false, AutoRebirth = false, AutoSkill = false, AutoPotion = false, AutoRespawn = false, AntiAFK = false },
     AUT_Specific = {
-        AutoArrow = false,
-        AutoRokakaka = false,
-        AutoStandArrow = false,
-        AutoDiary = false,
-        AutoBone = false,
-        AutoCorpse = false,
-        AutoSoul = false,
-        AutoRequiem = false,
-        AutoOverHeaven = false,
-        AutoQuest = false,
-        AutoDialogue = false,
-        AutoSkillTree = false,
-        AutoTrait = false,
-        AutoBlessing = false,
-        AutoAscend = false,
-        AutoEvolve = false,
-        AutoSkin = false,
-        AutoItemPickup = false,
-        AutoStore = false,
-        AutoShiny = false,
-        SelectedStand = "",
-        SelectedSpec = "",
-        FarmingMode = "XP",
-        TPToItems = false,
-        SpeedBypass = false,
-        Noclip = false,
-        InfiniteJump = false,
-        GodMode = false,
-        AntiStun = false,
-        NoCooldown = false,
-        AutoDodge = false,
-        AutoBlock = false,
-        AutoParry = false,
-        AutoPerfectBlock = false
+        AutoArrow = false, AutoRokakaka = false, AutoStandArrow = false, AutoDiary = false,
+        AutoBone = false, AutoCorpse = false, AutoSoul = false, AutoRequiem = false,
+        AutoOverHeaven = false, AutoQuest = false, AutoDialogue = false, AutoItemPickup = false,
+        GodMode = false, NoCooldown = false, AntiStun = false, AutoHeal = false, AutoStore = false
     }
 }
 
 -- ============================================================
--- ANIMATION MODULE (50+ EFFECTS)
+-- ANIMATION MODULE (EXPANDED FOR MOBILE)
 -- ============================================================
 local AnimationModule = {}
 
 function AnimationModule:FadeIn(object, duration)
-    duration = duration or 0.5
+    duration = duration or 0.4
     object.BackgroundTransparency = 1
     object.Visible = true
     TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
@@ -413,7 +375,7 @@ function AnimationModule:FadeIn(object, duration)
 end
 
 function AnimationModule:FadeOut(object, duration, callback)
-    duration = duration or 0.5
+    duration = duration or 0.4
     TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
         BackgroundTransparency = 1
     }):Play()
@@ -426,12 +388,10 @@ function AnimationModule:SlideIn(object, direction, duration)
     duration = duration or 0.5
     local origPos = UDim2.new(object.Position.X.Scale, object.Position.X.Offset, object.Position.Y.Scale, object.Position.Y.Offset)
     local startPos = UDim2.new(origPos.X.Scale, origPos.X.Offset, origPos.Y.Scale, origPos.Y.Offset)
-    
     if direction == "left" then startPos = UDim2.new(startPos.X.Scale, startPos.X.Offset - 100, startPos.Y.Scale, startPos.Y.Offset)
     elseif direction == "right" then startPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + 100, startPos.Y.Scale, startPos.Y.Offset)
     elseif direction == "up" then startPos = UDim2.new(startPos.X.Scale, startPos.X.Offset, startPos.Y.Scale, startPos.Y.Offset - 100)
     elseif direction == "down" then startPos = UDim2.new(startPos.X.Scale, startPos.X.Offset, startPos.Y.Scale, startPos.Y.Offset + 100) end
-    
     object.Position = startPos
     object.Visible = true
     TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
@@ -440,7 +400,7 @@ function AnimationModule:SlideIn(object, direction, duration)
 end
 
 function AnimationModule:ScaleIn(object, duration)
-    duration = duration or 0.5
+    duration = duration or 0.4
     local startSize = object.Size
     object.Size = UDim2.new(0, 0, 0, 0)
     object.Visible = true
@@ -450,7 +410,7 @@ function AnimationModule:ScaleIn(object, duration)
 end
 
 function AnimationModule:ScaleOut(object, duration, callback)
-    duration = duration or 0.5
+    duration = duration or 0.3
     TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
         Size = UDim2.new(0, 0, 0, 0)
     }):Play()
@@ -460,7 +420,7 @@ function AnimationModule:ScaleOut(object, duration, callback)
 end
 
 function AnimationModule:Pulse(object, duration, scale)
-    scale = scale or 1.1
+    scale = scale or 1.05
     duration = duration or 1
     TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
         Size = UDim2.new(0, object.Size.X.Offset * scale, 0, object.Size.Y.Offset * scale)
@@ -471,36 +431,46 @@ function AnimationModule:Pulse(object, duration, scale)
     }):Play()
 end
 
-function AnimationModule:Shake(object, intensity, duration)
-    intensity = intensity or 5
-    duration = duration or 0.5
-    local startPos = object.Position
-    for i = 1, 10 do
-        object.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + math.random(-intensity, intensity), startPos.Y.Scale, startPos.Y.Offset + math.random(-intensity, intensity))
-        task.wait(duration / 10)
-    end
-    object.Position = startPos
-end
-
 function AnimationModule:GlowPulse(glow, intensity)
     task.spawn(function()
         while glow and glow.Parent do
             TweenService:Create(glow, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
                 BackgroundTransparency = 0.7,
-                Size = UDim2.new(1, intensity or 15, 1, intensity or 15)
+                Size = UDim2.new(1, intensity or 12, 1, intensity or 12)
             }):Play()
             task.wait(1.5)
             TweenService:Create(glow, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
                 BackgroundTransparency = 0.9,
-                Size = UDim2.new(1, 8, 1, 8)
+                Size = UDim2.new(1, 6, 1, 6)
             }):Play()
             task.wait(1.5)
         end
     end)
 end
 
+function AnimationModule:Flash(object, color, duration)
+    color = color or COLORS.White
+    duration = duration or 0.15
+    local origColor = object.BackgroundColor3
+    TweenService:Create(object, TweenInfo.new(duration), {BackgroundColor3 = color}):Play()
+    task.wait(duration)
+    TweenService:Create(object, TweenInfo.new(duration), {BackgroundColor3 = origColor}):Play()
+end
+
+function AnimationModule:Rainbow(object, speed)
+    speed = speed or 0.1
+    task.spawn(function()
+        while object and object.Parent do
+            for hue = 0, 1, speed do
+                object.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
+                task.wait(speed/10)
+            end
+        end
+    end)
+end
+
 function AnimationModule:Typewriter(label, text, speed)
-    speed = speed or 0.05
+    speed = speed or 0.03
     label.Text = ""
     for i = 1, #text do
         label.Text = string.sub(text, 1, i)
@@ -508,84 +478,116 @@ function AnimationModule:Typewriter(label, text, speed)
     end
 end
 
-function AnimationModule:RotateContinuous(object, speed)
-    task.spawn(function()
-        while object and object.Parent do
-            object.Rotation = object.Rotation + (speed or 1)
-            task.wait(0.03)
-        end
-    end)
+function AnimationModule:DripEffect(object, fromSize, toSize, duration)
+    duration = duration or 0.6
+    object.Size = fromSize or UDim2.new(0, 0, 0, 0)
+    object.Visible = true
+    TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {
+        Size = toSize
+    }):Play()
 end
 
-function AnimationModule:ColorTransition(object, colors, duration)
-    duration = duration or 2
-    local idx = 1
-    task.spawn(function()
-        while object and object.Parent do
-            TweenService:Create(object, TweenInfo.new(duration), {BackgroundColor3 = colors[idx]}):Play()
-            idx = (idx % #colors) + 1
-            task.wait(duration)
-        end
-    end)
+function AnimationModule:ElasticBounce(object, duration)
+    duration = duration or 0.5
+    local origSize = object.Size
+    TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, origSize.X.Offset * 1.15, 0, origSize.Y.Offset * 1.15)
+    }):Play()
+    task.wait(duration)
+    TweenService:Create(object, TweenInfo.new(0.2), {
+        Size = origSize
+    }):Play()
+end
+
+function AnimationModule:DropDown(object, duration)
+    duration = duration or 0.5
+    object.Size = UDim2.new(1, 0, 0, 0)
+    object.Visible = true
+    TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        Size = UDim2.new(1, 0, 1, 0)
+    }):Play()
+end
+
+function AnimationModule:DropUp(object, duration, callback)
+    duration = duration or 0.3
+    TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+        Size = UDim2.new(1, 0, 0, 0)
+    }):Play()
+    task.wait(duration)
+    object.Visible = false
+    if callback then callback() end
 end
 
 for i = 1, 40 do
     AnimationModule["ExtraAnim"..i] = function(obj)
         if obj then
-            TweenService:Create(obj, TweenInfo.new(0.5), {BackgroundTransparency = 0.5}):Play()
-            task.wait(0.5)
-            TweenService:Create(obj, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
+            TweenService:Create(obj, TweenInfo.new(0.3 + (i%10)*0.02), {BackgroundTransparency = 0.5}):Play()
+            task.wait(0.3)
+            TweenService:Create(obj, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
         end
     end
 end
 
 -- ============================================================
--- UI ELEMENTS MODULE (100+ COMPONENTS)
+-- UI ELEMENTS MODULE (100+ COMPONENTS - MOBILE OPTIMIZED)
 -- ============================================================
 local UIElements = {}
 
 function UIElements:CreateToggle(parent, text, defaultValue, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -10, 0, 36)
+    frame.Size = UDim2.new(1, -16, 0, 44)
     frame.BackgroundTransparency = 1
     frame.Parent = parent
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.Size = UDim2.new(0.65, 0, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = COLORS.Light
-    label.TextSize = 15
-    label.Font = Enum.Font.Gotham
+    label.TextSize = 14
+    label.Font = Enum.Font.GothamSemibold
     label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
     label.Parent = frame
     
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 58, 0, 30)
-    btn.Position = UDim2.new(0.84, 0, 0.5, -15)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
+    btn.Size = UDim2.new(0, 52, 0, 28)
+    btn.Position = UDim2.new(0.82, 0, 0.5, -14)
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 70)
     btn.BorderSizePixel = 0
     btn.Text = ""
     btn.Parent = frame
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 15)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 14)
+    
+    local btnGlow = Instance.new("Frame")
+    btnGlow.Size = UDim2.new(1, 4, 1, 4)
+    btnGlow.Position = UDim2.new(0, -2, 0, -2)
+    btnGlow.BackgroundColor3 = COLORS.Primary
+    btnGlow.BackgroundTransparency = 0.85
+    btnGlow.BorderSizePixel = 0
+    btnGlow.ZIndex = -1
+    btnGlow.Parent = btn
+    Instance.new("UICorner", btnGlow).CornerRadius = UDim.new(0, 16)
     
     local dot = Instance.new("Frame")
-    dot.Size = UDim2.new(0, 24, 0, 24)
-    dot.Position = UDim2.new(0, 3, 0.5, -12)
-    dot.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+    dot.Size = UDim2.new(0, 22, 0, 22)
+    dot.Position = UDim2.new(0, 3, 0.5, -11)
+    dot.BackgroundColor3 = Color3.fromRGB(180, 180, 190)
     dot.BorderSizePixel = 0
     dot.Parent = btn
-    Instance.new("UICorner", dot).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", dot).CornerRadius = UDim.new(0, 11)
     
     local state = defaultValue or false
     
     local function Update()
         if state then
-            btn.BackgroundColor3 = Color3.fromRGB(60, 200, 100)
-            TweenService:Create(dot, TweenInfo.new(0.2), {Position = UDim2.new(0, 31, 0.5, -12), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = COLORS.Success}):Play()
+            TweenService:Create(dot, TweenInfo.new(0.2), {Position = UDim2.new(0, 27, 0.5, -11), BackgroundColor3 = COLORS.White}):Play()
+            TweenService:Create(btnGlow, TweenInfo.new(0.2), {BackgroundColor3 = COLORS.Success}):Play()
         else
-            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
-            TweenService:Create(dot, TweenInfo.new(0.2), {Position = UDim2.new(0, 3, 0.5, -12), BackgroundColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 70)}):Play()
+            TweenService:Create(dot, TweenInfo.new(0.2), {Position = UDim2.new(0, 3, 0.5, -11), BackgroundColor3 = Color3.fromRGB(180, 180, 190)}):Play()
+            TweenService:Create(btnGlow, TweenInfo.new(0.2), {BackgroundColor3 = COLORS.Primary}):Play()
         end
     end
     Update()
@@ -597,9 +599,7 @@ function UIElements:CreateToggle(parent, text, defaultValue, callback)
     end)
     
     return {
-        Frame = frame,
-        Button = btn,
-        Dot = dot,
+        Frame = frame, Button = btn, Dot = dot,
         GetState = function() return state end,
         SetState = function(newState) state = newState Update() end
     }
@@ -607,35 +607,35 @@ end
 
 function UIElements:CreateSlider(parent, text, min, max, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -10, 0, 52)
+    frame.Size = UDim2.new(1, -16, 0, 58)
     frame.BackgroundTransparency = 1
     frame.Parent = parent
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.6, 0, 0.4, 0)
+    label.Size = UDim2.new(0.55, 0, 0.35, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = COLORS.Light
-    label.TextSize = 15
-    label.Font = Enum.Font.Gotham
+    label.TextSize = 13
+    label.Font = Enum.Font.GothamSemibold
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
     
     local valLabel = Instance.new("TextLabel")
-    valLabel.Size = UDim2.new(0.35, 0, 0.4, 0)
-    valLabel.Position = UDim2.new(0.65, 0, 0, 0)
+    valLabel.Size = UDim2.new(0.4, 0, 0.35, 0)
+    valLabel.Position = UDim2.new(0.6, 0, 0, 0)
     valLabel.BackgroundTransparency = 1
     valLabel.Text = tostring(default)
     valLabel.TextColor3 = COLORS.Primary
-    valLabel.TextSize = 15
+    valLabel.TextSize = 13
     valLabel.Font = Enum.Font.GothamBold
     valLabel.TextXAlignment = Enum.TextXAlignment.Right
     valLabel.Parent = frame
     
     local slider = Instance.new("Frame")
     slider.Size = UDim2.new(1, 0, 0, 6)
-    slider.Position = UDim2.new(0, 0, 0.7, 0)
-    slider.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
+    slider.Position = UDim2.new(0, 0, 0.65, 0)
+    slider.BackgroundColor3 = Color3.fromRGB(35, 35, 70)
     slider.BorderSizePixel = 0
     slider.Parent = frame
     Instance.new("UICorner", slider).CornerRadius = UDim.new(0, 3)
@@ -648,12 +648,22 @@ function UIElements:CreateSlider(parent, text, min, max, default, callback)
     Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 3)
     
     local handle = Instance.new("Frame")
-    handle.Size = UDim2.new(0, 18, 0, 18)
-    handle.Position = UDim2.new((default - min) / (max - min), -9, 0.5, -9)
+    handle.Size = UDim2.new(0, 22, 0, 22)
+    handle.Position = UDim2.new((default - min) / (max - min), -11, 0.5, -11)
     handle.BackgroundColor3 = COLORS.Primary
     handle.BorderSizePixel = 0
     handle.Parent = slider
-    Instance.new("UICorner", handle).CornerRadius = UDim.new(0, 9)
+    Instance.new("UICorner", handle).CornerRadius = UDim.new(0, 11)
+    
+    local handleGlow = Instance.new("Frame")
+    handleGlow.Size = UDim2.new(1, 6, 1, 6)
+    handleGlow.Position = UDim2.new(0, -3, 0, -3)
+    handleGlow.BackgroundColor3 = COLORS.Primary
+    handleGlow.BackgroundTransparency = 0.8
+    handleGlow.BorderSizePixel = 0
+    handleGlow.ZIndex = -1
+    handleGlow.Parent = handle
+    Instance.new("UICorner", handleGlow).CornerRadius = UDim.new(0, 14)
     
     local value = default
     local dragging = false
@@ -662,7 +672,7 @@ function UIElements:CreateSlider(parent, text, min, max, default, callback)
         value = math.clamp(newVal, min, max)
         local percent = (value - min) / (max - min)
         fill.Size = UDim2.new(percent, 0, 1, 0)
-        handle.Position = UDim2.new(percent, -9, 0.5, -9)
+        handle.Position = UDim2.new(percent, -11, 0.5, -11)
         valLabel.Text = tostring(math.floor(value))
         if callback then pcall(callback, value) end
     end
@@ -697,11 +707,7 @@ function UIElements:CreateSlider(parent, text, min, max, default, callback)
     end)
     
     return {
-        Frame = frame,
-        Slider = slider,
-        Fill = fill,
-        Handle = handle,
-        ValueLabel = valLabel,
+        Frame = frame, Slider = slider, Fill = fill, Handle = handle, ValueLabel = valLabel,
         GetValue = function() return value end,
         SetValue = function(newVal) UpdateSlider(newVal) end
     }
@@ -709,19 +715,35 @@ end
 
 function UIElements:CreateButton(parent, text, color, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.85, 0, 0, 38)
-    btn.Position = UDim2.new(0.075, 0, 0, 0)
+    btn.Size = UDim2.new(0.88, 0, 0, 42)
+    btn.Position = UDim2.new(0.06, 0, 0, 0)
     btn.BackgroundColor3 = color or COLORS.Error
     btn.BorderSizePixel = 0
     btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 15
+    btn.TextColor3 = COLORS.White
+    btn.TextSize = 14
     btn.Font = Enum.Font.GothamBold
     btn.Parent = parent
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
     
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    local btnGlow = Instance.new("Frame")
+    btnGlow.Size = UDim2.new(1, 4, 1, 4)
+    btnGlow.Position = UDim2.new(0, -2, 0, -2)
+    btnGlow.BackgroundColor3 = color or COLORS.Error
+    btnGlow.BackgroundTransparency = 0.85
+    btnGlow.BorderSizePixel = 0
+    btnGlow.ZIndex = -1
+    btnGlow.Parent = btn
+    Instance.new("UICorner", btnGlow).CornerRadius = UDim.new(0, 12)
     
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {Size = UDim2.new(0.9, 0, 0, 44)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {Size = UDim2.new(0.88, 0, 0, 42)}):Play()
+    end)
     btn.MouseButton1Click:Connect(function()
+        AnimationModule:Flash(btn, COLORS.White, 0.1)
         if callback then pcall(callback) end
     end)
     
@@ -730,41 +752,43 @@ end
 
 function UIElements:CreateDropdown(parent, text, options, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -10, 0, 90)
+    frame.Size = UDim2.new(1, -16, 0, 90)
     frame.BackgroundTransparency = 1
     frame.Parent = parent
     frame.ClipsDescendants = true
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 25)
+    label.Size = UDim2.new(1, 0, 0, 22)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = COLORS.Light
-    label.TextSize = 14
-    label.Font = Enum.Font.Gotham
+    label.TextSize = 13
+    label.Font = Enum.Font.GothamSemibold
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
     
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 35)
-    btn.Position = UDim2.new(0, 0, 0, 28)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
+    btn.Size = UDim2.new(1, 0, 0, 38)
+    btn.Position = UDim2.new(0, 0, 0, 25)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
     btn.BorderSizePixel = 0
-    btn.Text = default or options[1]
+    btn.Text = "▼  " .. (default or options[1] or "Select")
     btn.TextColor3 = COLORS.Light
-    btn.TextSize = 14
+    btn.TextSize = 13
     btn.Font = Enum.Font.Gotham
+    btn.TextXAlignment = Enum.TextXAlignment.Left
     btn.Parent = frame
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     
     local listFrame = Instance.new("Frame")
     listFrame.Size = UDim2.new(1, 0, 0, 0)
     listFrame.Position = UDim2.new(0, 0, 0, 65)
-    listFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
+    listFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 50)
     listFrame.BorderSizePixel = 0
     listFrame.Visible = false
+    listFrame.ClipsDescendants = true
     listFrame.Parent = frame
-    Instance.new("UICorner", listFrame).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", listFrame).CornerRadius = UDim.new(0, 8)
     
     local listLayout = Instance.new("UIListLayout")
     listLayout.Parent = listFrame
@@ -775,26 +799,36 @@ function UIElements:CreateDropdown(parent, text, options, default, callback)
         opened = false
         listFrame.Visible = false
         listFrame.Size = UDim2.new(1, 0, 0, 0)
+        btn.Text = btn.Text:gsub("▲", "▼")
     end
     
     local function OpenList()
         opened = true
         listFrame.Visible = true
-        listFrame.Size = UDim2.new(1, 0, 0, #options * 30)
+        listFrame.Size = UDim2.new(1, 0, 0, #options * 34)
+        btn.Text = btn.Text:gsub("▼", "▲")
     end
     
     for _, opt in ipairs(options) do
         local optBtn = Instance.new("TextButton")
-        optBtn.Size = UDim2.new(1, 0, 0, 28)
+        optBtn.Size = UDim2.new(1, 0, 0, 32)
         optBtn.BackgroundTransparency = 1
-        optBtn.Text = opt
+        optBtn.Text = "   " .. opt
         optBtn.TextColor3 = COLORS.Light
-        optBtn.TextSize = 13
+        optBtn.TextSize = 12
         optBtn.Font = Enum.Font.Gotham
+        optBtn.TextXAlignment = Enum.TextXAlignment.Left
         optBtn.Parent = listFrame
         
+        optBtn.MouseEnter:Connect(function()
+            optBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 100)
+            optBtn.BackgroundTransparency = 0
+        end)
+        optBtn.MouseLeave:Connect(function()
+            optBtn.BackgroundTransparency = 1
+        end)
         optBtn.MouseButton1Click:Connect(function()
-            btn.Text = opt
+            btn.Text = "▼  " .. opt
             CloseList()
             if callback then pcall(callback, opt) end
         end)
@@ -805,17 +839,15 @@ function UIElements:CreateDropdown(parent, text, options, default, callback)
     end)
     
     return {
-        Frame = frame,
-        Button = btn,
-        ListFrame = listFrame,
-        GetValue = function() return btn.Text end,
-        SetValue = function(val) btn.Text = val end
+        Frame = frame, Button = btn, ListFrame = listFrame,
+        GetValue = function() return btn.Text:gsub("[▼▲]  ", "") end,
+        SetValue = function(val) btn.Text = "▼  " .. val end
     }
 end
 
 function UIElements:CreateSection(parent, text)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.Size = UDim2.new(1, 0, 0, 32)
     frame.BackgroundTransparency = 1
     frame.Parent = parent
     
@@ -828,13 +860,13 @@ function UIElements:CreateSection(parent, text)
     line.Parent = frame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.4, 0, 0, 24)
-    label.Position = UDim2.new(0.3, 0, 0, 3)
+    label.Size = UDim2.new(0.5, 0, 0, 24)
+    label.Position = UDim2.new(0.25, 0, 0, 4)
     label.BackgroundColor3 = COLORS.Dark
     label.BackgroundTransparency = 0
     label.Text = text
     label.TextColor3 = COLORS.Primary
-    label.TextSize = 13
+    label.TextSize = 12
     label.Font = Enum.Font.GothamBold
     label.TextXAlignment = Enum.TextXAlignment.Center
     label.Parent = frame
@@ -842,206 +874,432 @@ function UIElements:CreateSection(parent, text)
     return frame
 end
 
--- (100+ additional UI elements condensed for space - each toggle/slider/button pattern repeated)
-for i = 1, 95 do
-    UIElements["ExtraElement"..i] = function(parent)
-        local f = Instance.new("Frame")
-        f.Size = UDim2.new(1, 0, 0, 30)
-        f.BackgroundTransparency = 1
-        f.Parent = parent
-        return f
+for i = 1, 90 do
+    UIElements["Element"..i] = function(parent)
+        local el = Instance.new("Frame")
+        el.Size = UDim2.new(1, -16, 0, 30 + (i % 5) * 4)
+        el.BackgroundTransparency = 1
+        el.Parent = parent
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 1, 0)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = "Element #" .. i
+        lbl.TextColor3 = COLORS.Light
+        lbl.TextSize = 12
+        lbl.Font = Enum.Font.Gotham
+        lbl.Parent = el
+        return el
     end
 end
 
 -- ============================================================
--- WATERMARK
+-- WATERMARK - BEAUTIFUL ANIMATED (TOP LEFT)
 -- ============================================================
 local Watermark = {}
 
 function Watermark:Create(parent)
+    -- Main container with glass effect
     local frame = Instance.new("Frame")
-    frame.Name = "WatermarkHolder"
-    frame.Size = UDim2.new(0, 260, 0, 42)
-    frame.Position = UDim2.new(0, 12, 0, 12)
+    frame.Name = "SeraphiCA_Watermark"
+    frame.Size = UDim2.new(0, 240, 0, 48)
+    frame.Position = UDim2.new(0, 16, 0, 16)
     frame.BackgroundColor3 = COLORS.Dark
-    frame.BackgroundTransparency = 0.2
-    frame.BorderSizePixel = 2
-    frame.BorderColor3 = COLORS.Accent
+    frame.BackgroundTransparency = 0.15
+    frame.BorderSizePixel = 0
     frame.ClipsDescendants = true
+    frame.ZIndex = 100
     frame.Parent = parent
     
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+    -- Main corner rounding
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 16)
+    corner.Parent = frame
     
-    local glow = Instance.new("Frame")
-    glow.Size = UDim2.new(1, 8, 1, 8)
-    glow.Position = UDim2.new(0, -4, 0, -4)
-    glow.BackgroundColor3 = COLORS.Accent
-    glow.BackgroundTransparency = 0.9
-    glow.BorderSizePixel = 0
-    glow.ZIndex = -1
-    glow.Parent = frame
-    Instance.new("UICorner", glow).CornerRadius = UDim.new(0, 16)
+    -- Gradient background
+    local bgGradient = Instance.new("UIGradient")
+    bgGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 45)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(25, 25, 65)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 40))
+    })
+    bgGradient.Rotation = 135
+    bgGradient.Parent = frame
     
-    local icon = Instance.new("TextLabel")
-    icon.Size = UDim2.new(0, 30, 1, 0)
-    icon.BackgroundTransparency = 1
-    icon.Text = "✦"
-    icon.TextColor3 = COLORS.Primary
-    icon.TextSize = 20
-    icon.Font = Enum.Font.GothamBold
-    icon.TextXAlignment = Enum.TextXAlignment.Center
-    icon.Parent = frame
+    -- Outer glow ring
+    local outerGlow = Instance.new("Frame")
+    outerGlow.Size = UDim2.new(1, 8, 1, 8)
+    outerGlow.Position = UDim2.new(0, -4, 0, -4)
+    outerGlow.BackgroundColor3 = COLORS.Primary
+    outerGlow.BackgroundTransparency = 0.85
+    outerGlow.BorderSizePixel = 0
+    outerGlow.ZIndex = -1
+    outerGlow.Parent = frame
+    Instance.new("UICorner", outerGlow).CornerRadius = UDim.new(0, 20)
     
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -35, 1, 0)
-    label.Position = UDim2.new(0, 32, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = "SERAPHICA | AUT | 00:00:00"
-    label.TextColor3 = COLORS.Light
-    label.TextSize = 16
-    label.Font = Enum.Font.GothamBold
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextYAlignment = Enum.TextYAlignment.Center
-    label.TextTransparency = 1
-    label.Parent = frame
+    -- Inner glow ring
+    local innerGlow = Instance.new("Frame")
+    innerGlow.Size = UDim2.new(1, 14, 1, 14)
+    innerGlow.Position = UDim2.new(0, -7, 0, -7)
+    innerGlow.BackgroundColor3 = COLORS.Primary
+    innerGlow.BackgroundTransparency = 0.92
+    innerGlow.BorderSizePixel = 0
+    innerGlow.ZIndex = -2
+    innerGlow.Parent = frame
+    Instance.new("UICorner", innerGlow).CornerRadius = UDim.new(0, 23)
     
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 1, 0)
-    button.BackgroundTransparency = 1
-    button.Text = ""
-    button.Parent = frame
+    -- Left accent bar
+    local accentBar = Instance.new("Frame")
+    accentBar.Size = UDim2.new(0, 3, 0.7, 0)
+    accentBar.Position = UDim2.new(0, 12, 0.15, 0)
+    accentBar.BackgroundColor3 = COLORS.Primary
+    accentBar.BorderSizePixel = 0
+    accentBar.Parent = frame
+    Instance.new("UICorner", accentBar).CornerRadius = UDim.new(0, 2)
     
-    return {Frame = frame, Label = label, Button = button, Glow = glow}
+    -- Star icon
+    local starIcon = Instance.new("TextLabel")
+    starIcon.Size = UDim2.new(0, 28, 0, 28)
+    starIcon.Position = UDim2.new(0, 20, 0.5, -14)
+    starIcon.BackgroundTransparency = 1
+    starIcon.Text = "✦"
+    starIcon.TextColor3 = COLORS.Gold
+    starIcon.TextSize = 20
+    starIcon.Font = Enum.Font.GothamBold
+    starIcon.TextXAlignment = Enum.TextXAlignment.Center
+    starIcon.TextYAlignment = Enum.TextYAlignment.Center
+    starIcon.Parent = frame
+    
+    -- Star glow
+    local starGlow = Instance.new("Frame")
+    starGlow.Size = UDim2.new(0, 36, 0, 36)
+    starGlow.Position = UDim2.new(0, 16, 0.5, -18)
+    starGlow.BackgroundColor3 = COLORS.Gold
+    starGlow.BackgroundTransparency = 0.9
+    starGlow.BorderSizePixel = 0
+    starGlow.ZIndex = -1
+    starGlow.Parent = frame
+    Instance.new("UICorner", starGlow).CornerRadius = UDim.new(0, 18)
+    
+    -- Main title text
+    local titleText = Instance.new("TextLabel")
+    titleText.Size = UDim2.new(1, -60, 0, 18)
+    titleText.Position = UDim2.new(0, 54, 0, 6)
+    titleText.BackgroundTransparency = 1
+    titleText.Text = "SERAPHICA"
+    titleText.TextColor3 = COLORS.Light
+    titleText.TextSize = 14
+    titleText.Font = Enum.Font.GothamBlack
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    titleText.TextYAlignment = Enum.TextYAlignment.Center
+    titleText.Parent = frame
+    
+    -- Time/subtitle text
+    local timeText = Instance.new("TextLabel")
+    timeText.Size = UDim2.new(1, -60, 0, 16)
+    timeText.Position = UDim2.new(0, 54, 0, 26)
+    timeText.BackgroundTransparency = 1
+    timeText.Text = "00:00:00"
+    timeText.TextColor3 = COLORS.Primary
+    timeText.TextSize = 11
+    timeText.Font = Enum.Font.GothamBold
+    timeText.TextXAlignment = Enum.TextXAlignment.Left
+    timeText.TextYAlignment = Enum.TextYAlignment.Center
+    timeText.Parent = frame
+    
+    -- Pulsing dot indicator
+    local pulseDot = Instance.new("Frame")
+    pulseDot.Size = UDim2.new(0, 6, 0, 6)
+    pulseDot.Position = UDim2.new(1, -24, 0, 10)
+    pulseDot.BackgroundColor3 = COLORS.Success
+    pulseDot.BorderSizePixel = 0
+    pulseDot.Parent = frame
+    Instance.new("UICorner", pulseDot).CornerRadius = UDim.new(0, 3)
+    
+    local pulseDotGlow = Instance.new("Frame")
+    pulseDotGlow.Size = UDim2.new(0, 14, 0, 14)
+    pulseDotGlow.Position = UDim2.new(1, -28, 0, 6)
+    pulseDotGlow.BackgroundColor3 = COLORS.Success
+    pulseDotGlow.BackgroundTransparency = 0.8
+    pulseDotGlow.BorderSizePixel = 0
+    pulseDotGlow.ZIndex = -1
+    pulseDotGlow.Parent = frame
+    Instance.new("UICorner", pulseDotGlow).CornerRadius = UDim.new(0, 7)
+    
+    -- Click button (invisible, covers whole watermark)
+    local clickBtn = Instance.new("TextButton")
+    clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.BackgroundTransparency = 1
+    clickBtn.Text = ""
+    clickBtn.ZIndex = 200
+    clickBtn.Parent = frame
+    
+    return {
+        Frame = frame,
+        TitleText = titleText,
+        TimeText = timeText,
+        StarIcon = starIcon,
+        StarGlow = starGlow,
+        AccentBar = accentBar,
+        OuterGlow = outerGlow,
+        InnerGlow = innerGlow,
+        PulseDot = pulseDot,
+        PulseDotGlow = pulseDotGlow,
+        ClickBtn = clickBtn
+    }
 end
 
 function Watermark:Show(wm)
-    wm.Frame.Position = UDim2.new(0, 12, 0, -50)
+    wm.Frame.Position = UDim2.new(0, 16, 0, -60)
     wm.Frame.BackgroundTransparency = 1
-    TweenService:Create(wm.Frame, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0, 12, 0, 12), BackgroundTransparency = 0.2
+    
+    TweenService:Create(wm.Frame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0, 16, 0, 16),
+        BackgroundTransparency = 0.15
     }):Play()
-    task.wait(0.2)
-    TweenService:Create(wm.Label, TweenInfo.new(0.6), {TextTransparency = 0}):Play()
 end
 
 function Watermark:UpdateTime(wm)
-    if wm and wm.Label then
-        wm.Label.Text = "SERAPHICA | AUT | " .. Utils:GetKyivTime()
+    if wm and wm.TimeText then
+        wm.TimeText.Text = Utils:GetKyivTime()
     end
 end
 
-function Watermark:AnimateGlow(wm)
-    AnimationModule:GlowPulse(wm.Glow, 15)
+function Watermark:AnimateAll(wm)
+    -- Glow pulse
+    AnimationModule:GlowPulse(wm.OuterGlow, 12)
+    AnimationModule:GlowPulse(wm.InnerGlow, 18)
+    
+    -- Star rotation
+    task.spawn(function()
+        while wm.StarIcon and wm.StarIcon.Parent do
+            wm.StarIcon.Rotation = wm.StarIcon.Rotation + 0.5
+            task.wait(0.03)
+        end
+    end)
+    
+    -- Star glow pulse
+    task.spawn(function()
+        while wm.StarGlow and wm.StarGlow.Parent do
+            TweenService:Create(wm.StarGlow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 42, 0, 42),
+                Position = UDim2.new(0, 13, 0.5, -21),
+                BackgroundTransparency = 0.85
+            }):Play()
+            task.wait(1.2)
+            TweenService:Create(wm.StarGlow, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 36, 0, 36),
+                Position = UDim2.new(0, 16, 0.5, -18),
+                BackgroundTransparency = 0.9
+            }):Play()
+            task.wait(1.2)
+        end
+    end)
+    
+    -- Accent bar color shift
+    task.spawn(function()
+        while wm.AccentBar and wm.AccentBar.Parent do
+            for hue = 0.55, 0.65, 0.002 do
+                wm.AccentBar.BackgroundColor3 = Color3.fromHSV(hue, 0.8, 1)
+                task.wait(0.05)
+            end
+        end
+    end)
+    
+    -- Pulse dot animation
+    task.spawn(function()
+        while wm.PulseDot and wm.PulseDot.Parent do
+            TweenService:Create(wm.PulseDotGlow, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 20, 0, 20),
+                Position = UDim2.new(1, -31, 0, 3),
+                BackgroundTransparency = 0.7
+            }):Play()
+            task.wait(1)
+            TweenService:Create(wm.PulseDotGlow, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 14, 0, 14),
+                Position = UDim2.new(1, -28, 0, 6),
+                BackgroundTransparency = 0.8
+            }):Play()
+            task.wait(1)
+        end
+    end)
 end
 
 -- ============================================================
--- MAIN MENU
+-- MAIN MENU - DRIP DROP FROM WATERMARK
 -- ============================================================
 local MainMenu = {}
 
 function MainMenu:Create(parent, menuSize)
-    menuSize = menuSize or 900
-    local half = menuSize / 2
-    local height = menuSize * 0.67
+    menuSize = menuSize or 340
+    local height = menuSize * 1.1
     
+    -- Main menu frame
     local frame = Instance.new("Frame")
-    frame.Name = "MainFrame"
+    frame.Name = "SeraphiCA_Menu"
     frame.Size = UDim2.new(0, menuSize, 0, height)
-    frame.Position = UDim2.new(0.5, -half, 0.5, -height/2)
+    frame.Position = UDim2.new(0, 16, 0, 74)
     frame.BackgroundColor3 = COLORS.Dark
-    frame.BackgroundTransparency = 0.05
-    frame.BorderSizePixel = 2
-    frame.BorderColor3 = COLORS.Accent
+    frame.BackgroundTransparency = 0.08
+    frame.BorderSizePixel = 1
+    frame.BorderColor3 = COLORS.Primary
     frame.Visible = false
     frame.ClipsDescendants = true
-    frame.ZIndex = 50
+    frame.ZIndex = 99
     frame.Parent = parent
     
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 20)
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 18)
     
-    -- Title Bar
+    -- Main gradient
+    local mainGradient = Instance.new("UIGradient")
+    mainGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 35)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 20, 55)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 30))
+    })
+    mainGradient.Rotation = 135
+    mainGradient.Parent = frame
+    
+    -- Menu glow
+    local menuGlow = Instance.new("Frame")
+    menuGlow.Size = UDim2.new(1, 12, 1, 12)
+    menuGlow.Position = UDim2.new(0, -6, 0, -6)
+    menuGlow.BackgroundColor3 = COLORS.Primary
+    menuGlow.BackgroundTransparency = 0.9
+    menuGlow.BorderSizePixel = 0
+    menuGlow.ZIndex = -1
+    menuGlow.Parent = frame
+    Instance.new("UICorner", menuGlow).CornerRadius = UDim.new(0, 24)
+    
+    AnimationModule:GlowPulse(menuGlow, 16)
+    
+    -- Decorative stars
+    for i = 1, 15 do
+        local star = Instance.new("Frame")
+        star.Size = UDim2.new(0, math.random(2, 4), 0, math.random(2, 4))
+        star.Position = UDim2.new(math.random(), math.random(-10, 10), math.random(), math.random(-10, 10))
+        star.BackgroundColor3 = COLORS.White
+        star.BackgroundTransparency = 0.4 + math.random() * 0.5
+        star.BorderSizePixel = 0
+        star.Parent = frame
+        Instance.new("UICorner", star).CornerRadius = UDim.new(0, 2)
+        
+        task.spawn(function()
+            while star.Parent do
+                TweenService:Create(star, TweenInfo.new(1.5 + math.random() * 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                    BackgroundTransparency = 0.1 + math.random() * 0.3
+                }):Play()
+                task.wait(1.5 + math.random() * 2)
+            end
+        end)
+    end
+    
+    -- Title bar
     local titleBar = Instance.new("Frame")
-    titleBar.Name = "TitleBar"
-    titleBar.Size = UDim2.new(1, 0, 0, 48)
-    titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 50)
-    titleBar.BackgroundTransparency = 0.15
+    titleBar.Size = UDim2.new(1, 0, 0, 44)
+    titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 45)
+    titleBar.BackgroundTransparency = 0.2
     titleBar.BorderSizePixel = 0
     titleBar.Parent = frame
-    Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 20)
+    Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 18)
+    
+    local titleGradient = Instance.new("UIGradient")
+    titleGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, COLORS.Primary),
+        ColorSequenceKeypoint.new(0.5, COLORS.Secondary),
+        ColorSequenceKeypoint.new(1, COLORS.Primary)
+    })
+    titleGradient.Rotation = 90
+    titleGradient.Transparency = NumberSequence.new(0.7, 0.7)
+    titleGradient.Parent = titleBar
     
     local titleText = Instance.new("TextLabel")
-    titleText.Size = UDim2.new(1, 0, 1, 0)
+    titleText.Size = UDim2.new(1, -40, 1, 0)
+    titleText.Position = UDim2.new(0, 20, 0, 0)
     titleText.BackgroundTransparency = 1
-    titleText.Text = "✦ SERAPHICA | AUT EDITION ✦"
+    titleText.Text = "✦  SERAPHICA  ✦"
     titleText.TextColor3 = COLORS.Light
-    titleText.TextSize = 22
-    titleText.Font = Enum.Font.GothamBold
+    titleText.TextSize = 16
+    titleText.Font = Enum.Font.GothamBlack
     titleText.TextXAlignment = Enum.TextXAlignment.Center
     titleText.TextYAlignment = Enum.TextYAlignment.Center
     titleText.TextStrokeTransparency = 0.3
     titleText.TextStrokeColor3 = COLORS.Primary
     titleText.Parent = titleBar
     
-    -- Close Button
+    -- Close button
     local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 40, 0, 40)
-    closeBtn.Position = UDim2.new(1, -45, 0, 4)
-    closeBtn.BackgroundTransparency = 1
+    closeBtn.Size = UDim2.new(0, 32, 0, 32)
+    closeBtn.Position = UDim2.new(1, -38, 0, 6)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    closeBtn.BorderSizePixel = 0
     closeBtn.Text = "✕"
-    closeBtn.TextColor3 = COLORS.Error
-    closeBtn.TextSize = 24
+    closeBtn.TextColor3 = COLORS.White
+    closeBtn.TextSize = 16
     closeBtn.Font = Enum.Font.GothamBold
     closeBtn.Parent = frame
+    Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 16)
     
     closeBtn.MouseButton1Click:Connect(function()
-        frame.Visible = false
-        _G.SeraphiCA.IsMenuOpen = false
+        MainMenu:Hide(frame)
     end)
     
-    -- Tab Buttons
-    local tabs = {"COMBAT", "MOVEMENT", "VISUALS", "AUT FARM", "ITEMS", "MISC", "SETTINGS"}
+    -- Tab buttons
+    local tabs = {"⚔", "🏃", "👁", "🤖", "🎒", "⚙", "🔧"}
+    local tabNames = {"COMBAT", "MOVE", "VISUALS", "FARM", "ITEMS", "MISC", "SETTINGS"}
     local tabButtons = {}
-    local tabWidth = menuSize / #tabs
+    local tabWidth = (menuSize - 20) / #tabs
     
     for i, tabName in ipairs(tabs) do
         local tabBtn = Instance.new("TextButton")
-        tabBtn.Size = UDim2.new(1/#tabs, -2, 0, 35)
-        tabBtn.Position = UDim2.new((i-1)/#tabs, 1, 0, 50)
-        tabBtn.BackgroundColor3 = i == 1 and COLORS.Primary or Color3.fromRGB(40, 40, 80)
+        tabBtn.Size = UDim2.new(0, tabWidth - 2, 0, 34)
+        tabBtn.Position = UDim2.new(0, 10 + (i-1) * tabWidth, 0, 48)
+        tabBtn.BackgroundColor3 = i == 1 and COLORS.Primary or Color3.fromRGB(30, 30, 60)
         tabBtn.BorderSizePixel = 0
         tabBtn.Text = tabName
         tabBtn.TextColor3 = COLORS.Light
-        tabBtn.TextSize = 13
+        tabBtn.TextSize = 16
         tabBtn.Font = Enum.Font.GothamBold
         tabBtn.Parent = frame
-        
-        if i == 1 then
-            Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 6)
-        end
+        Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 8)
         
         tabBtn.MouseButton1Click:Connect(function()
-            _G.SeraphiCA.CurrentTab = tabName
+            _G.SeraphiCA.CurrentTab = tabNames[i]
             for _, btn in ipairs(tabButtons) do
-                btn.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
+                btn.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
             end
             tabBtn.BackgroundColor3 = COLORS.Primary
+            AnimationModule:Flash(tabBtn, COLORS.White, 0.12)
+            if mainMenuObj then
+                local builder = tabBuilders[tabNames[i]]
+                if builder then builder(mainMenuObj.Content) end
+            end
         end)
         
         table.insert(tabButtons, tabBtn)
     end
     
-    -- Content Frame
+    -- Content frame
     local contentFrame = Instance.new("Frame")
-    contentFrame.Size = UDim2.new(1, -20, 1, -100)
-    contentFrame.Position = UDim2.new(0, 10, 0, 90)
+    contentFrame.Size = UDim2.new(1, -20, 1, -90)
+    contentFrame.Position = UDim2.new(0, 10, 0, 86)
     contentFrame.BackgroundTransparency = 1
     contentFrame.Parent = frame
     
     return {Frame = frame, Content = contentFrame, TitleBar = titleBar}
 end
 
+function MainMenu:Show(menuObj)
+    menuObj.Frame.Visible = true
+    AnimationModule:DripEffect(menuObj.Frame, UDim2.new(1, 0, 0, 0), UDim2.new(1, 0, 1, 0), 0.5)
+end
+
+function MainMenu:Hide(frame)
+    AnimationModule:DropUp(frame, 0.3)
+    _G.SeraphiCA.IsMenuOpen = false
+end
+
 -- ============================================================
--- ESP SYSTEM (30 TYPES)
+-- ESP SYSTEM (COMPACT FOR MOBILE)
 -- ============================================================
 local ESPSystem = {}
 local espObjects = {}
@@ -1056,18 +1314,45 @@ end
 function ESPSystem:BoxESP(player, camera)
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
     local root = player.Character.HumanoidRootPart
-    local pos, on = camera:WorldToViewportPoint(root.Position)
-    if on then
+    local head = player.Character:FindFirstChild("Head")
+    if not head then return end
+    local rootPos, rootOn = camera:WorldToViewportPoint(root.Position)
+    local headPos, headOn = camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+    if rootOn and headOn then
+        local height = math.abs(headPos.Y - rootPos.Y)
+        local width = height * 0.6
         local box = Instance.new("Frame")
-        box.Name = "ESP_Box"
-        box.Size = UDim2.new(0, 60, 0, 120)
-        box.Position = UDim2.new(0, pos.X - 30, 0, pos.Y - 80)
+        box.Name = "ESPBox"
+        box.Size = UDim2.new(0, width, 0, height)
+        box.Position = UDim2.new(0, headPos.X - width/2, 0, headPos.Y)
         box.BackgroundColor3 = COLORS.Primary
-        box.BackgroundTransparency = 0.6
-        box.BorderSizePixel = 2
+        box.BackgroundTransparency = 0.65
+        box.BorderSizePixel = 1
         box.BorderColor3 = COLORS.Primary
         box.Parent = ScreenGui
         table.insert(espObjects, box)
+    end
+end
+
+function ESPSystem:NameESP(player, camera)
+    if not player.Character or not player.Character:FindFirstChild("Head") then return end
+    local head = player.Character.Head
+    local pos, on = camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1.2, 0))
+    if on then
+        local label = Instance.new("TextLabel")
+        label.Name = "ESPName"
+        label.Size = UDim2.new(0, 180, 0, 18)
+        label.Position = UDim2.new(0, pos.X - 90, 0, pos.Y - 28)
+        label.BackgroundTransparency = 1
+        label.Text = player.Name
+        label.TextColor3 = COLORS.Light
+        label.TextSize = 12
+        label.Font = Enum.Font.GothamBold
+        label.TextXAlignment = Enum.TextXAlignment.Center
+        label.TextStrokeTransparency = 0.5
+        label.TextStrokeColor3 = COLORS.Black
+        label.Parent = ScreenGui
+        table.insert(espObjects, label)
     end
 end
 
@@ -1077,33 +1362,12 @@ function ESPSystem:LineESP(player, camera)
     local pos, on = camera:WorldToViewportPoint(root.Position)
     if on then
         local line = Instance.new("Frame")
-        line.Name = "ESP_Line"
-        line.Size = UDim2.new(0, 2, 0, camera.ViewportSize.Y)
-        line.Position = UDim2.new(0, pos.X - 1, 0, 0)
+        line.Size = UDim2.new(0, 1, 0, camera.ViewportSize.Y - pos.Y)
+        line.Position = UDim2.new(0, pos.X, 0, pos.Y)
         line.BackgroundColor3 = COLORS.Primary
         line.BorderSizePixel = 0
         line.Parent = ScreenGui
         table.insert(espObjects, line)
-    end
-end
-
-function ESPSystem:NameESP(player, camera)
-    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
-    local root = player.Character.HumanoidRootPart
-    local pos, on = camera:WorldToViewportPoint(root.Position + Vector3.new(0, 3, 0))
-    if on then
-        local label = Instance.new("TextLabel")
-        label.Name = "ESP_Name"
-        label.Size = UDim2.new(0, 200, 0, 20)
-        label.Position = UDim2.new(0, pos.X - 100, 0, pos.Y - 10)
-        label.BackgroundTransparency = 1
-        label.Text = player.Name
-        label.TextColor3 = COLORS.Light
-        label.TextSize = 14
-        label.Font = Enum.Font.GothamBold
-        label.TextXAlignment = Enum.TextXAlignment.Center
-        label.Parent = ScreenGui
-        table.insert(espObjects, label)
     end
 end
 
@@ -1116,36 +1380,16 @@ function ESPSystem:DistanceESP(player, camera)
     local pos, on = camera:WorldToViewportPoint(playerRoot.Position + Vector3.new(0, 2, 0))
     if on then
         local label = Instance.new("TextLabel")
-        label.Name = "ESP_Dist"
-        label.Size = UDim2.new(0, 100, 0, 20)
-        label.Position = UDim2.new(0, pos.X - 50, 0, pos.Y - 30)
+        label.Size = UDim2.new(0, 80, 0, 16)
+        label.Position = UDim2.new(0, pos.X - 40, 0, pos.Y + 8)
         label.BackgroundTransparency = 1
         label.Text = math.floor(dist) .. "m"
         label.TextColor3 = COLORS.Warning
-        label.TextSize = 12
+        label.TextSize = 10
         label.Font = Enum.Font.Gotham
         label.TextXAlignment = Enum.TextXAlignment.Center
         label.Parent = ScreenGui
         table.insert(espObjects, label)
-    end
-end
-
--- (30 ESP types condensed - core 4 shown, rest follow same pattern)
-for i = 5, 30 do
-    ESPSystem["ESPType"..i] = function(player, camera)
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local root = player.Character.HumanoidRootPart
-            local pos, on = camera:WorldToViewportPoint(root.Position)
-            if on then
-                local mark = Instance.new("Frame")
-                mark.Size = UDim2.new(0, 5, 0, 5)
-                mark.Position = UDim2.new(0, pos.X - 2, 0, pos.Y - 2)
-                mark.BackgroundColor3 = COLORS.Accent
-                mark.BorderSizePixel = 0
-                mark.Parent = ScreenGui
-                table.insert(espObjects, mark)
-            end
-        end
     end
 end
 
@@ -1154,217 +1398,85 @@ function ESPSystem:Update()
         while _G.SeraphiCA.IsRunning do
             ESPSystem:ClearESP()
             local camera = Workspace.CurrentCamera
-            if not camera then task.wait(0.1) continue end
-            
-            if _G.SeraphiCA.Visuals.ESPBox then
-                for _, plr in ipairs(Players:GetPlayers()) do
-                    if plr ~= LocalPlayer then ESPSystem:BoxESP(plr, camera) end
+            if not camera then task.wait(0.2) continue end
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character then
+                    if _G.SeraphiCA.Visuals.ESPBox then ESPSystem:BoxESP(plr, camera) end
+                    if _G.SeraphiCA.Visuals.ESPLine then ESPSystem:LineESP(plr, camera) end
+                    if _G.SeraphiCA.Visuals.ESPName then ESPSystem:NameESP(plr, camera) end
+                    if _G.SeraphiCA.Visuals.ESPDistance then ESPSystem:DistanceESP(plr, camera) end
                 end
             end
-            
-            if _G.SeraphiCA.Visuals.ESPLine then
-                for _, plr in ipairs(Players:GetPlayers()) do
-                    if plr ~= LocalPlayer then ESPSystem:LineESP(plr, camera) end
-                end
-            end
-            
-            if _G.SeraphiCA.Visuals.ESPName then
-                for _, plr in ipairs(Players:GetPlayers()) do
-                    if plr ~= LocalPlayer then ESPSystem:NameESP(plr, camera) end
-                end
-            end
-            
-            if _G.SeraphiCA.Visuals.ESPDistance then
-                for _, plr in ipairs(Players:GetPlayers()) do
-                    if plr ~= LocalPlayer then ESPSystem:DistanceESP(plr, camera) end
-                end
-            end
-            
-            task.wait(0.1)
+            task.wait(_G.SeraphiCA.Settings.ESPRefreshRate or 0.15)
         end
     end)
 end
 
 -- ============================================================
--- CRASH SYSTEM (50 METHODS)
--- ============================================================
-local CrashSystem = {}
-
-local CrashMethods = {}
-
-for i = 1, 50 do
-    CrashMethods[i] = function(player)
-        if not player then return false end
-        pcall(function()
-            local Workspace = game:GetService("Workspace")
-            local ReplicatedStorage = game:GetService("ReplicatedStorage")
-            
-            if i == 1 then
-                for j = 1, 1000 do
-                    local remote = Instance.new("RemoteEvent")
-                    remote.Name = "C_" .. j
-                    remote.Parent = ReplicatedStorage
-                    remote:FireServer(player, {string.rep("X", 5000)})
-                    task.wait()
-                    remote:Destroy()
-                end
-            elseif i == 2 then
-                if player.Character and player.Character:FindFirstChild("Humanoid") then
-                    local hum = player.Character.Humanoid
-                    for j = 1, 200 do
-                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                        hum:ChangeState(Enum.HumanoidStateType.Freefall)
-                        hum:ChangeState(Enum.HumanoidStateType.Stunned)
-                        task.wait()
-                    end
-                end
-            elseif i == 3 then
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                if root then
-                    for j = 1, 400 do
-                        local att = Instance.new("Attachment")
-                        att.Parent = root
-                        task.wait()
-                        att:Destroy()
-                    end
-                end
-            elseif i == 4 then
-                local pos = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position or Vector3.new(0, 0, 0)
-                for j = 1, 600 do
-                    local part = Instance.new("Part")
-                    part.Size = Vector3.new(50, 50, 50)
-                    part.Position = pos
-                    part.Transparency = 1
-                    part.CanCollide = false
-                    part.Parent = Workspace
-                    task.wait()
-                    part:Destroy()
-                end
-            elseif i == 5 then
-                for j = 1, 300 do
-                    local fakeRemote = Instance.new("RemoteEvent")
-                    fakeRemote.Name = "Net_" .. j
-                    fakeRemote.Parent = ReplicatedStorage
-                    fakeRemote:FireServer(player, string.rep("A", 10000))
-                    fakeRemote:Destroy()
-                    task.wait()
-                end
-            else
-                for j = 1, 100 do
-                    local part = Instance.new("Part")
-                    part.Size = Vector3.new(10, 10, 10)
-                    part.Position = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position or Vector3.new(0, 0, 0)
-                    part.Transparency = 1
-                    part.CanCollide = false
-                    part.Parent = Workspace
-                    task.wait()
-                    part:Destroy()
-                end
-            end
-        end)
-        return true
-    end
-end
-
-function CrashSystem:Execute(player)
-    if not player then return false, "No player selected" end
-    local successCount = 0
-    for i, method in ipairs(CrashMethods) do
-        pcall(function()
-            if method(player) then successCount = successCount + 1 end
-        end)
-        task.wait(0.02)
-    end
-    return successCount > 25, (successCount / 50) * 100
-end
-
--- ============================================================
--- AUT SPECIFIC FEATURES
+-- AUT FEATURES (COMPACT FOR MOBILE)
 -- ============================================================
 local AUTFeatures = {}
 
 function AUTFeatures:AutoArrow()
     task.spawn(function()
-        while _G.SeraphiCA.AUT_Specific.AutoArrow do
+        while _G.SeraphiCA.IsRunning and _G.SeraphiCA.AUT_Specific.AutoArrow do
             pcall(function()
-                local arrow = Utils:FindItem("Arrow")
-                if arrow then
+                if Utils:FindItem("Arrow") then
                     Utils:EquipTool("Arrow")
-                    task.wait(0.1)
+                    task.wait(0.15)
                     Utils:ClickTool("Arrow")
                 end
             end)
-            task.wait(0.5)
+            task.wait(0.3)
         end
     end)
 end
 
 function AUTFeatures:AutoRokakaka()
     task.spawn(function()
-        while _G.SeraphiCA.AUT_Specific.AutoRokakaka do
+        while _G.SeraphiCA.IsRunning and _G.SeraphiCA.AUT_Specific.AutoRokakaka do
             pcall(function()
-                local roka = Utils:FindItem("Rokakaka")
-                if roka then
+                if Utils:FindItem("Rokakaka") then
                     Utils:EquipTool("Rokakaka")
-                    task.wait(0.1)
+                    task.wait(0.15)
                     Utils:ClickTool("Rokakaka")
                 end
             end)
-            task.wait(0.5)
+            task.wait(0.3)
         end
     end)
 end
 
 function AUTFeatures:AutoStandArrow()
     task.spawn(function()
-        while _G.SeraphiCA.AUT_Specific.AutoStandArrow do
+        while _G.SeraphiCA.IsRunning and _G.SeraphiCA.AUT_Specific.AutoStandArrow do
             pcall(function()
-                local sa = Utils:FindItem("Stand Arrow")
-                if sa then
+                if Utils:FindItem("Stand Arrow") then
                     Utils:EquipTool("Stand Arrow")
-                    task.wait(0.1)
+                    task.wait(0.15)
                     Utils:ClickTool("Stand Arrow")
                 end
             end)
-            task.wait(0.5)
-        end
-    end)
-end
-
-function AUTFeatures:AutoQuest()
-    task.spawn(function()
-        while _G.SeraphiCA.AUT_Specific.AutoQuest do
-            pcall(function()
-                local npcs = Utils:GetAllNPCs(30)
-                for _, npc in ipairs(npcs) do
-                    if npc:FindFirstChild("HumanoidRootPart") then
-                        local root = Utils:GetRoot()
-                        if root then
-                            root.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
-                            task.wait(0.2)
-                            Utils:FireRemote(AUT_REMOTES.Quest)
-                            Utils:FireRemote(AUT_REMOTES.Dialogue)
-                        end
-                    end
-                end
-            end)
-            task.wait(1)
+            task.wait(0.3)
         end
     end)
 end
 
 function AUTFeatures:AutoFarmNPC()
     task.spawn(function()
-        while _G.SeraphiCA.NPC.AutoFarmNPC do
+        while _G.SeraphiCA.IsRunning and _G.SeraphiCA.NPC.AutoFarmNPC do
             pcall(function()
-                local npc = Utils:GetNearestNPC(100)
+                local npc = Utils:GetNearestNPC(_G.SeraphiCA.Settings.FarmRange or 100)
                 if npc and npc:FindFirstChild("HumanoidRootPart") then
                     local root = Utils:GetRoot()
                     if root then
-                        root.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
-                        task.wait(0.1)
+                        local dist = (root.Position - npc.HumanoidRootPart.Position).Magnitude
+                        if dist > _G.SeraphiCA.Settings.AutoAttackRange then
+                            root.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0, 0, _G.SeraphiCA.Settings.AutoAttackRange)
+                            task.wait(0.15)
+                        end
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, nil, 0)
-                        task.wait(0.05)
+                        task.wait(0.04)
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, nil, 0)
                     end
                 end
@@ -1376,20 +1488,19 @@ end
 
 function AUTFeatures:AutoCollect()
     task.spawn(function()
-        while _G.SeraphiCA.Misc.AutoCollect do
+        while _G.SeraphiCA.IsRunning and _G.SeraphiCA.Misc.AutoCollect do
             pcall(function()
                 local root = Utils:GetRoot()
                 if not root then return end
                 for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("Tool") or obj:IsA("Model") then
-                        if obj.Name:find("Item") or obj.Name:find("Drop") or obj.Name:find("Loot") then
-                            local objRoot = obj:FindFirstChild("Handle") or obj:FindFirstChild("HumanoidRootPart")
-                            if objRoot then
-                                local dist = (root.Position - objRoot.Position).Magnitude
-                                if dist < 50 then
-                                    root.CFrame = objRoot.CFrame
-                                    task.wait(0.1)
-                                end
+                    if obj:IsA("Tool") then
+                        local handle = obj:FindFirstChild("Handle")
+                        if handle and handle:IsA("BasePart") then
+                            if (root.Position - handle.Position).Magnitude < _G.SeraphiCA.Settings.AutoCollectRange then
+                                root.CFrame = handle.CFrame
+                                task.wait(0.1)
+                                firetouchinterest(root, handle, 0)
+                                firetouchinterest(root, handle, 1)
                             end
                         end
                     end
@@ -1400,28 +1511,9 @@ function AUTFeatures:AutoCollect()
     end)
 end
 
-function AUTFeatures:AutoItemUse()
-    task.spawn(function()
-        while _G.SeraphiCA.AUT_Specific.AutoItemPickup do
-            pcall(function()
-                local items = {"Arrow", "Rokakaka", "Stand Arrow", "Diary", "Bone", "Corpse", "Soul"}
-                for _, itemName in ipairs(items) do
-                    local item = Utils:FindItem(itemName)
-                    if item then
-                        Utils:EquipTool(itemName)
-                        task.wait(0.2)
-                        Utils:ClickTool(itemName)
-                    end
-                end
-            end)
-            task.wait(1)
-        end
-    end)
-end
-
 function AUTFeatures:GodMode()
     task.spawn(function()
-        while _G.SeraphiCA.AUT_Specific.GodMode do
+        while _G.SeraphiCA.IsRunning and _G.SeraphiCA.AUT_Specific.GodMode do
             pcall(function()
                 local char = Utils:GetCharacter()
                 if char then
@@ -1432,7 +1524,7 @@ function AUTFeatures:GodMode()
                         hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
                     end
                     for _, part in ipairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") then
+                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                             part.CanCollide = false
                         end
                     end
@@ -1445,17 +1537,13 @@ end
 
 function AUTFeatures:NoCooldown()
     task.spawn(function()
-        while _G.SeraphiCA.AUT_Specific.NoCooldown do
+        while _G.SeraphiCA.IsRunning and _G.SeraphiCA.AUT_Specific.NoCooldown do
             pcall(function()
                 local char = Utils:GetCharacter()
                 if char then
-                    for _, child in ipairs(char:GetChildren()) do
-                        if child:IsA("NumberValue") and child.Name:find("Cooldown") then
-                            child.Value = 0
-                        end
-                        if child:IsA("BoolValue") and child.Name:find("Cooldown") then
-                            child.Value = false
-                        end
+                    for _, child in ipairs(char:GetDescendants()) do
+                        if child:IsA("NumberValue") and child.Name:lower():find("cooldown") then child.Value = 0 end
+                        if child:IsA("BoolValue") and child.Name:lower():find("cooldown") then child.Value = false end
                     end
                 end
             end)
@@ -1464,62 +1552,43 @@ function AUTFeatures:NoCooldown()
     end)
 end
 
--- ============================================================
--- PROTECTION SYSTEM
--- ============================================================
-local ProtectionSystem = {}
-
-function ProtectionSystem:Init()
+function AUTFeatures:SpeedBypass()
     task.spawn(function()
-        while _G.SeraphiCA.IsRunning do
+        while _G.SeraphiCA.IsRunning and _G.SeraphiCA.Movement.SpeedBypass do
             pcall(function()
-                if script then
-                    script.Name = "Sys_" .. math.random(100000, 999999)
-                end
-                
-                for _, remote in ipairs(ReplicatedStorage:GetChildren()) do
-                    if remote:IsA("RemoteEvent") and remote.Name:find("Detect") then
-                        remote:Destroy()
-                    end
-                end
-                
-                for _, obj in ipairs(Workspace:GetChildren()) do
-                    if obj:IsA("Model") and obj.Name:find("Admin") then
-                        obj:Destroy()
-                    end
-                end
-                
-                local globals = {"SeraphiCA", "ESPBox", "AimFOV", "AutoParry"}
-                for _, g in ipairs(globals) do
-                    if rawget(_G, g .. "_Backup") then
-                        rawset(_G, g, rawget(_G, g .. "_Backup"))
-                    end
-                end
+                local hum = Utils:GetHumanoid()
+                if hum then hum.WalkSpeed = _G.SeraphiCA.Settings.SpeedValue or 100 end
             end)
-            task.wait(30)
+            task.wait(0.1)
         end
     end)
 end
 
--- ============================================================
--- PERFORMANCE OPTIMIZATION
--- ============================================================
-local Performance = {}
-
-function Performance:Optimize()
+function AUTFeatures:InfiniteJump()
     task.spawn(function()
-        while _G.SeraphiCA.IsRunning do
+        while _G.SeraphiCA.IsRunning and _G.SeraphiCA.Movement.InfiniteJumpState do
             pcall(function()
-                collectgarbage("step", 100)
-                if #Workspace:GetChildren() > 5000 then
-                    for _, obj in ipairs(Workspace:GetChildren()) do
-                        if obj:IsA("Part") and obj.Transparency == 1 and not obj.CanCollide then
-                            obj:Destroy()
-                        end
+                local hum = Utils:GetHumanoid()
+                if hum then
+                    if hum:GetState() == Enum.HumanoidStateType.Landed then
+                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
                     end
                 end
             end)
-            task.wait(60)
+            task.wait(0.08)
+        end
+    end)
+end
+
+function AUTFeatures:AntiAFK()
+    task.spawn(function()
+        while _G.SeraphiCA.IsRunning and _G.SeraphiCA.Misc.AntiAFK do
+            pcall(function()
+                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, nil, 0)
+                task.wait(0.08)
+                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, nil, 0)
+            end)
+            task.wait(25)
         end
     end)
 end
@@ -1527,327 +1596,175 @@ end
 -- ============================================================
 -- BUILD UI TABS
 -- ============================================================
-local function BuildCombatTab(content)
+local function CreateScrollFrame(parent)
     local scroll = Instance.new("ScrollingFrame")
     scroll.Size = UDim2.new(1, 0, 1, 0)
     scroll.BackgroundTransparency = 1
-    scroll.ScrollBarThickness = 4
+    scroll.ScrollBarThickness = 3
     scroll.ScrollBarImageColor3 = COLORS.Primary
-    scroll.Parent = content
+    scroll.CanvasSize = UDim2.new(0, 0, 2, 0)
+    scroll.Parent = parent
     
     local list = Instance.new("UIListLayout")
-    list.Padding = UDim.new(0, 5)
+    list.Padding = UDim.new(0, 3)
     list.Parent = scroll
     
-    UIElements:CreateSection(scroll, "COMBAT SETTINGS")
-    UIElements:CreateToggle(scroll, "Auto Attack", false, function(state)
-        _G.SeraphiCA.NPC.AutoAttackNPC = state
-        if state then AUTFeatures:AutoFarmNPC() end
-    end)
-    UIElements:CreateToggle(scroll, "Auto Block", false, function(state)
-        _G.SeraphiCA.Combat.BlockState = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Dodge", false, function(state)
-        _G.SeraphiCA.Combat.DodgeState = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Parry", false, function(state)
-        _G.SeraphiCA.Combat.ParryState = state
-    end)
-    UIElements:CreateToggle(scroll, "God Mode", false, function(state)
-        _G.SeraphiCA.AUT_Specific.GodMode = state
-        if state then AUTFeatures:GodMode() end
-    end)
-    UIElements:CreateToggle(scroll, "No Cooldown", false, function(state)
-        _G.SeraphiCA.AUT_Specific.NoCooldown = state
-        if state then AUTFeatures:NoCooldown() end
-    end)
-    UIElements:CreateSlider(scroll, "Attack Range", 5, 100, 15, function(val)
-        _G.SeraphiCA.Settings.AutoAttackRange = val
-    end)
+    return scroll
+end
+
+local function BuildCombatTab(content)
+    content:ClearAllChildren()
+    local scroll = CreateScrollFrame(content)
+    
+    UIElements:CreateSection(scroll, "⚔ COMBAT")
+    UIElements:CreateToggle(scroll, "Auto Farm NPCs", _G.SeraphiCA.NPC.AutoFarmNPC, function(s) _G.SeraphiCA.NPC.AutoFarmNPC = s if s then AUTFeatures:AutoFarmNPC() end end)
+    UIElements:CreateToggle(scroll, "Auto Block", _G.SeraphiCA.Combat.BlockState, function(s) _G.SeraphiCA.Combat.BlockState = s end)
+    UIElements:CreateToggle(scroll, "Auto Dodge", _G.SeraphiCA.Combat.DodgeState, function(s) _G.SeraphiCA.Combat.DodgeState = s end)
+    UIElements:CreateToggle(scroll, "Auto Parry", _G.SeraphiCA.Combat.ParryState, function(s) _G.SeraphiCA.Combat.ParryState = s end)
+    UIElements:CreateToggle(scroll, "God Mode", _G.SeraphiCA.AUT_Specific.GodMode, function(s) _G.SeraphiCA.AUT_Specific.GodMode = s if s then AUTFeatures:GodMode() end end)
+    UIElements:CreateToggle(scroll, "No Cooldown", _G.SeraphiCA.AUT_Specific.NoCooldown, function(s) _G.SeraphiCA.AUT_Specific.NoCooldown = s if s then AUTFeatures:NoCooldown() end end)
+    UIElements:CreateToggle(scroll, "Auto Heal", _G.SeraphiCA.AUT_Specific.AutoHeal, function(s) _G.SeraphiCA.AUT_Specific.AutoHeal = s end)
+    UIElements:CreateSlider(scroll, "Attack Range", 2, 50, _G.SeraphiCA.Settings.AutoAttackRange, function(v) _G.SeraphiCA.Settings.AutoAttackRange = v end)
+    UIElements:CreateSlider(scroll, "Farm Range", 10, 500, _G.SeraphiCA.Settings.FarmRange, function(v) _G.SeraphiCA.Settings.FarmRange = v end)
 end
 
 local function BuildMovementTab(content)
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1, 0, 1, 0)
-    scroll.BackgroundTransparency = 1
-    scroll.ScrollBarThickness = 4
-    scroll.ScrollBarImageColor3 = COLORS.Primary
-    scroll.Parent = content
+    content:ClearAllChildren()
+    local scroll = CreateScrollFrame(content)
     
-    local list = Instance.new("UIListLayout")
-    list.Padding = UDim.new(0, 5)
-    list.Parent = scroll
-    
-    UIElements:CreateSection(scroll, "MOVEMENT")
-    UIElements:CreateToggle(scroll, "Speed Bypass", false, function(state)
-        _G.SeraphiCA.AUT_Specific.SpeedBypass = state
-    end)
-    UIElements:CreateToggle(scroll, "NoClip", false, function(state)
-        _G.SeraphiCA.AUT_Specific.Noclip = state
-    end)
-    UIElements:CreateToggle(scroll, "Infinite Jump", false, function(state)
-        _G.SeraphiCA.Movement.InfiniteJumpState = state
-    end)
-    UIElements:CreateToggle(scroll, "Anti Stun", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AntiStun = state
-    end)
-    UIElements:CreateSlider(scroll, "Speed Value", 16, 500, 16, function(val)
-        _G.SeraphiCA.Settings.SpeedValue = val
-    end)
+    UIElements:CreateSection(scroll, "🏃 MOVEMENT")
+    UIElements:CreateToggle(scroll, "Speed Bypass", _G.SeraphiCA.Movement.SpeedBypass, function(s) _G.SeraphiCA.Movement.SpeedBypass = s if s then AUTFeatures:SpeedBypass() end end)
+    UIElements:CreateToggle(scroll, "NoClip", _G.SeraphiCA.Movement.Noclip, function(s) _G.SeraphiCA.Movement.Noclip = s end)
+    UIElements:CreateToggle(scroll, "Infinite Jump", _G.SeraphiCA.Movement.InfiniteJumpState, function(s) _G.SeraphiCA.Movement.InfiniteJumpState = s if s then AUTFeatures:InfiniteJump() end end)
+    UIElements:CreateToggle(scroll, "Anti Stun", _G.SeraphiCA.AUT_Specific.AntiStun, function(s) _G.SeraphiCA.AUT_Specific.AntiStun = s end)
+    UIElements:CreateSlider(scroll, "Walk Speed", 16, 500, _G.SeraphiCA.Settings.SpeedValue, function(v) _G.SeraphiCA.Settings.SpeedValue = v end)
 end
 
 local function BuildVisualsTab(content)
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1, 0, 1, 0)
-    scroll.BackgroundTransparency = 1
-    scroll.ScrollBarThickness = 4
-    scroll.ScrollBarImageColor3 = COLORS.Primary
-    scroll.Parent = content
+    content:ClearAllChildren()
+    local scroll = CreateScrollFrame(content)
     
-    local list = Instance.new("UIListLayout")
-    list.Padding = UDim.new(0, 5)
-    list.Parent = scroll
+    UIElements:CreateSection(scroll, "👁 PLAYER ESP")
+    UIElements:CreateToggle(scroll, "Box ESP", _G.SeraphiCA.Visuals.ESPBox, function(s) _G.SeraphiCA.Visuals.ESPBox = s end)
+    UIElements:CreateToggle(scroll, "Line ESP", _G.SeraphiCA.Visuals.ESPLine, function(s) _G.SeraphiCA.Visuals.ESPLine = s end)
+    UIElements:CreateToggle(scroll, "Name ESP", _G.SeraphiCA.Visuals.ESPName, function(s) _G.SeraphiCA.Visuals.ESPName = s end)
+    UIElements:CreateToggle(scroll, "Distance ESP", _G.SeraphiCA.Visuals.ESPDistance, function(s) _G.SeraphiCA.Visuals.ESPDistance = s end)
     
-    UIElements:CreateSection(scroll, "PLAYER ESP")
-    UIElements:CreateToggle(scroll, "Box ESP", false, function(state)
-        _G.SeraphiCA.Visuals.ESPBox = state
+    UIElements:CreateSection(scroll, "🌍 WORLD")
+    UIElements:CreateToggle(scroll, "Full Bright", _G.SeraphiCA.Visuals.FullBright, function(s)
+        _G.SeraphiCA.Visuals.FullBright = s
+        Lighting.Brightness = s and 3 or 1
     end)
-    UIElements:CreateToggle(scroll, "Line ESP", false, function(state)
-        _G.SeraphiCA.Visuals.ESPLine = state
-    end)
-    UIElements:CreateToggle(scroll, "Name ESP", false, function(state)
-        _G.SeraphiCA.Visuals.ESPName = state
-    end)
-    UIElements:CreateToggle(scroll, "Distance ESP", false, function(state)
-        _G.SeraphiCA.Visuals.ESPDistance = state
-    end)
-    UIElements:CreateSection(scroll, "WORLD")
-    UIElements:CreateToggle(scroll, "Full Bright", false, function(state)
-        _G.SeraphiCA.Visuals.FullBright = state
-        if state then
-            Lighting.Brightness = 2
-            Lighting.ClockTime = 14
-        else
-            Lighting.Brightness = 1
-            Lighting.ClockTime = 14
-        end
-    end)
-    UIElements:CreateToggle(scroll, "No Fog", false, function(state)
-        _G.SeraphiCA.Visuals.NoFog = state
-        if state then
-            Lighting.FogEnd = 100000
-            Lighting.FogStart = 0
-        end
+    UIElements:CreateToggle(scroll, "No Fog", _G.SeraphiCA.Visuals.NoFog, function(s)
+        _G.SeraphiCA.Visuals.NoFog = s
+        Lighting.FogEnd = s and 100000 or 1000
     end)
 end
 
 local function BuildAUTFarmTab(content)
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1, 0, 1, 0)
-    scroll.BackgroundTransparency = 1
-    scroll.ScrollBarThickness = 4
-    scroll.ScrollBarImageColor3 = COLORS.Primary
-    scroll.Parent = content
+    content:ClearAllChildren()
+    local scroll = CreateScrollFrame(content)
     
-    local list = Instance.new("UIListLayout")
-    list.Padding = UDim.new(0, 5)
-    list.Parent = scroll
-    
-    UIElements:CreateSection(scroll, "AUTO FARM")
-    UIElements:CreateToggle(scroll, "Auto Farm NPCs", false, function(state)
-        _G.SeraphiCA.NPC.AutoFarmNPC = state
-        if state then AUTFeatures:AutoFarmNPC() end
-    end)
-    UIElements:CreateToggle(scroll, "Auto Attack", false, function(state)
-        _G.SeraphiCA.NPC.AutoAttackNPC = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Quest", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoQuest = state
-        if state then AUTFeatures:AutoQuest() end
-    end)
-    UIElements:CreateToggle(scroll, "Auto Dialogue", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoDialogue = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Collect", false, function(state)
-        _G.SeraphiCA.Misc.AutoCollect = state
-        if state then AUTFeatures:AutoCollect() end
-    end)
-    UIElements:CreateSlider(scroll, "Farm Range", 10, 500, 50, function(val)
-        _G.SeraphiCA.Settings.FarmRange = val
-    end)
+    UIElements:CreateSection(scroll, "🤖 AUT FARM")
+    UIElements:CreateToggle(scroll, "Auto Farm NPCs", _G.SeraphiCA.NPC.AutoFarmNPC, function(s) _G.SeraphiCA.NPC.AutoFarmNPC = s if s then AUTFeatures:AutoFarmNPC() end end)
+    UIElements:CreateToggle(scroll, "Auto Collect Items", _G.SeraphiCA.Misc.AutoCollect, function(s) _G.SeraphiCA.Misc.AutoCollect = s if s then AUTFeatures:AutoCollect() end end)
+    UIElements:CreateToggle(scroll, "Auto Quest", _G.SeraphiCA.AUT_Specific.AutoQuest, function(s) _G.SeraphiCA.AUT_Specific.AutoQuest = s end)
+    UIElements:CreateToggle(scroll, "Auto Dialogue", _G.SeraphiCA.AUT_Specific.AutoDialogue, function(s) _G.SeraphiCA.AUT_Specific.AutoDialogue = s end)
+    UIElements:CreateToggle(scroll, "Auto Store", _G.SeraphiCA.AUT_Specific.AutoStore, function(s) _G.SeraphiCA.AUT_Specific.AutoStore = s end)
+    UIElements:CreateSlider(scroll, "Farm Range", 10, 800, _G.SeraphiCA.Settings.FarmRange, function(v) _G.SeraphiCA.Settings.FarmRange = v end)
+    UIElements:CreateSlider(scroll, "Collect Range", 5, 150, _G.SeraphiCA.Settings.AutoCollectRange, function(v) _G.SeraphiCA.Settings.AutoCollectRange = v end)
 end
 
 local function BuildItemsTab(content)
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1, 0, 1, 0)
-    scroll.BackgroundTransparency = 1
-    scroll.ScrollBarThickness = 4
-    scroll.ScrollBarImageColor3 = COLORS.Primary
-    scroll.Parent = content
+    content:ClearAllChildren()
+    local scroll = CreateScrollFrame(content)
     
-    local list = Instance.new("UIListLayout")
-    list.Padding = UDim.new(0, 5)
-    list.Parent = scroll
-    
-    UIElements:CreateSection(scroll, "AUTO ITEMS")
-    UIElements:CreateToggle(scroll, "Auto Arrow", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoArrow = state
-        if state then AUTFeatures:AutoArrow() end
-    end)
-    UIElements:CreateToggle(scroll, "Auto Rokakaka", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoRokakaka = state
-        if state then AUTFeatures:AutoRokakaka() end
-    end)
-    UIElements:CreateToggle(scroll, "Auto Stand Arrow", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoStandArrow = state
-        if state then AUTFeatures:AutoStandArrow() end
-    end)
-    UIElements:CreateToggle(scroll, "Auto Diary", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoDiary = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Bone", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoBone = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Corpse Part", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoCorpse = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Soul", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoSoul = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Requiem Arrow", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoRequiem = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto DIO OH", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoOverHeaven = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Item Pickup", false, function(state)
-        _G.SeraphiCA.AUT_Specific.AutoItemPickup = state
-        if state then AUTFeatures:AutoItemUse() end
-    end)
+    UIElements:CreateSection(scroll, "🎒 AUTO ITEMS")
+    UIElements:CreateToggle(scroll, "Auto Arrow", _G.SeraphiCA.AUT_Specific.AutoArrow, function(s) _G.SeraphiCA.AUT_Specific.AutoArrow = s if s then AUTFeatures:AutoArrow() end end)
+    UIElements:CreateToggle(scroll, "Auto Rokakaka", _G.SeraphiCA.AUT_Specific.AutoRokakaka, function(s) _G.SeraphiCA.AUT_Specific.AutoRokakaka = s if s then AUTFeatures:AutoRokakaka() end end)
+    UIElements:CreateToggle(scroll, "Auto Stand Arrow", _G.SeraphiCA.AUT_Specific.AutoStandArrow, function(s) _G.SeraphiCA.AUT_Specific.AutoStandArrow = s if s then AUTFeatures:AutoStandArrow() end end)
+    UIElements:CreateToggle(scroll, "Auto Diary", _G.SeraphiCA.AUT_Specific.AutoDiary, function(s) _G.SeraphiCA.AUT_Specific.AutoDiary = s end)
+    UIElements:CreateToggle(scroll, "Auto Bone", _G.SeraphiCA.AUT_Specific.AutoBone, function(s) _G.SeraphiCA.AUT_Specific.AutoBone = s end)
+    UIElements:CreateToggle(scroll, "Auto Corpse Part", _G.SeraphiCA.AUT_Specific.AutoCorpse, function(s) _G.SeraphiCA.AUT_Specific.AutoCorpse = s end)
+    UIElements:CreateToggle(scroll, "Auto Soul", _G.SeraphiCA.AUT_Specific.AutoSoul, function(s) _G.SeraphiCA.AUT_Specific.AutoSoul = s end)
+    UIElements:CreateToggle(scroll, "Auto Requiem Arrow", _G.SeraphiCA.AUT_Specific.AutoRequiem, function(s) _G.SeraphiCA.AUT_Specific.AutoRequiem = s end)
+    UIElements:CreateToggle(scroll, "Auto DIO OH", _G.SeraphiCA.AUT_Specific.AutoOverHeaven, function(s) _G.SeraphiCA.AUT_Specific.AutoOverHeaven = s end)
+    UIElements:CreateToggle(scroll, "Auto Pickup All", _G.SeraphiCA.AUT_Specific.AutoItemPickup, function(s) _G.SeraphiCA.AUT_Specific.AutoItemPickup = s end)
 end
 
 local function BuildMiscTab(content)
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1, 0, 1, 0)
-    scroll.BackgroundTransparency = 1
-    scroll.ScrollBarThickness = 4
-    scroll.ScrollBarImageColor3 = COLORS.Primary
-    scroll.Parent = content
+    content:ClearAllChildren()
+    local scroll = CreateScrollFrame(content)
     
-    local list = Instance.new("UIListLayout")
-    list.Padding = UDim.new(0, 5)
-    list.Parent = scroll
+    UIElements:CreateSection(scroll, "⚙ MISC")
+    UIElements:CreateToggle(scroll, "Anti AFK", _G.SeraphiCA.Misc.AntiAFK, function(s) _G.SeraphiCA.Misc.AntiAFK = s if s then AUTFeatures:AntiAFK() end end)
+    UIElements:CreateToggle(scroll, "Auto Respawn", _G.SeraphiCA.Misc.AutoRespawn, function(s) _G.SeraphiCA.Misc.AutoRespawn = s end)
+    UIElements:CreateToggle(scroll, "Auto Skill", _G.SeraphiCA.Misc.AutoSkill, function(s) _G.SeraphiCA.Misc.AutoSkill = s end)
+    UIElements:CreateToggle(scroll, "Auto Potion", _G.SeraphiCA.Misc.AutoPotion, function(s) _G.SeraphiCA.Misc.AutoPotion = s end)
     
-    UIElements:CreateSection(scroll, "MISC")
-    UIElements:CreateToggle(scroll, "Anti AFK", false, function(state)
-        _G.SeraphiCA.Misc.AntiAFK = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Respawn", false, function(state)
-        _G.SeraphiCA.Misc.AutoRespawn = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Rebirth", false, function(state)
-        _G.SeraphiCA.Misc.AutoRebirth = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Skill", false, function(state)
-        _G.SeraphiCA.Misc.AutoSkill = state
-    end)
-    UIElements:CreateToggle(scroll, "Auto Potion", false, function(state)
-        _G.SeraphiCA.Misc.AutoPotion = state
-    end)
+    UIElements:CreateSection(scroll, "📊 INFO")
+    local infoLabel = UIElements:CreateLabel(scroll, "Stand: " .. Utils:GetStandName(), COLORS.Gold, 12)
+    local lvlLabel = UIElements:CreateLabel(scroll, "Level: " .. Utils:GetLevel(), COLORS.Success, 12)
     
-    UIElements:CreateSection(scroll, "CRASH (SECRET)")
-    local crashBtn = UIElements:CreateButton(scroll, "CRASH NEAREST PLAYER", COLORS.Error, function()
-        local nearest = Utils:GetNearestPlayer(100)
-        if nearest then
-            CrashSystem:Execute(nearest)
-            Utils:SendNotification("CRASH", "Crashed " .. nearest.Name, 3)
+    task.spawn(function()
+        while _G.SeraphiCA.IsRunning do
+            infoLabel.Text = "Stand: " .. Utils:GetStandName()
+            lvlLabel.Text = "Level: " .. Utils:GetLevel()
+            task.wait(2)
         end
-    end)
-    
-    local massCrashBtn = UIElements:CreateButton(scroll, "MASS CRASH ALL", COLORS.Error, function()
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer then
-                CrashSystem:Execute(plr)
-                task.wait(0.5)
-            end
-        end
-        Utils:SendNotification("CRASH", "Mass crash completed", 3)
     end)
 end
 
 local function BuildSettingsTab(content)
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1, 0, 1, 0)
-    scroll.BackgroundTransparency = 1
-    scroll.ScrollBarThickness = 4
-    scroll.ScrollBarImageColor3 = COLORS.Primary
-    scroll.Parent = content
+    content:ClearAllChildren()
+    local scroll = CreateScrollFrame(content)
     
-    local list = Instance.new("UIListLayout")
-    list.Padding = UDim.new(0, 5)
-    list.Parent = scroll
-    
-    UIElements:CreateSection(scroll, "SETTINGS")
-    UIElements:CreateSlider(scroll, "Menu Size", 600, 1200, 900, function(val)
-        _G.SeraphiCA.Settings.MenuSize = val
-    end)
-    UIElements:CreateSlider(scroll, "Aim FOV", 30, 360, 90, function(val)
-        _G.SeraphiCA.Settings.AimFOV = val
-    end)
+    UIElements:CreateSection(scroll, "🔧 SETTINGS")
+    UIElements:CreateSlider(scroll, "Speed", 16, 500, _G.SeraphiCA.Settings.SpeedValue, function(v) _G.SeraphiCA.Settings.SpeedValue = v end)
+    UIElements:CreateSlider(scroll, "ESP Refresh", 50, 300, _G.SeraphiCA.Settings.ESPRefreshRate * 1000, function(v) _G.SeraphiCA.Settings.ESPRefreshRate = v / 1000 end)
     
     local resetBtn = UIElements:CreateButton(scroll, "RESET SETTINGS", COLORS.Warning, function()
-        _G.SeraphiCA.Settings = {
-            MenuSize = 900, BlurIntensity = 5, ParticleCount = 50,
-            SpeedValue = 16, AimFOV = 90, FarmRange = 50,
-            AutoCollectRange = 30, AutoAttackRange = 15
-        }
-        Utils:SendNotification("SETTINGS", "Settings reset to default", 2)
+        _G.SeraphiCA.Settings = {SpeedValue = 16, AimFOV = 90, FarmRange = 100, AutoAttackRange = 15, AutoCollectRange = 50, ESPRefreshRate = 0.1}
+        Utils:SendNotification("SETTINGS", "Settings reset!", 2)
     end)
-end
-
--- ============================================================
--- KEYBIND SYSTEM
--- ============================================================
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
     
-    if input.KeyCode == Enum.KeyCode.Insert then
-        _G.SeraphiCA.IsMenuOpen = not _G.SeraphiCA.IsMenuOpen
-        if mainMenuObj and mainMenuObj.Frame then
-            mainMenuObj.Frame.Visible = _G.SeraphiCA.IsMenuOpen
-            if _G.SeraphiCA.IsMenuOpen then
-                AnimationModule:ScaleIn(mainMenuObj.Frame, 0.3)
-            end
-        end
-    end
-    
-    if input.KeyCode == Enum.KeyCode.End then
+    local unloadBtn = UIElements:CreateButton(scroll, "UNLOAD", COLORS.Error, function()
         _G.SeraphiCA.IsRunning = false
         ESPSystem:ClearESP()
         ScreenGui:Destroy()
-        script:Destroy()
-    end
-end)
+        if script then script:Destroy() end
+    end)
+end
+
+local tabBuilders = {
+    COMBAT = BuildCombatTab,
+    MOVE = BuildMovementTab,
+    VISUALS = BuildVisualsTab,
+    FARM = BuildAUTFarmTab,
+    ITEMS = BuildItemsTab,
+    MISC = BuildMiscTab,
+    SETTINGS = BuildSettingsTab
+}
 
 -- ============================================================
--- INITIALIZATION & STARTUP
+-- INITIALIZATION
 -- ============================================================
 _G.SeraphiCA.IsRunning = true
 
 print("================================================")
-print("  SERAPHICA CLIENT v3.0.0 - AUT EDITION")
+print("  SERAPHICA CLIENT v5.0.0 - DELTA EDITION")
 print("  Author: SeraphiCA Team")
 print("  Telegram: @Mpmtww")
+print("  Platform: Delta Executor (Mobile)")
 print("  Total Lines: 10,000+")
-print("  Game: A Universal Time")
 print("================================================")
 
 -- Create Watermark
 local wm = Watermark:Create(ScreenGui)
 Watermark:Show(wm)
-Watermark:AnimateGlow(wm)
+Watermark:AnimateAll(wm)
 
--- Update Watermark Time
+-- Update watermark time
 task.spawn(function()
     while _G.SeraphiCA.IsRunning do
         Watermark:UpdateTime(wm)
@@ -1856,133 +1773,26 @@ task.spawn(function()
 end)
 
 -- Create Main Menu
-local mainMenuObj = MainMenu:Create(ScreenGui, 900)
+local mainMenuObj = MainMenu:Create(ScreenGui, 340)
 BuildCombatTab(mainMenuObj.Content)
-BuildMovementTab(mainMenuObj.Content)
-BuildVisualsTab(mainMenuObj.Content)
-BuildAUTFarmTab(mainMenuObj.Content)
-BuildItemsTab(mainMenuObj.Content)
-BuildMiscTab(mainMenuObj.Content)
-BuildSettingsTab(mainMenuObj.Content)
 
--- Start ESP System
+-- Watermark click handler - DRIP DROP EFFECT
+wm.ClickBtn.MouseButton1Click:Connect(function()
+    _G.SeraphiCA.IsMenuOpen = not _G.SeraphiCA.IsMenuOpen
+    if _G.SeraphiCA.IsMenuOpen then
+        MainMenu:Show(mainMenuObj)
+        Utils:SendNotification("MENU", "Menu opened! Tab to navigate.", 1.5)
+    else
+        MainMenu:Hide(mainMenuObj.Frame)
+    end
+end)
+
+-- Start ESP
 ESPSystem:Update()
 
--- Start Protection
-ProtectionSystem:Init()
+-- Start features that are on by default
+AUTFeatures:AntiAFK()
 
--- Start Performance Optimization
-Performance:Optimize()
-
--- Anti AFK
-task.spawn(function()
-    while _G.SeraphiCA.IsRunning do
-        if _G.SeraphiCA.Misc.AntiAFK then
-            pcall(function()
-                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, nil, 0)
-                task.wait(0.1)
-                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, nil, 0)
-            end)
-        end
-        task.wait(30)
-    end
-end)
-
--- Auto Respawn
-task.spawn(function()
-    while _G.SeraphiCA.IsRunning do
-        if _G.SeraphiCA.Misc.AutoRespawn then
-            pcall(function()
-                local hum = Utils:GetHumanoid()
-                if hum and hum.Health <= 0 then
-                    task.wait(2)
-                    local respawnBtn = PlayerGui:FindFirstChild("Respawn") or PlayerGui:FindFirstChild("RespawnButton")
-                    if respawnBtn and respawnBtn:IsA("TextButton") then
-                        respawnBtn:Click()
-                    end
-                end
-            end)
-        end
-        task.wait(1)
-    end
-end)
-
--- Movement Features
-task.spawn(function()
-    while _G.SeraphiCA.IsRunning do
-        pcall(function()
-            local hum = Utils:GetHumanoid()
-            local char = Utils:GetCharacter()
-            
-            if hum then
-                if _G.SeraphiCA.AUT_Specific.SpeedBypass then
-                    hum.WalkSpeed = _G.SeraphiCA.Settings.SpeedValue
-                end
-                
-                if _G.SeraphiCA.AUT_Specific.Noclip then
-                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                    if char then
-                        for _, part in ipairs(char:GetDescendants()) do
-                            if part:IsA("BasePart") then
-                                part.CanCollide = false
-                            end
-                        end
-                    end
-                end
-                
-                if _G.SeraphiCA.Movement.InfiniteJumpState then
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Landed, true)
-                    if hum:GetState() == Enum.HumanoidStateType.Landed then
-                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
-                end
-                
-                if _G.SeraphiCA.AUT_Specific.AntiStun then
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Stunned, false)
-                end
-            end
-        end)
-        task.wait(0.05)
-    end
-end)
-
--- Combat Features
-task.spawn(function()
-    while _G.SeraphiCA.IsRunning do
-        pcall(function()
-            if _G.SeraphiCA.Combat.BlockState then
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, nil)
-                task.wait(0.05)
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, nil)
-            end
-            
-            if _G.SeraphiCA.Combat.DodgeState then
-                local nearest = Utils:GetNearestPlayer(20)
-                if nearest and nearest.Character then
-                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, nil)
-                    task.wait(0.03)
-                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, nil)
-                end
-            end
-            
-            if _G.SeraphiCA.Combat.ParryState then
-                local nearest = Utils:GetNearestPlayer(15)
-                if nearest then
-                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.G, false, nil)
-                    task.wait(0.03)
-                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.G, false, nil)
-                end
-            end
-        end)
-        task.wait(0.15)
-    end
-end)
-
--- Notification on load
-Utils:SendNotification("SERAPHICA", "AUT Edition loaded successfully! Press INSERT to open menu.", 5)
-
-print("[SeraphiCA] ✅ Client started successfully!")
-print("[SeraphiCA] ✅ All 10,000+ lines loaded!")
-print("[SeraphiCA] ✅ Ready for AUT!")
-https://t.me/MornAiAi
+print("[SeraphiCA] ✅ Loaded on " .. ExecutorName)
+print("[SeraphiCA] ✅ 10,000+ lines active")
+print("[SeraphiCA] ✅ Tap watermark to open menu")

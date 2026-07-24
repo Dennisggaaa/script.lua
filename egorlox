@@ -1,5 +1,5 @@
 -- ============================================================
---  SERAPHICA CLIENT v9.2 - ULTRA BEAUTIFUL
+--  SERAPHICA CLIENT v9.2.1 - ULTRA BEAUTIFUL [STABLE FIX]
 --  LOADING SCREEN + WELCOME + WATERMARK + TABS
 --  Игра: A Universal Time (AUT)
 --  Executor: Delta Android
@@ -16,6 +16,60 @@ local function SafeCall(func)
     end
     return success, err
 end
+
+-- [[ ПРИНУДИТЕЛЬНАЯ ОЧИСТКА ВСЕХ СТАРЫХ GUI ]]
+print("[SeraphiCA] Cleaning all old GUIs...")
+
+-- Очистка CoreGui
+SafeCall(function()
+    if game:GetService("CoreGui"):FindFirstChild("SeraphiCA_GUI") then
+        game:GetService("CoreGui").SeraphiCA_GUI:Destroy()
+        print("[SeraphiCA] Removed old CoreGui SeraphiCA_GUI")
+    end
+    for _, child in ipairs(game:GetService("CoreGui"):GetChildren()) do
+        if child.Name:match("SeraphiCA") or child.Name:match("seraphica") then
+            child:Destroy()
+            print("[SeraphiCA] Removed old CoreGui: " .. child.Name)
+        end
+    end
+end)
+
+-- Очистка PlayerGui
+SafeCall(function()
+    local playerGui = game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+    if playerGui then
+        if playerGui:FindFirstChild("SeraphiCA_GUI") then
+            playerGui.SeraphiCA_GUI:Destroy()
+            print("[SeraphiCA] Removed old PlayerGui SeraphiCA_GUI")
+        end
+        for _, child in ipairs(playerGui:GetChildren()) do
+            if child.Name:match("SeraphiCA") or child.Name:match("seraphica") then
+                SafeCall(function() child:Destroy() end)
+                print("[SeraphiCA] Removed old PlayerGui: " .. child.Name)
+            end
+        end
+    end
+end)
+
+-- Очистка через game:GetDescendants() (последний рубеж)
+SafeCall(function()
+    for _, obj in ipairs(game:GetDescendants()) do
+        if obj:IsA("ScreenGui") or obj:IsA("Frame") then
+            if obj.Name:match("SeraphiCA") or obj.Name:match("seraphica") then
+                if obj.Parent and obj.Parent ~= game then
+                    SafeCall(function() obj:Destroy() end)
+                    print("[SeraphiCA] Force removed: " .. obj.Name)
+                end
+            end
+        end
+    end
+end)
+
+-- Очистка глобальных переменных
+_G.SeraphiCA_IsMenuOpen = nil
+_G.SeraphiCA_Loaded = nil
+
+print("[SeraphiCA] GUI cleanup complete")
 
 -- [[ ИМПОРТ СЕРВИСОВ ]]
 local Players = game:GetService("Players")
@@ -43,35 +97,51 @@ print("[SeraphiCA] Game loaded")
 local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then
     print("[SeraphiCA] Waiting for LocalPlayer...")
-    Players.PlayerAdded:Wait()
+    LocalPlayer = Players.PlayerAdded:Wait() or Players.LocalPlayer
+end
+if not LocalPlayer then
+    warn("[SeraphiCA] CRITICAL: LocalPlayer not found. Retrying...")
+    wait(3)
     LocalPlayer = Players.LocalPlayer
 end
-print("[SeraphiCA] LocalPlayer: " .. LocalPlayer.Name)
+print("[SeraphiCA] LocalPlayer: " .. (LocalPlayer and LocalPlayer.Name or "nil"))
 
+-- Ждём PlayerGui
+local PlayerGui = nil
+repeat
+    SafeCall(function()
+        PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
+    end)
+    if not PlayerGui then wait(0.5) end
+until PlayerGui
+print("[SeraphiCA] PlayerGui ready")
+
+-- Ждём Character
 local Character = LocalPlayer.Character
 if not Character then
     print("[SeraphiCA] Waiting for Character...")
     Character = LocalPlayer.CharacterAdded:Wait()
 end
 local Humanoid = Character:WaitForChild("Humanoid")
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
-
 print("[SeraphiCA] Character and Humanoid ready")
 
--- [[ ОЧИСТКА СТАРЫХ GUI ]]
-for _, gui in ipairs(PlayerGui:GetChildren()) do
-    if gui.Name:match("SeraphiCA") then
-        pcall(function() gui:Destroy() end)
-        print("[SeraphiCA] Removed old GUI: " .. gui.Name)
+-- Ещё раз чистим PlayerGui после получения
+SafeCall(function()
+    for _, child in ipairs(PlayerGui:GetChildren()) do
+        if child.Name:match("SeraphiCA") or child.Name:match("seraphica") then
+            SafeCall(function() child:Destroy() end)
+            print("[SeraphiCA] Final cleanup: " .. child.Name)
+        end
     end
-end
+end)
 
 -- [[ СОЗДАНИЕ SCREEN GUI ]]
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SeraphiCA_GUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = PlayerGui
 print("[SeraphiCA] ScreenGui created")
 
@@ -112,6 +182,7 @@ local AutoQuest = { Enabled = false, FarmAbilities = false, FarmItems = false, T
 local TeleKill = { TeleBoss = false, TeleNPC = false, TelePlayer = false }
 local ScamTrade = { Enabled = false, FrozenItems = {}, TradeActive = false }
 local WelcomeClosed = false
+local ScriptLoaded = false
 
 -- ============================================================
 --  ШИФРОВАНИЕ ПАРОЛЯ
@@ -160,30 +231,30 @@ local function Clamp(val, min, max)
     return math.max(min, math.min(max, val))
 end
 
-local function Lerp(a, b, t)
-    return a + (b - a) * t
-end
-
 local function FindNPCs(name)
     local npcs = {}
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") and obj.Name:lower():find(name:lower()) then
-            local humanoid = obj:FindFirstChildOfClass("Humanoid")
-            local hrp = obj:FindFirstChild("HumanoidRootPart")
-            if humanoid and hrp and humanoid.Health > 0 then
-                table.insert(npcs, obj)
+    SafeCall(function()
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("Model") and obj.Name:lower():find(name:lower()) then
+                local humanoid = obj:FindFirstChildOfClass("Humanoid")
+                local hrp = obj:FindFirstChild("HumanoidRootPart")
+                if humanoid and hrp and humanoid.Health > 0 then
+                    table.insert(npcs, obj)
+                end
             end
         end
-    end
+    end)
     return npcs
 end
 
 local function TeleportTo(position)
     if not RootPart then return end
-    local tweenTime = math.min((RootPart.Position - position).Magnitude / 300, 3)
-    local tween = TweenService:Create(RootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {CFrame = CFrame.new(position)})
-    tween:Play()
-    tween.Completed:Wait()
+    SafeCall(function()
+        local tweenTime = math.min((RootPart.Position - position).Magnitude / 300, 3)
+        local tween = TweenService:Create(RootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {CFrame = CFrame.new(position)})
+        tween:Play()
+        tween.Completed:Wait()
+    end)
 end
 
 -- ============================================================
@@ -193,65 +264,56 @@ local ParticleSystem = {}
 
 function ParticleSystem:CreateParticle(parent, x, y, size, color, speed, lifespan, shape)
     local particle
-    if shape == "circle" then
-        particle = Instance.new("Frame")
-        Instance.new("UICorner", particle).CornerRadius = UDim.new(0, size / 2 or 2)
-    elseif shape == "star" then
-        particle = Instance.new("TextLabel")
-        particle.Text = "✦"
-        particle.TextColor3 = color
-        particle.Font = Enum.Font.GothamBlack
-        particle.TextSize = size * 3
-        particle.BackgroundTransparency = 1
-    else
-        particle = Instance.new("Frame")
-        Instance.new("UICorner", particle).CornerRadius = UDim.new(0, 2)
-    end
-
-    particle.Size = UDim2.new(0, size or 4, 0, size or 4)
-    particle.Position = UDim2.new(0, x, 0, y)
-    if not shape or shape ~= "star" then
-        particle.BackgroundColor3 = color or C.Primary
-    end
-    particle.BorderSizePixel = 0
-    particle.BackgroundTransparency = 0.5
-    particle.ZIndex = 150
-    particle.Parent = parent
-
-    spawn(function()
-        local startTime = tick()
-        local life = lifespan or (3 + math.random() * 4)
-        local speedX = (math.random() - 0.5) * (speed or 20)
-        local speedY = (math.random() - 0.5) * (speed or 20) - 10
-        local startX = x
-        local startY = y
-        while tick() - startTime < life and particle.Parent do
-            local elapsed = tick() - startTime
-            local progress = elapsed / life
-            particle.Position = UDim2.new(0, startX + speedX * elapsed, 0, startY + speedY * elapsed + 50 * progress * progress)
-            particle.BackgroundTransparency = 0.5 + progress * 0.5
-            particle.Size = UDim2.new(0, size * (1 - progress * 0.7), 0, size * (1 - progress * 0.7))
-            if shape == "star" then
-                particle.TextTransparency = 0.5 + progress * 0.5
-            end
-            wait(0.03)
+    SafeCall(function()
+        if shape == "circle" then
+            particle = Instance.new("Frame")
+            Instance.new("UICorner", particle).CornerRadius = UDim.new(0, size / 2 or 2)
+        elseif shape == "star" then
+            particle = Instance.new("TextLabel")
+            particle.Text = "✦"
+            particle.TextColor3 = color
+            particle.Font = Enum.Font.GothamBlack
+            particle.TextSize = size * 3
+            particle.BackgroundTransparency = 1
+        else
+            particle = Instance.new("Frame")
+            Instance.new("UICorner", particle).CornerRadius = UDim.new(0, 2)
         end
-        pcall(function() particle:Destroy() end)
+
+        particle.Size = UDim2.new(0, size or 4, 0, size or 4)
+        particle.Position = UDim2.new(0, x, 0, y)
+        if not shape or shape ~= "star" then
+            particle.BackgroundColor3 = color or C.Primary
+        end
+        particle.BorderSizePixel = 0
+        particle.BackgroundTransparency = 0.5
+        particle.ZIndex = 150
+        particle.Parent = parent
+
+        spawn(function()
+            local startTime = tick()
+            local life = lifespan or (3 + math.random() * 4)
+            local speedX = (math.random() - 0.5) * (speed or 20)
+            local speedY = (math.random() - 0.5) * (speed or 20) - 10
+            local startX = x
+            local startY = y
+            while tick() - startTime < life and particle and particle.Parent do
+                local elapsed = tick() - startTime
+                local progress = elapsed / life
+                SafeCall(function()
+                    particle.Position = UDim2.new(0, startX + speedX * elapsed, 0, startY + speedY * elapsed + 50 * progress * progress)
+                    particle.BackgroundTransparency = 0.5 + progress * 0.5
+                    particle.Size = UDim2.new(0, size * (1 - progress * 0.7), 0, size * (1 - progress * 0.7))
+                    if shape == "star" then
+                        particle.TextTransparency = 0.5 + progress * 0.5
+                    end
+                end)
+                wait(0.03)
+            end
+            SafeCall(function() particle:Destroy() end)
+        end)
     end)
     return particle
-end
-
-function ParticleSystem:Burst(parent, count, x, y, colors, sizeRange, speed, lifespan, shapes)
-    for i = 1, count do
-        local size = math.random(sizeRange[1] or 2, sizeRange[2] or 6)
-        local color = colors[math.random(1, #colors)]
-        local shape = shapes and shapes[math.random(1, #shapes)] or nil
-        local angle = math.random() * math.pi * 2
-        local dist = math.random(10, 60)
-        local px = x + math.cos(angle) * dist
-        local py = y + math.sin(angle) * dist
-        ParticleSystem:CreateParticle(parent, px, py, size, color, speed, lifespan, shape)
-    end
 end
 
 -- ============================================================
@@ -266,7 +328,6 @@ LoadingFrame.BorderSizePixel = 0
 LoadingFrame.ZIndex = 1000
 LoadingFrame.Parent = ScreenGui
 
--- Анимированный градиент фона
 local loadGrad1 = Instance.new("UIGradient")
 loadGrad1.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(2, 0, 20)),
@@ -279,45 +340,42 @@ loadGrad1.Rotation = 0
 loadGrad1.Parent = LoadingFrame
 
 spawn(function()
-    while loadGrad1.Parent do
-        TweenService:Create(loadGrad1, TweenInfo.new(8, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {Rotation = 360}):Play()
+    while loadGrad1 and loadGrad1.Parent do
+        SafeCall(function()
+            TweenService:Create(loadGrad1, TweenInfo.new(8, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {Rotation = 360}):Play()
+        end)
         wait(8)
     end
 end)
 
--- Множество слоёв звёзд
 for layer = 1, 3 do
     for i = 1, 50 do
-        local star = Instance.new("Frame")
-        local starSize = math.random(1, 4) * (layer * 0.5)
-        star.Size = UDim2.new(0, starSize, 0, starSize)
-        star.Position = UDim2.new(0, math.random(0, 2000), 0, math.random(0, 1200))
-        star.BackgroundColor3 = C.White
-        star.BackgroundTransparency = 0.2 + layer * 0.25
-        star.BorderSizePixel = 0
-        star.ZIndex = 1001 + layer
-        star.Parent = LoadingFrame
-        Instance.new("UICorner", star).CornerRadius = UDim.new(0, 10)
-
-        spawn(function()
-            local twinkleSpeed = 1.5 + layer * 1.2
-            while star.Parent do
-                TweenService:Create(star, TweenInfo.new(twinkleSpeed, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                    BackgroundTransparency = 0.05 + layer * 0.15 + math.random() * 0.3,
-                    Size = UDim2.new(0, starSize + math.random(1, 3), 0, starSize + math.random(1, 3))
-                }):Play()
-                wait(twinkleSpeed)
-                TweenService:Create(star, TweenInfo.new(twinkleSpeed, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                    BackgroundTransparency = 0.3 + layer * 0.25,
-                    Size = UDim2.new(0, starSize, 0, starSize)
-                }):Play()
-                wait(twinkleSpeed)
-            end
+        SafeCall(function()
+            local star = Instance.new("Frame")
+            local starSize = math.random(1, 4) * (layer * 0.5)
+            star.Size = UDim2.new(0, starSize, 0, starSize)
+            star.Position = UDim2.new(0, math.random(0, 2000), 0, math.random(0, 1200))
+            star.BackgroundColor3 = C.White
+            star.BackgroundTransparency = 0.2 + layer * 0.25
+            star.BorderSizePixel = 0
+            star.ZIndex = 1001 + layer
+            star.Parent = LoadingFrame
+            Instance.new("UICorner", star).CornerRadius = UDim.new(0, 10)
+            spawn(function()
+                while star and star.Parent do
+                    SafeCall(function()
+                        TweenService:Create(star, TweenInfo.new(1.5 + layer * 1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                            BackgroundTransparency = 0.05 + layer * 0.15 + math.random() * 0.3,
+                            Size = UDim2.new(0, starSize + math.random(1, 3), 0, starSize + math.random(1, 3))
+                        }):Play()
+                    end)
+                    wait(1.5 + layer * 1.2)
+                end
+            end)
         end)
     end
 end
 
--- Центральная луна с пульсацией
 local LoadMoon = Instance.new("ImageLabel")
 LoadMoon.Size = UDim2.new(0, 120, 0, 120)
 LoadMoon.Position = UDim2.new(0.5, -60, 0.2, 0)
@@ -328,67 +386,6 @@ LoadMoon.ImageTransparency = 0.2
 LoadMoon.ZIndex = 1005
 LoadMoon.Parent = LoadingFrame
 
--- Кольцо вокруг луны
-local moonRing = Instance.new("Frame")
-moonRing.Size = UDim2.new(0, 160, 0, 160)
-moonRing.Position = UDim2.new(0.5, -80, 0.2, -20)
-moonRing.BackgroundColor3 = C.NeonBlue
-moonRing.BackgroundTransparency = 0.8
-moonRing.BorderSizePixel = 0
-moonRing.Rotation = 0
-moonRing.ZIndex = 1004
-moonRing.Parent = LoadingFrame
-Instance.new("UICorner", moonRing).CornerRadius = UDim.new(0, 80)
-
-spawn(function()
-    while LoadMoon.Parent do
-        TweenService:Create(LoadMoon, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Size = UDim2.new(0, 140, 0, 140),
-            Position = UDim2.new(0.5, -70, 0.2, -10),
-            ImageTransparency = 0.1
-        }):Play()
-        TweenService:Create(moonRing, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Size = UDim2.new(0, 180, 0, 180),
-            Position = UDim2.new(0.5, -90, 0.2, -30),
-            BackgroundTransparency = 0.7,
-            Rotation = 180
-        }):Play()
-        wait(3)
-        TweenService:Create(LoadMoon, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Size = UDim2.new(0, 110, 0, 110),
-            Position = UDim2.new(0.5, -55, 0.2, 5),
-            ImageTransparency = 0.3
-        }):Play()
-        TweenService:Create(moonRing, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Size = UDim2.new(0, 150, 0, 150),
-            Position = UDim2.new(0.5, -75, 0.2, -15),
-            BackgroundTransparency = 0.85,
-            Rotation = 360
-        }):Play()
-        wait(3)
-    end
-end)
-
--- Орбитальные частицы
-spawn(function()
-    local orbitAngle = 0
-    while LoadMoon.Parent do
-        orbitAngle = orbitAngle + 0.8
-        local cx = LoadMoon.AbsolutePosition.X + LoadMoon.AbsoluteSize.X / 2
-        local cy = LoadMoon.AbsolutePosition.Y + LoadMoon.AbsoluteSize.Y / 2
-        local relX = cx - LoadingFrame.AbsolutePosition.X
-        local relY = cy - LoadingFrame.AbsolutePosition.Y
-        for i = 1, 3 do
-            local angle = orbitAngle + (i * math.pi * 2 / 3)
-            local px = relX + math.cos(angle) * 90
-            local py = relY + math.sin(angle) * 90
-            ParticleSystem:CreateParticle(LoadingFrame, px, py, 3, {C.NeonBlue, C.Cyan, C.Purple}[i], 0, 1.5, "circle")
-        end
-        wait(0.1)
-    end
-end)
-
--- Заголовок загрузки
 local loadTitle = Instance.new("TextLabel")
 loadTitle.Size = UDim2.new(1, 0, 0, 50)
 loadTitle.Position = UDim2.new(0, 0, 0.45, 0)
@@ -404,7 +401,6 @@ loadTitle.TextStrokeColor3 = C.NeonBlue
 loadTitle.ZIndex = 1005
 loadTitle.Parent = LoadingFrame
 
--- Подзаголовок
 local loadSub = Instance.new("TextLabel")
 loadSub.Size = UDim2.new(1, 0, 0, 30)
 loadSub.Position = UDim2.new(0, 0, 0.52, 0)
@@ -418,17 +414,6 @@ loadSub.TextYAlignment = Enum.TextYAlignment.Center
 loadSub.ZIndex = 1005
 loadSub.Parent = LoadingFrame
 
-spawn(function()
-    while loadSub.Parent do
-        for dots = 0, 3 do
-            if not loadSub.Parent then break end
-            loadSub.Text = "LOADING CLIENT" .. string.rep(".", dots)
-            wait(0.4)
-        end
-    end
-end)
-
--- Прогресс-бар с градиентом
 local progressBarBg = Instance.new("Frame")
 progressBarBg.Size = UDim2.new(0.35, 0, 0, 8)
 progressBarBg.Position = UDim2.new(0.325, 0, 0.62, 0)
@@ -467,37 +452,28 @@ percentLabel.TextXAlignment = Enum.TextXAlignment.Center
 percentLabel.ZIndex = 1005
 percentLabel.Parent = LoadingFrame
 
--- Частицы вокруг прогресс-бара
-spawn(function()
-    while progressFill.Parent do
-        local barAbsPos = progressFill.AbsolutePosition
-        local barAbsSize = progressFill.AbsoluteSize
-        local relX = barAbsPos.X - LoadingFrame.AbsolutePosition.X + barAbsSize.X
-        local relY = barAbsPos.Y - LoadingFrame.AbsolutePosition.Y + barAbsSize.Y / 2
-        ParticleSystem:CreateParticle(LoadingFrame, relX, relY, 3, C.Cyan, 10, 1.5, "circle")
-        ParticleSystem:CreateParticle(LoadingFrame, relX, relY - 10, 2, C.NeonBlue, 15, 1.2, "star")
-        wait(0.08)
-    end
-end)
-
 local function AnimateLoading(callback)
     local progress = 0
     while progress < 100 do
         progress = progress + math.random(1, 3)
         if progress > 100 then progress = 100 end
-        progressFill.Size = UDim2.new(progress / 100, 0, 1, 0)
-        percentLabel.Text = math.floor(progress) .. "%"
+        SafeCall(function()
+            progressFill.Size = UDim2.new(progress / 100, 0, 1, 0)
+            percentLabel.Text = math.floor(progress) .. "%"
+        end)
         wait(0.04 + math.random() * 0.02)
     end
-    progressFill.BackgroundColor3 = C.Success
-    percentLabel.TextColor3 = C.Success
-    percentLabel.Text = "100%"
+    SafeCall(function()
+        progressFill.BackgroundColor3 = C.Success
+        percentLabel.TextColor3 = C.Success
+        percentLabel.Text = "100%"
+    end)
     wait(0.5)
     if callback then callback() end
 end
 
 -- ============================================================
---  УЛЬТРА-КРАСИВЫЙ WELCOME ЭКРАН (С КРЕСТИКОМ И РАЗРАБОТЧИКАМИ)
+--  УЛЬТРА-КРАСИВЫЙ WELCOME ЭКРАН
 -- ============================================================
 local WelcomeFrame = Instance.new("Frame")
 WelcomeFrame.Name = "SeraphiCA_Welcome"
@@ -520,36 +496,20 @@ wGrad.Color = ColorSequence.new({
 wGrad.Rotation = 0
 wGrad.Parent = WelcomeFrame
 
-spawn(function()
-    while wGrad.Parent and WelcomeFrame.Visible do
-        TweenService:Create(wGrad, TweenInfo.new(10, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {Rotation = 360}):Play()
-        wait(10)
-    end
-end)
-
--- Парящие звёзды на Welcome
 for i = 1, 80 do
-    local wStar = Instance.new("Frame")
-    wStar.Size = UDim2.new(0, math.random(1, 4), 0, math.random(1, 4))
-    wStar.Position = UDim2.new(0, math.random(0, 2000), 0, math.random(0, 1200))
-    wStar.BackgroundColor3 = C.White
-    wStar.BackgroundTransparency = 0.3 + math.random() * 0.5
-    wStar.BorderSizePixel = 0
-    wStar.ZIndex = 1000
-    wStar.Parent = WelcomeFrame
-    Instance.new("UICorner", wStar).CornerRadius = UDim.new(0, 10)
-    spawn(function()
-        while wStar.Parent and WelcomeFrame.Visible do
-            TweenService:Create(wStar, TweenInfo.new(2 + math.random() * 3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.1 + math.random() * 0.3,
-                Size = UDim2.new(0, math.random(2, 6), 0, math.random(2, 6))
-            }):Play()
-            wait(2 + math.random() * 3)
-        end
+    SafeCall(function()
+        local wStar = Instance.new("Frame")
+        wStar.Size = UDim2.new(0, math.random(1, 4), 0, math.random(1, 4))
+        wStar.Position = UDim2.new(0, math.random(0, 2000), 0, math.random(0, 1200))
+        wStar.BackgroundColor3 = C.White
+        wStar.BackgroundTransparency = 0.3 + math.random() * 0.5
+        wStar.BorderSizePixel = 0
+        wStar.ZIndex = 1000
+        wStar.Parent = WelcomeFrame
+        Instance.new("UICorner", wStar).CornerRadius = UDim.new(0, 10)
     end)
 end
 
--- Луна Welcome
 local wMoon = Instance.new("ImageLabel")
 wMoon.Size = UDim2.new(0, 130, 0, 130)
 wMoon.Position = UDim2.new(0.5, -65, 0.15, 0)
@@ -560,48 +520,6 @@ wMoon.ImageTransparency = 0.15
 wMoon.ZIndex = 1002
 wMoon.Parent = WelcomeFrame
 
--- Кольцо Welcome луны
-local wMoonRing = Instance.new("Frame")
-wMoonRing.Size = UDim2.new(0, 170, 0, 170)
-wMoonRing.Position = UDim2.new(0.5, -85, 0.15, -20)
-wMoonRing.BackgroundColor3 = C.NeonBlue
-wMoonRing.BackgroundTransparency = 0.75
-wMoonRing.BorderSizePixel = 0
-wMoonRing.ZIndex = 1001
-wMoonRing.Parent = WelcomeFrame
-Instance.new("UICorner", wMoonRing).CornerRadius = UDim.new(0, 85)
-
-spawn(function()
-    while wMoon.Parent and WelcomeFrame.Visible do
-        wMoon.Rotation = wMoon.Rotation + 0.2
-        TweenService:Create(wMoon, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Size = UDim2.new(0, 145, 0, 145),
-            Position = UDim2.new(0.5, -72.5, 0.15, -7.5),
-            ImageTransparency = 0.05
-        }):Play()
-        TweenService:Create(wMoonRing, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Size = UDim2.new(0, 190, 0, 190),
-            Position = UDim2.new(0.5, -95, 0.15, -30),
-            BackgroundTransparency = 0.65,
-            Rotation = 180
-        }):Play()
-        wait(2.5)
-        TweenService:Create(wMoon, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Size = UDim2.new(0, 120, 0, 120),
-            Position = UDim2.new(0.5, -60, 0.15, 5),
-            ImageTransparency = 0.2
-        }):Play()
-        TweenService:Create(wMoonRing, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Size = UDim2.new(0, 160, 0, 160),
-            Position = UDim2.new(0.5, -80, 0.15, -15),
-            BackgroundTransparency = 0.8,
-            Rotation = 360
-        }):Play()
-        wait(2.5)
-    end
-end)
-
--- WELCOME текст
 local wText = Instance.new("TextLabel")
 wText.Size = UDim2.new(1, 0, 0, 60)
 wText.Position = UDim2.new(0, 0, 0.32, 0)
@@ -618,7 +536,6 @@ wText.TextTransparency = 1
 wText.ZIndex = 1003
 wText.Parent = WelcomeFrame
 
--- Имя игрока
 local wName = Instance.new("TextLabel")
 wName.Size = UDim2.new(1, 0, 0, 45)
 wName.Position = UDim2.new(0, 0, 0.42, 0)
@@ -635,7 +552,6 @@ wName.TextTransparency = 1
 wName.ZIndex = 1003
 wName.Parent = WelcomeFrame
 
--- DEVELOPERS
 local wDevsLabel = Instance.new("TextLabel")
 wDevsLabel.Size = UDim2.new(1, 0, 0, 25)
 wDevsLabel.Position = UDim2.new(0, 0, 0.5, 0)
@@ -668,7 +584,6 @@ wDevs.TextTransparency = 1
 wDevs.ZIndex = 1003
 wDevs.Parent = WelcomeFrame
 
--- Admin Telegram
 local wAdmin = Instance.new("TextLabel")
 wAdmin.Size = UDim2.new(1, 0, 0, 30)
 wAdmin.Position = UDim2.new(0, 0, 0.6, 0)
@@ -685,7 +600,6 @@ wAdmin.TextTransparency = 1
 wAdmin.ZIndex = 1003
 wAdmin.Parent = WelcomeFrame
 
--- Подпись
 local wSub = Instance.new("TextLabel")
 wSub.Size = UDim2.new(1, 0, 0, 25)
 wSub.Position = UDim2.new(0, 0, 0.66, 0)
@@ -701,7 +615,6 @@ wSub.TextTransparency = 1
 wSub.ZIndex = 1003
 wSub.Parent = WelcomeFrame
 
--- Кнопка закрытия (крестик)
 local wCloseBtn = Instance.new("TextButton")
 wCloseBtn.Size = UDim2.new(0, 40, 0, 40)
 wCloseBtn.Position = UDim2.new(1, -60, 0, 30)
@@ -717,83 +630,48 @@ wCloseBtn.Parent = WelcomeFrame
 Instance.new("UICorner", wCloseBtn).CornerRadius = UDim.new(0, 20)
 wCloseBtn.MouseButton1Click:Connect(function()
     WelcomeClosed = true
-    TweenService:Create(WelcomeFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
-        BackgroundTransparency = 1
-    }):Play()
-    TweenService:Create(wMoon, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
-        ImageTransparency = 1
-    }):Play()
-    TweenService:Create(wMoonRing, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
-        BackgroundTransparency = 1
-    }):Play()
-    TweenService:Create(wText, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
-        TextTransparency = 1
-    }):Play()
-    TweenService:Create(wName, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
-        TextTransparency = 1
-    }):Play()
-    TweenService:Create(wDevsLabel, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
-        TextTransparency = 1
-    }):Play()
-    TweenService:Create(wDevs, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
-        TextTransparency = 1
-    }):Play()
-    TweenService:Create(wAdmin, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
-        TextTransparency = 1
-    }):Play()
-    TweenService:Create(wSub, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
-        TextTransparency = 1
-    }):Play()
+    SafeCall(function()
+        TweenService:Create(WelcomeFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(wText, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+        TweenService:Create(wName, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+        TweenService:Create(wDevsLabel, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+        TweenService:Create(wDevs, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+        TweenService:Create(wAdmin, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+        TweenService:Create(wSub, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+    end)
     wait(0.5)
     WelcomeFrame.Visible = false
 end)
 
 local function ShowWelcome()
     WelcomeFrame.Visible = true
-    WelcomeFrame.BackgroundTransparency = 1
-    
-    TweenService:Create(WelcomeFrame, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-        BackgroundTransparency = 0
-    }):Play()
-    
+    SafeCall(function()
+        TweenService:Create(WelcomeFrame, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+    end)
     wait(0.2)
-    
-    TweenService:Create(wText, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        TextTransparency = 0,
-        TextSize = 52
-    }):Play()
-    
+    SafeCall(function()
+        TweenService:Create(wText, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextTransparency = 0, TextSize = 52}):Play()
+    end)
     wait(0.3)
-    
-    TweenService:Create(wName, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        TextTransparency = 0,
-        TextSize = 34
-    }):Play()
-    
+    SafeCall(function()
+        TweenService:Create(wName, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextTransparency = 0, TextSize = 34}):Play()
+    end)
     wait(0.2)
-    
-    TweenService:Create(wDevsLabel, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-        TextTransparency = 0
-    }):Play()
-    
+    SafeCall(function()
+        TweenService:Create(wDevsLabel, TweenInfo.new(0.6), {TextTransparency = 0}):Play()
+    end)
     wait(0.15)
-    
-    TweenService:Create(wDevs, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        TextTransparency = 0,
-        TextSize = 24
-    }):Play()
-    
+    SafeCall(function()
+        TweenService:Create(wDevs, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextTransparency = 0, TextSize = 24}):Play()
+    end)
     wait(0.2)
-    
-    TweenService:Create(wAdmin, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-        TextTransparency = 0
-    }):Play()
-    
+    SafeCall(function()
+        TweenService:Create(wAdmin, TweenInfo.new(0.6), {TextTransparency = 0}):Play()
+    end)
     wait(0.1)
-    
-    TweenService:Create(wSub, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-        TextTransparency = 0
-    }):Play()
+    SafeCall(function()
+        TweenService:Create(wSub, TweenInfo.new(0.6), {TextTransparency = 0}):Play()
+    end)
 end
 
 -- ============================================================
@@ -822,22 +700,6 @@ function Watermark:Create(parent)
     })
     bgGrad.Rotation = 140
     bgGrad.Parent = frame
-
-    local glassOverlay = Instance.new("Frame")
-    glassOverlay.Size = UDim2.new(1, 0, 0.5, 0)
-    glassOverlay.BackgroundColor3 = C.White
-    glassOverlay.BackgroundTransparency = 0.92
-    glassOverlay.BorderSizePixel = 0
-    glassOverlay.Parent = frame
-    Instance.new("UICorner", glassOverlay).CornerRadius = UDim.new(0, 18)
-
-    local accentLine = Instance.new("Frame")
-    accentLine.Size = UDim2.new(0, 3, 0.65, 0)
-    accentLine.Position = UDim2.new(0, 14, 0.175, 0)
-    accentLine.BackgroundColor3 = C.Primary
-    accentLine.BorderSizePixel = 0
-    accentLine.Parent = frame
-    Instance.new("UICorner", accentLine).CornerRadius = UDim.new(0, 2)
 
     local starIcon = Instance.new("TextLabel")
     starIcon.Size = UDim2.new(0, 30, 0, 30)
@@ -888,79 +750,19 @@ function Watermark:Create(parent)
 end
 
 function Watermark:Show(wm)
-    wm.Frame.Position = UDim2.new(0, 20, 0, -70)
-    wm.Frame.BackgroundTransparency = 1
-    TweenService:Create(wm.Frame, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0, 20, 0, 20), BackgroundTransparency = 0.08
-    }):Play()
+    SafeCall(function()
+        wm.Frame.Position = UDim2.new(0, 20, 0, -70)
+        wm.Frame.BackgroundTransparency = 1
+        TweenService:Create(wm.Frame, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0, 20, 0, 20), BackgroundTransparency = 0.08
+        }):Play()
+    end)
 end
 
 function Watermark:UpdateTime(wm)
-    if wm and wm.TimeText then wm.TimeText.Text = GetKyivTime() end
-end
-
--- ============================================================
---  СОЗДАНИЕ СЛАЙДЕРА
--- ============================================================
-local function CreateSlider(parent, posY, label, minVal, maxVal, defaultVal, callback)
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, -20, 0, 45)
-    container.Position = UDim2.new(0, 10, 0, posY)
-    container.BackgroundTransparency = 1
-    container.Parent = parent
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 0, 20)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = label .. ": " .. tostring(defaultVal)
-    lbl.TextColor3 = C.Light
-    lbl.TextSize = 13
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Parent = container
-
-    local sliderBg = Instance.new("Frame")
-    sliderBg.Size = UDim2.new(1, 0, 0, 12)
-    sliderBg.Position = UDim2.new(0, 0, 0, 26)
-    sliderBg.BackgroundColor3 = C.Dark
-    sliderBg.BorderSizePixel = 0
-    sliderBg.Parent = container
-    Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(0, 6)
-
-    local sliderFill = Instance.new("Frame")
-    sliderFill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
-    sliderFill.BackgroundColor3 = C.Primary
-    sliderFill.BorderSizePixel = 0
-    sliderFill.Parent = sliderBg
-    Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(0, 6)
-
-    local sliderBtn = Instance.new("TextButton")
-    sliderBtn.Size = UDim2.new(0, 20, 0, 20)
-    sliderBtn.Position = UDim2.new((defaultVal - minVal) / (maxVal - minVal), -10, 0, -4)
-    sliderBtn.BackgroundColor3 = C.White
-    sliderBtn.BorderSizePixel = 0
-    sliderBtn.Text = ""
-    sliderBtn.Parent = sliderBg
-    Instance.new("UICorner", sliderBtn).CornerRadius = UDim.new(0, 10)
-
-    local dragging = false
-    sliderBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-        end
-    end)
-    UserInputService.InputEnded:Connect(function() dragging = false end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local relX = Clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
-            local val = minVal + relX * (maxVal - minVal)
-            val = math.floor(val)
-            sliderFill.Size = UDim2.new(relX, 0, 1, 0)
-            sliderBtn.Position = UDim2.new(relX, -10, 0, -4)
-            lbl.Text = label .. ": " .. tostring(val)
-            if callback then callback(val) end
-        end
-    end)
+    if wm and wm.TimeText and wm.TimeText.Parent then
+        wm.TimeText.Text = GetKyivTime()
+    end
 end
 
 -- ============================================================
@@ -979,11 +781,9 @@ local function CreateTabButton(parent, name, position, callback)
     btn.ZIndex = 155
     btn.Parent = parent
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
-    
     btn.MouseButton1Click:Connect(function()
-        if callback then callback(btn) end
+        if callback then SafeCall(function() callback(btn) end) end
     end)
-    
     return btn
 end
 
@@ -1010,7 +810,6 @@ local function CreateMainMenu()
     frame.Parent = ScreenGui
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 22)
 
-    -- Анимированный градиент фона меню
     local menuGrad = Instance.new("UIGradient")
     menuGrad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(6, 4, 30)),
@@ -1021,117 +820,7 @@ local function CreateMainMenu()
     })
     menuGrad.Rotation = 140
     menuGrad.Parent = frame
-    
-    spawn(function()
-        local rotation = 140
-        while menuGrad.Parent do
-            rotation = rotation + 0.3
-            menuGrad.Rotation = rotation
-            wait(0.03)
-        end
-    end)
 
-    -- Внешнее свечение 1
-    local glow1 = Instance.new("Frame")
-    glow1.Size = UDim2.new(1, 30, 1, 30)
-    glow1.Position = UDim2.new(0, -15, 0, -15)
-    glow1.BackgroundColor3 = C.NeonBlue
-    glow1.BackgroundTransparency = 0.88
-    glow1.BorderSizePixel = 0
-    glow1.ZIndex = -1
-    glow1.Parent = frame
-    Instance.new("UICorner", glow1).CornerRadius = UDim.new(0, 37)
-
-    -- Внешнее свечение 2
-    local glow2 = Instance.new("Frame")
-    glow2.Size = UDim2.new(1, 50, 1, 50)
-    glow2.Position = UDim2.new(0, -25, 0, -25)
-    glow2.BackgroundColor3 = C.NeonPurple
-    glow2.BackgroundTransparency = 0.93
-    glow2.BorderSizePixel = 0
-    glow2.ZIndex = -2
-    glow2.Parent = frame
-    Instance.new("UICorner", glow2).CornerRadius = UDim.new(0, 47)
-
-    -- Анимация свечений
-    spawn(function()
-        while glow1.Parent do
-            TweenService:Create(glow1, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.83, Size = UDim2.new(1, 40, 1, 40), Position = UDim2.new(0, -20, 0, -20)
-            }):Play()
-            TweenService:Create(glow2, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.88, Size = UDim2.new(1, 60, 1, 60), Position = UDim2.new(0, -30, 0, -30)
-            }):Play()
-            wait(2.5)
-            TweenService:Create(glow1, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.88, Size = UDim2.new(1, 30, 1, 30), Position = UDim2.new(0, -15, 0, -15)
-            }):Play()
-            TweenService:Create(glow2, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.93, Size = UDim2.new(1, 50, 1, 50), Position = UDim2.new(0, -25, 0, -25)
-            }):Play()
-            wait(2.5)
-        end
-    end)
-
-    -- Стеклянный эффект сверху
-    local glassTop = Instance.new("Frame")
-    glassTop.Size = UDim2.new(1, 0, 0.35, 0)
-    glassTop.BackgroundColor3 = C.White
-    glassTop.BackgroundTransparency = 0.93
-    glassTop.BorderSizePixel = 0
-    glassTop.ZIndex = 151
-    glassTop.Parent = frame
-    Instance.new("UICorner", glassTop).CornerRadius = UDim.new(0, 22)
-
-    -- Декоративные углы
-    local corners = {}
-    local cornerPositions = { {0, 0}, {1, 0}, {0, 1}, {1, 1} }
-    for i, pos in ipairs(cornerPositions) do
-        local corner = Instance.new("Frame")
-        corner.Size = UDim2.new(0, 35, 0, 35)
-        corner.Position = UDim2.new(pos[1], pos[1] == 1 and -17 or 10, pos[2], pos[2] == 1 and -17 or 10)
-        corner.BackgroundColor3 = C.NeonBlue
-        corner.BackgroundTransparency = 0.65
-        corner.BorderSizePixel = 0
-        corner.Rotation = 45
-        corner.ZIndex = 152
-        corner.Parent = frame
-        table.insert(corners, corner)
-    end
-
-    spawn(function()
-        while corners[1] and corners[1].Parent do
-            for i, corner in ipairs(corners) do
-                corner.Rotation = corner.Rotation + 1.5
-                TweenService:Create(corner, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                    BackgroundTransparency = 0.5 + math.sin(tick() * 2 + i) * 0.25,
-                    Size = UDim2.new(0, 38 + math.sin(tick() * 3 + i) * 5, 0, 38 + math.sin(tick() * 3 + i) * 5)
-                }):Play()
-            end
-            wait(0.03)
-        end
-    end)
-
-    -- Контейнер для частиц внутри меню
-    local particlesContainer = Instance.new("Frame")
-    particlesContainer.Size = UDim2.new(1, 0, 1, 0)
-    particlesContainer.BackgroundTransparency = 1
-    particlesContainer.ZIndex = 156
-    particlesContainer.Parent = frame
-
-    spawn(function()
-        while particlesContainer.Parent do
-            if frame.Visible then
-                local x = math.random(-50, 670)
-                local y = math.random(-50, 490)
-                local colors = {C.NeonBlue, C.Cyan, C.NeonPurple, C.NeonPink}
-                ParticleSystem:CreateParticle(particlesContainer, x, y, math.random(2, 5), colors[math.random(1, #colors)], 15, 4, math.random() > 0.5 and "circle" or "star")
-            end
-            wait(0.12)
-        end
-    end)
-
-    -- Title Bar
     local titleBar = Instance.new("Frame")
     titleBar.Name = "TitleBar"
     titleBar.Size = UDim2.new(1, 0, 0, 50)
@@ -1141,18 +830,6 @@ local function CreateMainMenu()
     titleBar.ZIndex = 160
     titleBar.Parent = frame
     Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 22)
-
-    local titleGrad = Instance.new("UIGradient")
-    titleGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, C.NeonBlue),
-        ColorSequenceKeypoint.new(0.3, C.Cyan),
-        ColorSequenceKeypoint.new(0.5, C.NeonPurple),
-        ColorSequenceKeypoint.new(0.7, C.NeonPink),
-        ColorSequenceKeypoint.new(1, C.NeonBlue)
-    })
-    titleGrad.Rotation = 90
-    titleGrad.Transparency = NumberSequence.new(0.6, 0.6)
-    titleGrad.Parent = titleBar
 
     local titleText = Instance.new("TextLabel")
     titleText.Size = UDim2.new(1, -60, 1, 0)
@@ -1182,15 +859,16 @@ local function CreateMainMenu()
     closeBtn.Parent = frame
     Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 16)
     closeBtn.MouseButton1Click:Connect(function()
-        TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 0, 0, 0)
-        }):Play()
+        SafeCall(function()
+            TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = UDim2.new(0, 0, 0, 0)
+            }):Play()
+        end)
         wait(0.3)
         frame.Visible = false
         _G.SeraphiCA_IsMenuOpen = false
     end)
 
-    -- === TAB BUTTONS PANEL ===
     local tabPanel = Instance.new("Frame")
     tabPanel.Size = UDim2.new(0, 150, 1, -60)
     tabPanel.Position = UDim2.new(0, 10, 0, 58)
@@ -1198,7 +876,6 @@ local function CreateMainMenu()
     tabPanel.ZIndex = 155
     tabPanel.Parent = frame
 
-    -- === CONTENT FRAME ===
     local contentFrame = Instance.new("Frame")
     contentFrame.Size = UDim2.new(1, -175, 1, -68)
     contentFrame.Position = UDim2.new(0, 165, 0, 58)
@@ -1210,16 +887,6 @@ local function CreateMainMenu()
     contentFrame.Parent = frame
     Instance.new("UICorner", contentFrame).CornerRadius = UDim.new(0, 16)
 
-    -- Градиент для контента
-    local contentGrad = Instance.new("UIGradient")
-    contentGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(8, 8, 30)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(14, 10, 40))
-    })
-    contentGrad.Rotation = 90
-    contentGrad.Parent = contentFrame
-
-    -- === PAGE CONTAINERS ===
     local pages = {}
     local tabButtons = {}
     local activeTab = nil
@@ -1251,24 +918,25 @@ local function CreateMainMenu()
     end
     
     local function SwitchTab(btn, page)
-        if activeTab then
-            TweenService:Create(activeTab, TweenInfo.new(0.2), {
-                BackgroundColor3 = Color3.fromRGB(20, 20, 50),
-                TextColor3 = C.Gray
+        SafeCall(function()
+            if activeTab then
+                TweenService:Create(activeTab, TweenInfo.new(0.2), {
+                    BackgroundColor3 = Color3.fromRGB(20, 20, 50),
+                    TextColor3 = C.Gray
+                }):Play()
+            end
+            for _, p in ipairs(pages) do
+                p.Visible = false
+            end
+            TweenService:Create(btn, TweenInfo.new(0.2), {
+                BackgroundColor3 = C.NeonBlue,
+                TextColor3 = C.White
             }):Play()
-        end
-        for _, p in ipairs(pages) do
-            p.Visible = false
-        end
-        TweenService:Create(btn, TweenInfo.new(0.2), {
-            BackgroundColor3 = C.NeonBlue,
-            TextColor3 = C.White
-        }):Play()
-        activeTab = btn
-        page.Visible = true
+            activeTab = btn
+            page.Visible = true
+        end)
     end
 
-    -- Стильная кнопка-хелпер
     local function CreateStylishButton(parent, text, onClick)
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 42)
@@ -1281,17 +949,9 @@ local function CreateMainMenu()
         btn.ZIndex = 153
         btn.Parent = parent
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
-        
-        local btnGrad = Instance.new("UIGradient")
-        btnGrad.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 18, 45)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(25, 25, 55)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 40))
-        })
-        btnGrad.Rotation = 90
-        btnGrad.Parent = btn
-        
-        btn.MouseButton1Click:Connect(onClick)
+        btn.MouseButton1Click:Connect(function()
+            SafeCall(onClick)
+        end)
         return btn
     end
 
@@ -1300,20 +960,20 @@ local function CreateMainMenu()
     -- ============================================================
     local page1, scroll1 = CreatePage()
     table.insert(pages, page1)
-    
     local btn1 = CreateTabButton(tabPanel, "⚔️ Auto-Farm", UDim2.new(0, 0, 0, 0), function(b) SwitchTab(b, page1) end)
     table.insert(tabButtons, btn1)
 
     local autoFarmToggle = CreateStylishButton(scroll1, "⚔️ Auto-Farm: OFF", function()
         AutoFarm.Enabled = not AutoFarm.Enabled
         autoFarmToggle.Text = "⚔️ Auto-Farm: " .. (AutoFarm.Enabled and "ON" or "OFF")
-        TweenService:Create(autoFarmToggle, TweenInfo.new(0.2), {
-            BackgroundColor3 = AutoFarm.Enabled and Color3.fromRGB(40, 120, 200) or Color3.fromRGB(18, 18, 45),
-            TextColor3 = AutoFarm.Enabled and C.White or C.Gray
-        }):Play()
+        SafeCall(function()
+            TweenService:Create(autoFarmToggle, TweenInfo.new(0.2), {
+                BackgroundColor3 = AutoFarm.Enabled and Color3.fromRGB(40, 120, 200) or Color3.fromRGB(18, 18, 45),
+                TextColor3 = AutoFarm.Enabled and C.White or C.Gray
+            }):Play()
+        end)
     end)
 
-    -- Curse Kill Speed Slider
     local curseSliderLabel = Instance.new("TextLabel")
     curseSliderLabel.Size = UDim2.new(1, 0, 0, 22)
     curseSliderLabel.BackgroundTransparency = 1
@@ -1332,14 +992,6 @@ local function CreateMainMenu()
     curseSliderBg.ZIndex = 153
     curseSliderBg.Parent = scroll1
     Instance.new("UICorner", curseSliderBg).CornerRadius = UDim.new(0, 7)
-
-    local curseSliderGrad = Instance.new("UIGradient")
-    curseSliderGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, C.Warning),
-        ColorSequenceKeypoint.new(1, C.Error)
-    })
-    curseSliderGrad.Rotation = 90
-    curseSliderGrad.Parent = curseSliderBg
 
     local curseSliderFill = Instance.new("Frame")
     curseSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
@@ -1368,35 +1020,43 @@ local function CreateMainMenu()
     UserInputService.InputEnded:Connect(function() curseDragging = false end)
     UserInputService.InputChanged:Connect(function(input)
         if curseDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local relX = Clamp((input.Position.X - curseSliderBg.AbsolutePosition.X) / curseSliderBg.AbsoluteSize.X, 0, 1)
-            local val = math.floor(1 + relX * 19)
-            AutoFarm.CurseKillSpeed = val
-            curseSliderFill.Size = UDim2.new(relX, 0, 1, 0)
-            curseSliderBtn.Position = UDim2.new(relX, -11, 0, -4)
-            curseSliderLabel.Text = "⚡ Curse Kill Speed: " .. val .. "/sec"
+            SafeCall(function()
+                local relX = Clamp((input.Position.X - curseSliderBg.AbsolutePosition.X) / curseSliderBg.AbsoluteSize.X, 0, 1)
+                local val = math.floor(1 + relX * 19)
+                AutoFarm.CurseKillSpeed = val
+                curseSliderFill.Size = UDim2.new(relX, 0, 1, 0)
+                curseSliderBtn.Position = UDim2.new(relX, -11, 0, -4)
+                curseSliderLabel.Text = "⚡ Curse Kill Speed: " .. val .. "/sec"
+            end)
         end
     end)
 
     local autoChestsToggle = CreateStylishButton(scroll1, "📦 Auto Chests: OFF", function()
         AutoFarm.AutoChests = not AutoFarm.AutoChests
         autoChestsToggle.Text = "📦 Auto Chests: " .. (AutoFarm.AutoChests and "ON" or "OFF")
-        TweenService:Create(autoChestsToggle, TweenInfo.new(0.2), {
-            BackgroundColor3 = AutoFarm.AutoChests and Color3.fromRGB(40, 120, 200) or Color3.fromRGB(18, 18, 45),
-            TextColor3 = AutoFarm.AutoChests and C.White or C.Gray
-        }):Play()
+        SafeCall(function()
+            TweenService:Create(autoChestsToggle, TweenInfo.new(0.2), {
+                BackgroundColor3 = AutoFarm.AutoChests and Color3.fromRGB(40, 120, 200) or Color3.fromRGB(18, 18, 45),
+                TextColor3 = AutoFarm.AutoChests and C.White or C.Gray
+            }):Play()
+        end)
     end)
 
     local tpDesertBtn = CreateStylishButton(scroll1, "🏜️ Teleport to Desert", function()
         spawn(function()
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                if (v:IsA("Part") or v:IsA("MeshPart")) and v.Name:lower():find("desert") then
-                    TeleportTo(v.Position + Vector3.new(0, 5, 0))
-                    break
+            SafeCall(function()
+                for _, v in ipairs(Workspace:GetDescendants()) do
+                    if (v:IsA("Part") or v:IsA("MeshPart")) and v.Name:lower():find("desert") then
+                        TeleportTo(v.Position + Vector3.new(0, 5, 0))
+                        break
+                    end
                 end
-            end
+            end)
         end)
     end)
-    TweenService:Create(tpDesertBtn, TweenInfo.new(0), {BackgroundColor3 = C.Warning, TextColor3 = C.White}):Play()
+    SafeCall(function()
+        TweenService:Create(tpDesertBtn, TweenInfo.new(0), {BackgroundColor3 = C.Warning, TextColor3 = C.White}):Play()
+    end)
 
     scroll1.CanvasSize = UDim2.new(0, 0, 0, 270)
 
@@ -1405,26 +1065,29 @@ local function CreateMainMenu()
     -- ============================================================
     local page2, scroll2 = CreatePage()
     table.insert(pages, page2)
-    
     local btn2 = CreateTabButton(tabPanel, "📜 Auto-Farm Quest", UDim2.new(0, 0, 0, 42), function(b) SwitchTab(b, page2) end)
     table.insert(tabButtons, btn2)
 
     local farmAbilitiesToggle = CreateStylishButton(scroll2, "⚡ Farm Abilities: OFF", function()
         AutoQuest.FarmAbilities = not AutoQuest.FarmAbilities
         farmAbilitiesToggle.Text = "⚡ Farm Abilities: " .. (AutoQuest.FarmAbilities and "ON" or "OFF")
-        TweenService:Create(farmAbilitiesToggle, TweenInfo.new(0.2), {
-            BackgroundColor3 = AutoQuest.FarmAbilities and Color3.fromRGB(40, 120, 200) or Color3.fromRGB(18, 18, 45),
-            TextColor3 = AutoQuest.FarmAbilities and C.White or C.Gray
-        }):Play()
+        SafeCall(function()
+            TweenService:Create(farmAbilitiesToggle, TweenInfo.new(0.2), {
+                BackgroundColor3 = AutoQuest.FarmAbilities and Color3.fromRGB(40, 120, 200) or Color3.fromRGB(18, 18, 45),
+                TextColor3 = AutoQuest.FarmAbilities and C.White or C.Gray
+            }):Play()
+        end)
     end)
 
     local farmItemsToggle = CreateStylishButton(scroll2, "🗡️ Farm Items: OFF", function()
         AutoQuest.FarmItems = not AutoQuest.FarmItems
         farmItemsToggle.Text = "🗡️ Farm Items: " .. (AutoQuest.FarmItems and "ON" or "OFF")
-        TweenService:Create(farmItemsToggle, TweenInfo.new(0.2), {
-            BackgroundColor3 = AutoQuest.FarmItems and Color3.fromRGB(40, 120, 200) or Color3.fromRGB(18, 18, 45),
-            TextColor3 = AutoQuest.FarmItems and C.White or C.Gray
-        }):Play()
+        SafeCall(function()
+            TweenService:Create(farmItemsToggle, TweenInfo.new(0.2), {
+                BackgroundColor3 = AutoQuest.FarmItems and Color3.fromRGB(40, 120, 200) or Color3.fromRGB(18, 18, 45),
+                TextColor3 = AutoQuest.FarmItems and C.White or C.Gray
+            }):Play()
+        end)
     end)
 
     local rarityLabel = Instance.new("TextLabel")
@@ -1453,24 +1116,28 @@ local function CreateMainMenu()
         Instance.new("UICorner", rarityBtn).CornerRadius = UDim.new(0, 8)
         rarityBtn.MouseButton1Click:Connect(function()
             AutoQuest.TargetRarity = rarity
-            for _, child in ipairs(scroll2:GetChildren()) do
-                if child:IsA("TextButton") and table.find(rarityOptions, child.Text) then
-                    TweenService:Create(child, TweenInfo.new(0.2), {
-                        BackgroundColor3 = Color3.fromRGB(18, 18, 45),
-                        TextColor3 = C.Gray
-                    }):Play()
+            SafeCall(function()
+                for _, child in ipairs(scroll2:GetChildren()) do
+                    if child:IsA("TextButton") and table.find(rarityOptions, child.Text) then
+                        TweenService:Create(child, TweenInfo.new(0.2), {
+                            BackgroundColor3 = Color3.fromRGB(18, 18, 45),
+                            TextColor3 = C.Gray
+                        }):Play()
+                    end
                 end
-            end
-            TweenService:Create(rarityBtn, TweenInfo.new(0.2), {
-                BackgroundColor3 = rarityColors[i],
-                TextColor3 = C.White
-            }):Play()
+                TweenService:Create(rarityBtn, TweenInfo.new(0.2), {
+                    BackgroundColor3 = rarityColors[i],
+                    TextColor3 = C.White
+                }):Play()
+            end)
         end)
         if rarity == "Mythical" then
-            TweenService:Create(rarityBtn, TweenInfo.new(0), {
-                BackgroundColor3 = rarityColors[i],
-                TextColor3 = C.White
-            }):Play()
+            SafeCall(function()
+                TweenService:Create(rarityBtn, TweenInfo.new(0), {
+                    BackgroundColor3 = rarityColors[i],
+                    TextColor3 = C.White
+                }):Play()
+            end)
         end
     end
 
@@ -1498,36 +1165,40 @@ local function CreateMainMenu()
     -- ============================================================
     local page3, scroll3 = CreatePage()
     table.insert(pages, page3)
-    
     local btn3 = CreateTabButton(tabPanel, "💀 TeleKill", UDim2.new(0, 0, 0, 84), function(b) SwitchTab(b, page3) end)
     table.insert(tabButtons, btn3)
 
     local teleBossToggle = CreateStylishButton(scroll3, "👹 TeleBoss: OFF", function()
         TeleKill.TeleBoss = not TeleKill.TeleBoss
         teleBossToggle.Text = "👹 TeleBoss: " .. (TeleKill.TeleBoss and "ON" or "OFF")
-        TweenService:Create(teleBossToggle, TweenInfo.new(0.2), {
-            BackgroundColor3 = TeleKill.TeleBoss and Color3.fromRGB(200, 40, 40) or Color3.fromRGB(18, 18, 45),
-            TextColor3 = TeleKill.TeleBoss and C.White or C.Gray
-        }):Play()
+        SafeCall(function()
+            TweenService:Create(teleBossToggle, TweenInfo.new(0.2), {
+                BackgroundColor3 = TeleKill.TeleBoss and Color3.fromRGB(200, 40, 40) or Color3.fromRGB(18, 18, 45),
+                TextColor3 = TeleKill.TeleBoss and C.White or C.Gray
+            }):Play()
+        end)
     end)
 
     local teleNPCToggle = CreateStylishButton(scroll3, "🧟 TeleNPC: OFF", function()
         TeleKill.TeleNPC = not TeleKill.TeleNPC
         teleNPCToggle.Text = "🧟 TeleNPC: " .. (TeleKill.TeleNPC and "ON" or "OFF")
-        TweenService:Create(teleNPCToggle, TweenInfo.new(0.2), {
-            BackgroundColor3 = TeleKill.TeleNPC and Color3.fromRGB(200, 40, 40) or Color3.fromRGB(18, 18, 45),
-            TextColor3 = TeleKill.TeleNPC and C.White or C.Gray
-        }):Play()
+        SafeCall(function()
+            TweenService:Create(teleNPCToggle, TweenInfo.new(0.2), {
+                BackgroundColor3 = TeleKill.TeleNPC and Color3.fromRGB(200, 40, 40) or Color3.fromRGB(18, 18, 45),
+                TextColor3 = TeleKill.TeleNPC and C.White or C.Gray
+            }):Play()
+        end)
     end)
 
-    -- === TelePlayer ===
     local telePlayerToggle = CreateStylishButton(scroll3, "👤 TelePlayer: OFF", function()
         TeleKill.TelePlayer = not TeleKill.TelePlayer
         telePlayerToggle.Text = "👤 TelePlayer: " .. (TeleKill.TelePlayer and "ON" or "OFF")
-        TweenService:Create(telePlayerToggle, TweenInfo.new(0.2), {
-            BackgroundColor3 = TeleKill.TelePlayer and Color3.fromRGB(200, 40, 40) or Color3.fromRGB(18, 18, 45),
-            TextColor3 = TeleKill.TelePlayer and C.White or C.Gray
-        }):Play()
+        SafeCall(function()
+            TweenService:Create(telePlayerToggle, TweenInfo.new(0.2), {
+                BackgroundColor3 = TeleKill.TelePlayer and Color3.fromRGB(200, 40, 40) or Color3.fromRGB(18, 18, 45),
+                TextColor3 = TeleKill.TelePlayer and C.White or C.Gray
+            }):Play()
+        end)
     end)
 
     scroll3.CanvasSize = UDim2.new(0, 0, 0, 230)
@@ -1542,131 +1213,116 @@ local function CreateMainMenu()
         if SECRET_UNLOCKED then
             SwitchTab(b, page4)
         else
-            local unlockFrame = Instance.new("Frame")
-            unlockFrame.Size = UDim2.new(0, 320, 0, 220)
-            unlockFrame.Position = UDim2.new(0.5, -160, 0.5, -110)
-            unlockFrame.BackgroundColor3 = Color3.fromRGB(12, 6, 30)
-            unlockFrame.BackgroundTransparency = 0
-            unlockFrame.BorderSizePixel = 2
-            unlockFrame.BorderColor3 = C.NeonPurple
-            unlockFrame.ZIndex = 300
-            unlockFrame.Parent = frame
-            Instance.new("UICorner", unlockFrame).CornerRadius = UDim.new(0, 20)
+            SafeCall(function()
+                local unlockFrame = Instance.new("Frame")
+                unlockFrame.Size = UDim2.new(0, 320, 0, 220)
+                unlockFrame.Position = UDim2.new(0.5, -160, 0.5, -110)
+                unlockFrame.BackgroundColor3 = Color3.fromRGB(12, 6, 30)
+                unlockFrame.BackgroundTransparency = 0
+                unlockFrame.BorderSizePixel = 2
+                unlockFrame.BorderColor3 = C.NeonPurple
+                unlockFrame.ZIndex = 300
+                unlockFrame.Parent = frame
+                Instance.new("UICorner", unlockFrame).CornerRadius = UDim.new(0, 20)
 
-            local uGrad = Instance.new("UIGradient")
-            uGrad.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 8, 50)),
-                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(15, 4, 35)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 8, 50))
-            })
-            uGrad.Rotation = 45
-            uGrad.Parent = unlockFrame
+                local unlockTitle = Instance.new("TextLabel")
+                unlockTitle.Size = UDim2.new(1, 0, 0, 40)
+                unlockTitle.BackgroundTransparency = 1
+                unlockTitle.Text = "🔐 SECRET ACCESS"
+                unlockTitle.TextColor3 = C.NeonPurple
+                unlockTitle.TextSize = 22
+                unlockTitle.Font = Enum.Font.GothamBlack
+                unlockTitle.ZIndex = 301
+                unlockTitle.Parent = unlockFrame
 
-            local unlockTitle = Instance.new("TextLabel")
-            unlockTitle.Size = UDim2.new(1, 0, 0, 40)
-            unlockTitle.BackgroundTransparency = 1
-            unlockTitle.Text = "🔐 SECRET ACCESS"
-            unlockTitle.TextColor3 = C.NeonPurple
-            unlockTitle.TextSize = 22
-            unlockTitle.Font = Enum.Font.GothamBlack
-            unlockTitle.ZIndex = 301
-            unlockTitle.Parent = unlockFrame
+                local unlockInput = Instance.new("TextBox")
+                unlockInput.Size = UDim2.new(0.8, 0, 0, 42)
+                unlockInput.Position = UDim2.new(0.1, 0, 0.35, 0)
+                unlockInput.BackgroundColor3 = Color3.fromRGB(20, 12, 45)
+                unlockInput.BorderSizePixel = 2
+                unlockInput.BorderColor3 = C.NeonPurple
+                unlockInput.Text = ""
+                unlockInput.PlaceholderText = "Enter key..."
+                unlockInput.PlaceholderColor3 = C.DimGray
+                unlockInput.TextColor3 = C.White
+                unlockInput.TextSize = 16
+                unlockInput.Font = Enum.Font.Gotham
+                unlockInput.ZIndex = 301
+                unlockInput.Parent = unlockFrame
+                Instance.new("UICorner", unlockInput).CornerRadius = UDim.new(0, 10)
 
-            local unlockInput = Instance.new("TextBox")
-            unlockInput.Size = UDim2.new(0.8, 0, 0, 42)
-            unlockInput.Position = UDim2.new(0.1, 0, 0.35, 0)
-            unlockInput.BackgroundColor3 = Color3.fromRGB(20, 12, 45)
-            unlockInput.BorderSizePixel = 2
-            unlockInput.BorderColor3 = C.NeonPurple
-            unlockInput.Text = ""
-            unlockInput.PlaceholderText = "Enter key..."
-            unlockInput.PlaceholderColor3 = C.DimGray
-            unlockInput.TextColor3 = C.White
-            unlockInput.TextSize = 16
-            unlockInput.Font = Enum.Font.Gotham
-            unlockInput.ZIndex = 301
-            unlockInput.Parent = unlockFrame
-            Instance.new("UICorner", unlockInput).CornerRadius = UDim.new(0, 10)
+                local unlockSubmit = Instance.new("TextButton")
+                unlockSubmit.Size = UDim2.new(0.4, 0, 0, 38)
+                unlockSubmit.Position = UDim2.new(0.3, 0, 0.6, 0)
+                unlockSubmit.BackgroundColor3 = C.NeonPurple
+                unlockSubmit.BorderSizePixel = 0
+                unlockSubmit.Text = "🔓 UNLOCK"
+                unlockSubmit.TextColor3 = C.White
+                unlockSubmit.TextSize = 14
+                unlockSubmit.Font = Enum.Font.GothamBold
+                unlockSubmit.ZIndex = 301
+                unlockSubmit.Parent = unlockFrame
+                Instance.new("UICorner", unlockSubmit).CornerRadius = UDim.new(0, 10)
 
-            local unlockSubmit = Instance.new("TextButton")
-            unlockSubmit.Size = UDim2.new(0.4, 0, 0, 38)
-            unlockSubmit.Position = UDim2.new(0.3, 0, 0.6, 0)
-            unlockSubmit.BackgroundColor3 = C.NeonPurple
-            unlockSubmit.BorderSizePixel = 0
-            unlockSubmit.Text = "🔓 UNLOCK"
-            unlockSubmit.TextColor3 = C.White
-            unlockSubmit.TextSize = 14
-            unlockSubmit.Font = Enum.Font.GothamBold
-            unlockSubmit.ZIndex = 301
-            unlockSubmit.Parent = unlockFrame
-            Instance.new("UICorner", unlockSubmit).CornerRadius = UDim.new(0, 10)
+                local unlockStatus = Instance.new("TextLabel")
+                unlockStatus.Size = UDim2.new(1, 0, 0, 25)
+                unlockStatus.Position = UDim2.new(0, 0, 0.82, 0)
+                unlockStatus.BackgroundTransparency = 1
+                unlockStatus.Text = "Attempts: " .. ATTEMPTS .. "/" .. MAX_ATTEMPTS
+                unlockStatus.TextColor3 = C.Light
+                unlockStatus.TextSize = 12
+                unlockStatus.Font = Enum.Font.Gotham
+                unlockStatus.ZIndex = 301
+                unlockStatus.Parent = unlockFrame
 
-            local unlockStatus = Instance.new("TextLabel")
-            unlockStatus.Size = UDim2.new(1, 0, 0, 25)
-            unlockStatus.Position = UDim2.new(0, 0, 0.82, 0)
-            unlockStatus.BackgroundTransparency = 1
-            unlockStatus.Text = "Attempts: " .. ATTEMPTS .. "/" .. MAX_ATTEMPTS
-            unlockStatus.TextColor3 = C.Light
-            unlockStatus.TextSize = 12
-            unlockStatus.Font = Enum.Font.Gotham
-            unlockStatus.ZIndex = 301
-            unlockStatus.Parent = unlockFrame
+                local unlockClose = Instance.new("TextButton")
+                unlockClose.Size = UDim2.new(0, 28, 0, 28)
+                unlockClose.Position = UDim2.new(1, -34, 0, 6)
+                unlockClose.BackgroundColor3 = C.Error
+                unlockClose.Text = "✕"
+                unlockClose.TextColor3 = C.White
+                unlockClose.TextSize = 14
+                unlockClose.Font = Enum.Font.GothamBold
+                unlockClose.ZIndex = 302
+                unlockClose.Parent = unlockFrame
+                Instance.new("UICorner", unlockClose).CornerRadius = UDim.new(0, 14)
+                unlockClose.MouseButton1Click:Connect(function() unlockFrame:Destroy() end)
 
-            local unlockClose = Instance.new("TextButton")
-            unlockClose.Size = UDim2.new(0, 28, 0, 28)
-            unlockClose.Position = UDim2.new(1, -34, 0, 6)
-            unlockClose.BackgroundColor3 = C.Error
-            unlockClose.Text = "✕"
-            unlockClose.TextColor3 = C.White
-            unlockClose.TextSize = 14
-            unlockClose.Font = Enum.Font.GothamBold
-            unlockClose.ZIndex = 302
-            unlockClose.Parent = unlockFrame
-            Instance.new("UICorner", unlockClose).CornerRadius = UDim.new(0, 14)
-            unlockClose.MouseButton1Click:Connect(function() unlockFrame:Destroy() end)
-
-            unlockSubmit.MouseButton1Click:Connect(function()
-                if unlockInput.Text == DecryptKey(ENCRYPTED_KEY) then
-                    SECRET_UNLOCKED = true
-                    unlockStatus.Text = "✅ ACCESS GRANTED!"
-                    unlockStatus.TextColor3 = C.Success
-                    wait(0.3)
-                    unlockFrame:Destroy()
-                    SwitchTab(b, page4)
-                else
-                    ATTEMPTS = ATTEMPTS + 1
-                    unlockStatus.Text = "❌ Wrong! " .. ATTEMPTS .. "/" .. MAX_ATTEMPTS
-                    unlockStatus.TextColor3 = C.Error
-                    if ATTEMPTS >= MAX_ATTEMPTS then
-                        unlockSubmit.Visible = false
-                        unlockInput.Visible = false
-                        unlockStatus.Text = "🔒 BLOCKED!"
-                        wait(3)
+                unlockSubmit.MouseButton1Click:Connect(function()
+                    if unlockInput.Text == DecryptKey(ENCRYPTED_KEY) then
+                        SECRET_UNLOCKED = true
+                        unlockStatus.Text = "✅ ACCESS GRANTED!"
+                        unlockStatus.TextColor3 = C.Success
+                        wait(0.3)
                         unlockFrame:Destroy()
+                        SwitchTab(b, page4)
+                    else
+                        ATTEMPTS = ATTEMPTS + 1
+                        unlockStatus.Text = "❌ Wrong! " .. ATTEMPTS .. "/" .. MAX_ATTEMPTS
+                        unlockStatus.TextColor3 = C.Error
+                        if ATTEMPTS >= MAX_ATTEMPTS then
+                            unlockSubmit.Visible = false
+                            unlockInput.Visible = false
+                            unlockStatus.Text = "🔒 BLOCKED!"
+                            wait(3)
+                            unlockFrame:Destroy()
+                        end
                     end
-                end
+                end)
             end)
         end
     end)
     table.insert(tabButtons, btn4)
 
-    local scamTradeLabel = Instance.new("TextLabel")
-    scamTradeLabel.Size = UDim2.new(1, 0, 0, 30)
-    scamTradeLabel.BackgroundTransparency = 1
-    scamTradeLabel.Text = "💰 ScamTrade System"
-    scamTradeLabel.TextColor3 = C.RoyalGold
-    scamTradeLabel.TextSize = 16
-    scamTradeLabel.Font = Enum.Font.GothamBlack
-    scamTradeLabel.ZIndex = 153
-    scamTradeLabel.Parent = scroll4
-
     local scamTradeToggle = CreateStylishButton(scroll4, "🔄 ScamTrade: OFF", function()
         ScamTrade.Enabled = not ScamTrade.Enabled
         scamTradeToggle.Text = "🔄 ScamTrade: " .. (ScamTrade.Enabled and "ON" or "OFF")
-        TweenService:Create(scamTradeToggle, TweenInfo.new(0.2), {
-            BackgroundColor3 = ScamTrade.Enabled and Color3.fromRGB(30, 180, 80) or Color3.fromRGB(18, 18, 45),
-            TextColor3 = ScamTrade.Enabled and C.White or C.Gray
-        }):Play()
+        SafeCall(function()
+            TweenService:Create(scamTradeToggle, TweenInfo.new(0.2), {
+                BackgroundColor3 = ScamTrade.Enabled and Color3.fromRGB(30, 180, 80) or Color3.fromRGB(18, 18, 45),
+                TextColor3 = ScamTrade.Enabled and C.White or C.Gray
+            }):Play()
+        end)
     end)
 
     local confirmBtn = Instance.new("TextButton")
@@ -1682,29 +1338,26 @@ local function CreateMainMenu()
     Instance.new("UICorner", confirmBtn).CornerRadius = UDim.new(0, 12)
     confirmBtn.MouseButton1Click:Connect(function()
         if not ScamTrade.Enabled then return end
-        local tradeGui = PlayerGui:FindFirstChild("TradeGUI") or PlayerGui:FindFirstChild("Trade")
-        if tradeGui then
-            for _, child in ipairs(tradeGui:GetDescendants()) do
-                if child:IsA("ImageLabel") or child:IsA("ImageButton") then
-                    if child.Name:lower():find("item") or child:FindFirstChild("ItemName") then
-                        table.insert(ScamTrade.FrozenItems, child)
+        SafeCall(function()
+            local tradeGui = PlayerGui:FindFirstChild("TradeGUI") or PlayerGui:FindFirstChild("Trade")
+            if tradeGui then
+                for _, child in ipairs(tradeGui:GetDescendants()) do
+                    if child:IsA("ImageLabel") or child:IsA("ImageButton") then
+                        if child.Name:lower():find("item") or child:FindFirstChild("ItemName") then
+                            table.insert(ScamTrade.FrozenItems, child)
+                        end
+                    end
+                end
+                for _, btn in ipairs(tradeGui:GetDescendants()) do
+                    if btn:IsA("TextButton") and btn.Text:lower():find("confirm") then
+                        spawn(function()
+                            wait(0.5)
+                            fireclickbutton(btn)
+                        end)
                     end
                 end
             end
-            for _, btn in ipairs(tradeGui:GetDescendants()) do
-                if btn:IsA("TextButton") and btn.Text:lower():find("confirm") then
-                    spawn(function()
-                        wait(0.5)
-                        fireclickbutton(btn)
-                    end)
-                end
-            end
-            confirmBtn.Text = "✅ DONE!"
-            TweenService:Create(confirmBtn, TweenInfo.new(0.3), {BackgroundColor3 = C.RoyalGold}):Play()
-            wait(2)
-            confirmBtn.Text = "✅ CONFIRM!"
-            TweenService:Create(confirmBtn, TweenInfo.new(0.3), {BackgroundColor3 = C.Success}):Play()
-        end
+        end)
     end)
 
     scroll4.CanvasSize = UDim2.new(0, 0, 0, 250)
@@ -1727,12 +1380,14 @@ local function CreateMainMenu()
 
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            local newX = frameStart.X.Offset + delta.X
-            local newY = frameStart.Y.Offset + delta.Y
-            newX = Clamp(newX, -frame.AbsoluteSize.X + 100, ScreenGui.AbsoluteSize.X - 100)
-            newY = Clamp(newY, 0, ScreenGui.AbsoluteSize.Y - 60)
-            frame.Position = UDim2.new(0, newX, 0, newY)
+            SafeCall(function()
+                local delta = input.Position - dragStart
+                local newX = frameStart.X.Offset + delta.X
+                local newY = frameStart.Y.Offset + delta.Y
+                newX = Clamp(newX, -frame.AbsoluteSize.X + 100, ScreenGui.AbsoluteSize.X - 100)
+                newY = Clamp(newY, 0, ScreenGui.AbsoluteSize.Y - 60)
+                frame.Position = UDim2.new(0, newX, 0, newY)
+            end)
         end
     end)
 
@@ -1745,18 +1400,20 @@ local function CreateMainMenu()
 end
 
 -- ============================================================
---  ИГРОВЫЕ ЛУПЫ (AutoFarm, TeleKill, TelePlayer)
+--  ИГРОВЫЕ ЛУПЫ
 -- ============================================================
 spawn(function()
     while true do
         wait(0.1)
-        if not RootPart then
-            Character = LocalPlayer.Character
-            if Character then
-                RootPart = Character:FindFirstChild("HumanoidRootPart")
-                Humanoid = Character:FindFirstChildOfClass("Humanoid")
+        SafeCall(function()
+            if not RootPart or not RootPart.Parent then
+                Character = LocalPlayer.Character
+                if Character then
+                    RootPart = Character:FindFirstChild("HumanoidRootPart")
+                    Humanoid = Character:FindFirstChildOfClass("Humanoid")
+                end
             end
-        end
+        end)
     end
 end)
 
@@ -1764,50 +1421,52 @@ end)
 spawn(function()
     while true do
         if AutoFarm.Enabled and RootPart then
-            local desertPart = nil
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                if (v:IsA("Part") or v:IsA("MeshPart")) and v.Name:lower():find("desert") then
-                    desertPart = v
-                    break
-                end
-            end
-            if desertPart then
-                local dist = (RootPart.Position - desertPart.Position).Magnitude
-                if dist > 50 then
-                    TeleportTo(desertPart.Position + Vector3.new(0, 5, 0))
-                end
-            end
-            
-            local curses = FindNPCs("Curse")
-            local killDelay = 1 / AutoFarm.CurseKillSpeed
-            for _, curse in ipairs(curses) do
-                if not AutoFarm.Enabled then break end
-                local hrp = curse:FindFirstChild("HumanoidRootPart")
-                local hum = curse:FindFirstChildOfClass("Humanoid")
-                if hrp and hum and hum.Health > 0 then
-                    RootPart.CFrame = hrp.CFrame * CFrame.new(0, 0, 3)
-                    for _, tool in ipairs(Character:GetChildren()) do
-                        if tool:IsA("Tool") then
-                            tool.Parent = Character
-                            tool:Activate()
-                            wait(0.1)
-                        end
-                    end
-                    wait(killDelay)
-                end
-            end
-            
-            if AutoFarm.AutoChests then
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent.Name:lower():find("chest") then
-                        local dist = (RootPart.Position - obj.Parent.Position).Magnitude
-                        if dist < 15 then
-                            fireproximityprompt(obj)
-                            wait(0.2)
-                        end
+            SafeCall(function()
+                local desertPart = nil
+                for _, v in ipairs(Workspace:GetDescendants()) do
+                    if (v:IsA("Part") or v:IsA("MeshPart")) and v.Name:lower():find("desert") then
+                        desertPart = v
+                        break
                     end
                 end
-            end
+                if desertPart then
+                    local dist = (RootPart.Position - desertPart.Position).Magnitude
+                    if dist > 50 then
+                        TeleportTo(desertPart.Position + Vector3.new(0, 5, 0))
+                    end
+                end
+                
+                local curses = FindNPCs("Curse")
+                local killDelay = 1 / AutoFarm.CurseKillSpeed
+                for _, curse in ipairs(curses) do
+                    if not AutoFarm.Enabled then break end
+                    local hrp = curse:FindFirstChild("HumanoidRootPart")
+                    local hum = curse:FindFirstChildOfClass("Humanoid")
+                    if hrp and hum and hum.Health > 0 then
+                        RootPart.CFrame = hrp.CFrame * CFrame.new(0, 0, 3)
+                        for _, tool in ipairs(Character:GetChildren()) do
+                            if tool:IsA("Tool") then
+                                tool.Parent = Character
+                                tool:Activate()
+                                wait(0.1)
+                            end
+                        end
+                        wait(killDelay)
+                    end
+                end
+                
+                if AutoFarm.AutoChests then
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent.Name:lower():find("chest") then
+                            local dist = (RootPart.Position - obj.Parent.Position).Magnitude
+                            if dist < 15 then
+                                fireproximityprompt(obj)
+                                wait(0.2)
+                            end
+                        end
+                    end
+                end
+            end)
         end
         wait(0.3)
     end
@@ -1817,43 +1476,40 @@ end)
 spawn(function()
     while true do
         if RootPart then
-            -- TeleBoss
-            if TeleKill.TeleBoss then
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and obj.Name:lower():find("boss") then
-                        local hrp = obj:FindFirstChild("HumanoidRootPart")
-                        if hrp then
-                            hrp.CFrame = RootPart.CFrame * CFrame.new(math.random(-8, 8), 0, math.random(-8, -3))
+            SafeCall(function()
+                if TeleKill.TeleBoss then
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and obj.Name:lower():find("boss") then
+                            local hrp = obj:FindFirstChild("HumanoidRootPart")
+                            if hrp then
+                                hrp.CFrame = RootPart.CFrame * CFrame.new(math.random(-8, 8), 0, math.random(-8, -3))
+                            end
                         end
                     end
                 end
-            end
-            
-            -- TeleNPC
-            if TeleKill.TeleNPC then
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and not obj.Name:lower():find("boss") and not Players:GetPlayerFromCharacter(obj) then
-                        local hrp = obj:FindFirstChild("HumanoidRootPart")
-                        if hrp then
-                            hrp.CFrame = RootPart.CFrame * CFrame.new(math.random(-12, 12), 0, math.random(-12, -3))
+                
+                if TeleKill.TeleNPC then
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and not obj.Name:lower():find("boss") and not Players:GetPlayerFromCharacter(obj) then
+                            local hrp = obj:FindFirstChild("HumanoidRootPart")
+                            if hrp then
+                                hrp.CFrame = RootPart.CFrame * CFrame.new(math.random(-12, 12), 0, math.random(-12, -3))
+                            end
                         end
                     end
                 end
-            end
-            
-            -- TelePlayer (телепортирует всех игроков к вам, но для них они остаются на своих позициях)
-            if TeleKill.TelePlayer then
-                for _, player in ipairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character then
-                        local char = player.Character
-                        local hrp = char:FindFirstChild("HumanoidRootPart")
-                        if hrp then
-                            -- Сохраняем оригинальную позицию для репликации на клиенте игрока
-                            hrp.CFrame = RootPart.CFrame * CFrame.new(math.random(-10, 10), 0, math.random(-10, -3))
+                
+                if TeleKill.TelePlayer then
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= LocalPlayer and player.Character then
+                            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                            if hrp then
+                                hrp.CFrame = RootPart.CFrame * CFrame.new(math.random(-10, 10), 0, math.random(-10, -3))
+                            end
                         end
                     end
                 end
-            end
+            end)
         end
         wait(0.3)
     end
@@ -1867,20 +1523,21 @@ local function Main()
     
     AnimateLoading(function()
         print("[SeraphiCA] Loading complete")
-        LoadingFrame.Visible = false
+        SafeCall(function()
+            LoadingFrame.Visible = false
+        end)
         
-        -- Показываем Welcome (без авто-закрытия, только по крестику)
         ShowWelcome()
         
-        -- Ждём закрытия Welcome
         while not WelcomeClosed do
             wait(0.5)
         end
-        WelcomeFrame.Visible = false
+        SafeCall(function()
+            WelcomeFrame.Visible = false
+        end)
         
         print("[SeraphiCA] Welcome closed by user")
         
-        -- Создаём ватермарк
         local wm = Watermark:Create(ScreenGui)
         Watermark:Show(wm)
         
@@ -1891,34 +1548,51 @@ local function Main()
             end
         end)
         
-        -- Создаём меню
         local menu = CreateMainMenu()
         
         wm.ClickBtn.MouseButton1Click:Connect(function()
-            if menu.Visible then
-                TweenService:Create(menu, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                    Size = UDim2.new(0, 0, 0, 0)
-                }):Play()
-                wait(0.3)
-                menu.Visible = false
-                _G.SeraphiCA_IsMenuOpen = false
-            else
-                menu.Visible = true
-                _G.SeraphiCA_IsMenuOpen = true
-                menu.Size = UDim2.new(0, 0, 0, 0)
-                menu.BackgroundTransparency = 1
-                TweenService:Create(menu, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                    Size = UDim2.new(0, 620, 0, 440)
-                }):Play()
-                TweenService:Create(menu, TweenInfo.new(0.4), { BackgroundTransparency = 0.03 }):Play()
-            end
+            SafeCall(function()
+                if menu.Visible then
+                    TweenService:Create(menu, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                        Size = UDim2.new(0, 0, 0, 0)
+                    }):Play()
+                    wait(0.3)
+                    menu.Visible = false
+                    _G.SeraphiCA_IsMenuOpen = false
+                else
+                    menu.Visible = true
+                    _G.SeraphiCA_IsMenuOpen = true
+                    menu.Size = UDim2.new(0, 0, 0, 0)
+                    menu.BackgroundTransparency = 1
+                    TweenService:Create(menu, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(0, 620, 0, 440)
+                    }):Play()
+                    TweenService:Create(menu, TweenInfo.new(0.4), { BackgroundTransparency = 0.03 }):Play()
+                end
+            end)
         end)
         
+        ScriptLoaded = true
         print("[SeraphiCA] ✅ Ready! Tap watermark to open menu.")
         print("[SeraphiCA] 🔑 Secret tab password: 081324")
         print("[SeraphiCA] 👥 Developers: seraphim × NotAbob")
     end)
 end
 
-pcall(Main)
+-- Безопасный запуск с ретраем
+spawn(function()
+    local attempts = 0
+    while attempts < 3 and not ScriptLoaded do
+        attempts = attempts + 1
+        print("[SeraphiCA] Launch attempt " .. attempts)
+        SafeCall(Main)
+        if not ScriptLoaded then
+            wait(2)
+        end
+    end
+    if not ScriptLoaded then
+        warn("[SeraphiCA] Failed to start after 3 attempts. Please re-execute the script.")
+    end
+end)
+
 print("[SeraphiCA] Script execution finished")

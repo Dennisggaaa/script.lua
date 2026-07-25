@@ -1,6 +1,6 @@
 -- ============================================================
---  SERAPHICA CLIENT v14.0 - FULL WORKING
---  LOADING + WELCOME + SECRET + TELEKILL FIXED
+--  SERAPHICA CLIENT v15.2 - NO LOADING
+--  WELCOME + FULL MENU
 -- ============================================================
 
 print("[SeraphiCA] Script started")
@@ -143,122 +143,16 @@ local function TeleportToDesert()
 end
 
 -- ============================================================
---  ЗАГРУЗОЧНЫЙ ЭКРАН
--- ============================================================
-local LoadingFrame = Instance.new("Frame")
-LoadingFrame.Size = UDim2.new(1, 0, 1, 0)
-LoadingFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 20)
-LoadingFrame.BackgroundTransparency = 0
-LoadingFrame.BorderSizePixel = 0
-LoadingFrame.Parent = ScreenGui
-
-local grad = Instance.new("UIGradient")
-grad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 5, 30)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 10, 50)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 5, 25))
-})
-grad.Rotation = 45
-grad.Parent = LoadingFrame
-
--- Звезды
-for i = 1, 50 do
-    local star = Instance.new("Frame")
-    star.Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5))
-    star.Position = UDim2.new(0, math.random(0, 1920), 0, math.random(0, 1080))
-    star.BackgroundColor3 = C.White
-    star.BackgroundTransparency = 0.3 + math.random() * 0.6
-    star.BorderSizePixel = 0
-    star.Parent = LoadingFrame
-    local corner = Instance.new("UICorner", star)
-    corner.CornerRadius = UDim.new(0, 5)
-end
-
--- Луна
-local LoadMoon = Instance.new("ImageLabel")
-LoadMoon.Size = UDim2.new(0, 80, 0, 80)
-LoadMoon.Position = UDim2.new(0.5, -40, 0.25, -40)
-LoadMoon.BackgroundTransparency = 1
-LoadMoon.Image = "rbxassetid://1313579923"
-LoadMoon.ImageColor3 = Color3.fromRGB(200, 220, 255)
-LoadMoon.ImageTransparency = 0.4
-LoadMoon.Parent = LoadingFrame
-
-spawn(function()
-    while LoadMoon.Parent do
-        LoadMoon.Rotation = LoadMoon.Rotation + 0.5
-        wait(0.05)
-    end
-end)
-
--- Текст
-local loadText = Instance.new("TextLabel")
-loadText.Size = UDim2.new(1, 0, 0, 60)
-loadText.Position = UDim2.new(0, 0, 0.5, 20)
-loadText.BackgroundTransparency = 1
-loadText.Text = "Loading SeraphiCA..."
-loadText.TextColor3 = Color3.fromRGB(160, 210, 255)
-loadText.TextSize = 28
-loadText.Font = Enum.Font.GothamBold
-loadText.TextXAlignment = Enum.TextXAlignment.Center
-loadText.TextYAlignment = Enum.TextYAlignment.Center
-loadText.TextStrokeTransparency = 0.3
-loadText.TextStrokeColor3 = Color3.fromRGB(0, 100, 255)
-loadText.Parent = LoadingFrame
-
--- Прогресс
-local progressBar = Instance.new("Frame")
-progressBar.Size = UDim2.new(0.4, 0, 0, 6)
-progressBar.Position = UDim2.new(0.3, 0, 0.6, 0)
-progressBar.BackgroundColor3 = Color3.fromRGB(30, 30, 70)
-progressBar.BorderSizePixel = 0
-progressBar.Parent = LoadingFrame
-local pCorner = Instance.new("UICorner", progressBar)
-pCorner.CornerRadius = UDim.new(0, 3)
-
-local progressFill = Instance.new("Frame")
-progressFill.Size = UDim2.new(0, 0, 1, 0)
-progressFill.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-progressFill.BorderSizePixel = 0
-progressFill.Parent = progressBar
-local pfCorner = Instance.new("UICorner", progressFill)
-pfCorner.CornerRadius = UDim.new(0, 3)
-
-local percentLabel = Instance.new("TextLabel")
-percentLabel.Size = UDim2.new(0.4, 0, 0, 30)
-percentLabel.Position = UDim2.new(0.3, 0, 0.63, 0)
-percentLabel.BackgroundTransparency = 1
-percentLabel.Text = "0%"
-percentLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-percentLabel.TextSize = 16
-percentLabel.Font = Enum.Font.Gotham
-percentLabel.TextXAlignment = Enum.TextXAlignment.Center
-percentLabel.Parent = LoadingFrame
-
-local function AnimateLoading(callback)
-    local progress = 0
-    for i = 1, 20 do
-        progress = (i / 20) * 100
-        progressFill.Size = UDim2.new(progress / 100, 0, 1, 0)
-        percentLabel.Text = math.floor(progress) .. "%"
-        wait(0.05)
-    end
-    progressFill.Size = UDim2.new(1, 0, 1, 0)
-    percentLabel.Text = "100%"
-    wait(0.3)
-    if callback then callback() end
-end
-
--- ============================================================
 --  WELCOME ЭКРАН
 -- ============================================================
 local WelcomeFrame = Instance.new("Frame")
+WelcomeFrame.Name = "SeraphiCA_Welcome"
 WelcomeFrame.Size = UDim2.new(1, 0, 1, 0)
 WelcomeFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 20)
-WelcomeFrame.BackgroundTransparency = 0.95
+WelcomeFrame.BackgroundTransparency = 0.98
 WelcomeFrame.BorderSizePixel = 0
 WelcomeFrame.Visible = true
-WelcomeFrame.ZIndex = 100
+WelcomeFrame.ZIndex = 60
 WelcomeFrame.Parent = ScreenGui
 
 local wGrad = Instance.new("UIGradient")
@@ -270,10 +164,23 @@ wGrad.Color = ColorSequence.new({
 wGrad.Rotation = 45
 wGrad.Parent = WelcomeFrame
 
+-- Звезды
+for i = 1, 30 do
+    local star = Instance.new("Frame")
+    star.Size = UDim2.new(0, math.random(2, 4), 0, math.random(2, 4))
+    star.Position = UDim2.new(0, math.random(0, 1920), 0, math.random(0, 1080))
+    star.BackgroundColor3 = C.White
+    star.BackgroundTransparency = 0.4 + math.random() * 0.5
+    star.BorderSizePixel = 0
+    star.Parent = WelcomeFrame
+    local corner = Instance.new("UICorner", star)
+    corner.CornerRadius = UDim.new(0, 5)
+end
+
 -- Луна
 local wMoon = Instance.new("ImageLabel")
-wMoon.Size = UDim2.new(0, 150, 0, 150)
-wMoon.Position = UDim2.new(0.5, -75, 0.2, -75)
+wMoon.Size = UDim2.new(0, 120, 0, 120)
+wMoon.Position = UDim2.new(0.5, -60, 0.2, -60)
 wMoon.BackgroundTransparency = 1
 wMoon.Image = "rbxassetid://1313579923"
 wMoon.ImageColor3 = Color3.fromRGB(200, 220, 255)
@@ -292,13 +199,13 @@ local wCloseBtn = Instance.new("TextButton")
 wCloseBtn.Size = UDim2.new(0, 40, 0, 40)
 wCloseBtn.Position = UDim2.new(1, -55, 0, 15)
 wCloseBtn.BackgroundColor3 = C.Error
-wCloseBtn.BackgroundTransparency = 0.2
+wCloseBtn.BackgroundTransparency = 0.1
 wCloseBtn.BorderSizePixel = 0
 wCloseBtn.Text = "✕"
 wCloseBtn.TextColor3 = C.White
 wCloseBtn.TextSize = 20
 wCloseBtn.Font = Enum.Font.GothamBold
-wCloseBtn.ZIndex = 110
+wCloseBtn.ZIndex = 70
 wCloseBtn.Parent = WelcomeFrame
 local wcCorner = Instance.new("UICorner", wCloseBtn)
 wcCorner.CornerRadius = UDim.new(0, 20)
@@ -321,7 +228,7 @@ wText.TextStrokeTransparency = 0
 wText.TextStrokeColor3 = Color3.fromRGB(80, 150, 255)
 wText.Parent = WelcomeFrame
 
--- Имя
+-- Имя игрока
 local wName = Instance.new("TextLabel")
 wName.Size = UDim2.new(1, 0, 0, 50)
 wName.Position = UDim2.new(0, 0, 0.43, 0)
@@ -370,7 +277,7 @@ local devFrame = Instance.new("Frame")
 devFrame.Size = UDim2.new(0, 300, 0, 80)
 devFrame.Position = UDim2.new(0.5, -150, 0.72, 0)
 devFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 50)
-devFrame.BackgroundTransparency = 0.3
+devFrame.BackgroundTransparency = 0.2
 devFrame.BorderSizePixel = 1
 devFrame.BorderColor3 = C.Purple
 devFrame.Parent = WelcomeFrame
@@ -381,7 +288,7 @@ local devTitle = Instance.new("TextLabel")
 devTitle.Size = UDim2.new(1, 0, 0, 30)
 devTitle.Position = UDim2.new(0, 0, 0, 0)
 devTitle.BackgroundTransparency = 1
-devTitle.Text = "DEVELOPERS"
+devTitle.Text = "РАЗРАБОТЧИКИ"
 devTitle.TextColor3 = C.Gold
 devTitle.TextSize = 16
 devTitle.Font = Enum.Font.GothamBold
@@ -429,6 +336,7 @@ Watermark.TextColor3 = C.Primary
 Watermark.TextSize = 13
 Watermark.Font = Enum.Font.GothamBold
 Watermark.ZIndex = 200
+Watermark.Visible = true
 Watermark.Parent = ScreenGui
 local wmCorner = Instance.new("UICorner", Watermark)
 wmCorner.CornerRadius = UDim.new(0, 8)
@@ -541,11 +449,9 @@ local function CreateMenu()
         
         btn.MouseButton1Click:Connect(function()
             if i == 4 and not SECRET_UNLOCKED then
-                -- Показываем popup для ввода пароля
                 ShowSecretPopup(function(success)
                     if success then
                         SECRET_UNLOCKED = true
-                        -- Переключаем на секретную вкладку
                         for j, b in ipairs(tabButtons) do
                             b.BackgroundColor3 = j == 4 and C.Primary or Color3.fromRGB(12, 12, 35)
                             b.BackgroundTransparency = j == 4 and 0.3 or 0.7
@@ -559,7 +465,6 @@ local function CreateMenu()
                             if content then content.Visible = (j == 4) end
                         end
                     else
-                        -- Возврат на предыдущую вкладку
                         local prev = LAST_TAB
                         for j, b in ipairs(tabButtons) do
                             b.BackgroundColor3 = j == prev and C.Primary or Color3.fromRGB(12, 12, 35)
@@ -938,7 +843,6 @@ local function CreateMenu()
     bc.CornerRadius = UDim.new(0, 6)
     
     local bossActive = false
-    local bossList = {}
     
     bossBtn.MouseButton1Click:Connect(function()
         bossActive = not bossActive
@@ -951,13 +855,9 @@ local function CreateMenu()
                         if obj:IsA("Model") and obj.Name:match("Boss") and obj:FindFirstChild("Humanoid") then
                             local hum = obj.Humanoid
                             if hum.Health > 0 and Character and Character.PrimaryPart then
-                                -- Сохраняем оригинальную позицию босса для других игроков (невидимая телепортация)
                                 local originalPos = obj.PrimaryPart.Position
-                                -- Телепортируем босса к игроку (только локально)
                                 obj.PrimaryPart.CFrame = Character.PrimaryPart.CFrame + Vector3.new(0, 2, 0)
-                                -- Наносим урон
                                 hum.Health = 0
-                                -- Возвращаем на оригинальную позицию (для других игроков)
                                 wait(0.05)
                                 obj.PrimaryPart.CFrame = CFrame.new(originalPos)
                             end
@@ -1010,7 +910,7 @@ local function CreateMenu()
         end
     end)
     
-    -- TelePlayer (игроки телепортируются к тебе невидимо)
+    -- TelePlayer
     local playerBtn = Instance.new("TextButton")
     playerBtn.Size = UDim2.new(0.28, 0, 0, 30)
     playerBtn.Position = UDim2.new(0.67, 3, 0.12, 0)
@@ -1108,7 +1008,6 @@ local function CreateMenu()
             end
             plScroll.CanvasSize = UDim2.new(0, 0, 0, y)
             
-            -- Tele button (телепортирует игрока к тебе невидимо)
             local teleBtn = Instance.new("TextButton")
             teleBtn.Size = UDim2.new(0.25, 0, 0, 28)
             teleBtn.Position = UDim2.new(0.05, 0, 0.9, 0)
@@ -1124,18 +1023,14 @@ local function CreateMenu()
             teleBtn.MouseButton1Click:Connect(function()
                 if selectedPlayer and selectedPlayer.Character and selectedPlayer.Character.PrimaryPart then
                     if Character and Character.PrimaryPart then
-                        -- Сохраняем оригинальную позицию игрока
                         local originalPos = selectedPlayer.Character.PrimaryPart.Position
-                        -- Телепортируем к нам (только локально)
                         selectedPlayer.Character.PrimaryPart.CFrame = Character.PrimaryPart.CFrame + Vector3.new(2, 0, 0)
-                        -- Возвращаем на оригинальную позицию (для других игроков)
                         wait(0.05)
                         selectedPlayer.Character.PrimaryPart.CFrame = CFrame.new(originalPos)
                     end
                 end
             end)
             
-            -- Tele All (все игроки телепортируются к тебе невидимо)
             local teleAllBtn = Instance.new("TextButton")
             teleAllBtn.Size = UDim2.new(0.25, 0, 0, 28)
             teleAllBtn.Position = UDim2.new(0.35, 5, 0.9, 0)
@@ -1428,7 +1323,6 @@ function ShowSecretPopup(callback)
     secretStatus.TextXAlignment = Enum.TextXAlignment.Center
     secretStatus.Parent = secretPopup
     
-    -- Кнопка закрытия (крестик)
     local spCloseBtn = Instance.new("TextButton")
     spCloseBtn.Size = UDim2.new(0, 32, 0, 32)
     spCloseBtn.Position = UDim2.new(1, -38, 0, 8)
@@ -1488,33 +1382,27 @@ end
 -- ============================================================
 local function Main()
     print("[SeraphiCA] Starting...")
+    wait(0.5)
     
-    AnimateLoading(function()
-        print("[SeraphiCA] Loading complete")
-        
-        local menu = CreateMenu()
-        
-        Watermark.MouseButton1Click:Connect(function()
-            if menuOpen then
-                menu.Visible = false
-                menuOpen = false
-            else
-                menu.Visible = true
-                menuOpen = true
-                menu.Size = UDim2.new(0, 0, 0, 0)
-                TweenService:Create(menu, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                    Size = UDim2.new(0, 620, 0, 420)
-                }):Play()
-            end
-        end)
-        
-        LoadingFrame.Visible = false
-        
-        print("[SeraphiCA] ✅ Script loaded! Click watermark to open menu.")
-        print("[SeraphiCA] 🔑 Secret password: 081324")
-        print("[SeraphiCA] 👥 TelePlayer teleports players to you (invisible)")
-        print("[SeraphiCA] 💀 TeleBoss/NPC deals damage and keeps original positions")
+    -- Создаём меню
+    local menu = CreateMenu()
+    
+    Watermark.MouseButton1Click:Connect(function()
+        if menuOpen then
+            menu.Visible = false
+            menuOpen = false
+        else
+            menu.Visible = true
+            menuOpen = true
+            menu.Size = UDim2.new(0, 0, 0, 0)
+            TweenService:Create(menu, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 620, 0, 420)
+            }):Play()
+        end
     end)
+    
+    print("[SeraphiCA] ✅ Script loaded! Click watermark to open menu.")
+    print("[SeraphiCA] 🔑 Secret password: 081324")
 end
 
 pcall(Main)

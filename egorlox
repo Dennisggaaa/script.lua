@@ -1,1409 +1,2238 @@
--- ============================================================
---  SERAPHICA CLIENT v15.2 - NO LOADING
---  WELCOME + FULL MENU
--- ============================================================
+--[[
+    SERAPHICA HUB v2.1 by @Mpmtww
+    Инжект через Delta Executor / Synapse X / Script-Ware
+    Добавлена вкладка MM2 (Murder Mystery 2) с эксклюзивными функциями
+--]]
 
-print("[SeraphiCA] Script started")
-
--- [[ ИМПОРТ СЕРВИСОВ ]]
+--// Сервисы
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
-
-print("[SeraphiCA] Services loaded")
-
--- [[ ОЖИДАНИЕ ЗАГРУЗКИ ]]
-if not game:IsLoaded() then
-    print("[SeraphiCA] Waiting for game load...")
-    game.Loaded:Wait()
-end
-print("[SeraphiCA] Game loaded")
-
--- [[ ПОЛУЧЕНИЕ ИГРОКА ]]
+local TeleportService = game:GetService("TeleportService")
+local StarterGui = game:GetService("StarterGui")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local ContextActionService = game:GetService("ContextActionService")
+local PhysicsService = game:GetService("PhysicsService")
+local Debris = game:GetService("Debris")
 local LocalPlayer = Players.LocalPlayer
-if not LocalPlayer then
-    print("[SeraphiCA] Waiting for LocalPlayer...")
-    Players.PlayerAdded:Wait()
-    LocalPlayer = Players.LocalPlayer
-end
-print("[SeraphiCA] LocalPlayer: " .. LocalPlayer.Name)
+local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
 
-local Character = LocalPlayer.Character
-if not Character then
-    print("[SeraphiCA] Waiting for Character...")
-    Character = LocalPlayer.CharacterAdded:Wait()
-end
-local Humanoid = Character:WaitForChild("Humanoid")
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
-print("[SeraphiCA] Character ready")
-
--- [[ ОЧИСТКА СТАРЫХ GUI ]]
-for _, gui in ipairs(PlayerGui:GetChildren()) do
-    if gui.Name:match("SeraphiCA") then
-        pcall(function() gui:Destroy() end)
-        print("[SeraphiCA] Removed old GUI: " .. gui.Name)
-    end
-end
-
--- [[ СОЗДАНИЕ SCREEN GUI ]]
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphiCA_GUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = PlayerGui
-print("[SeraphiCA] ScreenGui created")
-
--- ============================================================
---  ЦВЕТА
--- ============================================================
-local C = {
-    Primary = Color3.fromRGB(130, 200, 255),
-    Secondary = Color3.fromRGB(210, 140, 255),
-    Success = Color3.fromRGB(100, 255, 140),
-    Error = Color3.fromRGB(255, 90, 90),
-    Warning = Color3.fromRGB(255, 205, 60),
-    Dark = Color3.fromRGB(8, 8, 28),
-    Light = Color3.fromRGB(230, 240, 255),
-    Gold = Color3.fromRGB(255, 215, 0),
-    Purple = Color3.fromRGB(190, 130, 255),
-    Cyan = Color3.fromRGB(0, 255, 240),
-    White = Color3.fromRGB(255, 255, 255),
-    Gray = Color3.fromRGB(160, 165, 175),
-    Orange = Color3.fromRGB(255, 165, 0),
-    Darker = Color3.fromRGB(5, 5, 20)
+--// MM2 Специфичные сервисы
+local MM2 = {
+    Roles = {},
+    SheriffColor = Color3.fromRGB(0, 150, 255),
+    MurdererColor = Color3.fromRGB(255, 0, 0),
+    InnocentColor = Color3.fromRGB(0, 255, 0),
+    HeroColor = Color3.fromRGB(255, 255, 0),
+    ESPCache = {},
+    KnifeESP = {},
+    GunESP = {},
+    CoinESP = {},
+    HighlightObjects = {},
+    AntiAfkConnection = nil,
+    AutoFarmConnection = nil,
+    TeleportLocations = {},
+    SavedPositions = {},
+    PlayerRoles = {},
+    RoleDetectionMethod = "Auto",
 }
 
--- ============================================================
---  ШИФРОВАНИЕ
--- ============================================================
-local function EncryptKey()
-    local key = "081324"
-    local encoded = ""
-    for i = 1, #key do
-        encoded = encoded .. string.char(string.byte(key, i) + 7)
-    end
-    return encoded
+--// Переменные окружения
+local ScreenGui = nil
+local NotificationGui = nil
+local MenuOpen = false
+local ToggleStates = {}
+local SliderValues = {}
+local DropdownValues = {}
+local ColorValues = {}
+local Connections = {}
+local CachedObjects = {}
+local ESPObjects = {}
+local TracerLines = {}
+local BoxObjects = {}
+local DrawingLines = {}
+local RainbowHue = 0
+local NotificationQueue = {}
+local MM2Highlights = {}
+local MM2ESPData = {}
+
+--// Цветовая схема Seraphica
+local Colors = {
+    Background = Color3.fromRGB(12, 12, 20),
+    Main = Color3.fromRGB(18, 18, 32),
+    Secondary = Color3.fromRGB(28, 28, 48),
+    Tertiary = Color3.fromRGB(35, 35, 60),
+    Accent = Color3.fromRGB(140, 80, 255),
+    AccentLight = Color3.fromRGB(170, 120, 255),
+    Accent2 = Color3.fromRGB(255, 70, 130),
+    Accent3 = Color3.fromRGB(0, 200, 255),
+    Text = Color3.fromRGB(230, 230, 245),
+    TextDim = Color3.fromRGB(160, 160, 180),
+    Green = Color3.fromRGB(50, 255, 100),
+    Red = Color3.fromRGB(255, 60, 60),
+    Yellow = Color3.fromRGB(255, 200, 40),
+    Orange = Color3.fromRGB(255, 140, 40),
+    Blue = Color3.fromRGB(0, 150, 255),
+    Pink = Color3.fromRGB(255, 80, 180),
+    Cyan = Color3.fromRGB(80, 230, 255),
+    White = Color3.fromRGB(255, 255, 255),
+    Black = Color3.fromRGB(0, 0, 0),
+    Border = Color3.fromRGB(50, 50, 75),
+    WatermarkBg = Color3.fromRGB(18, 18, 32),
+    SliderFill = Color3.fromRGB(100, 60, 200),
+    SliderBg = Color3.fromRGB(35, 35, 60),
+    TabActive = Color3.fromRGB(120, 70, 230),
+    TabInactive = Color3.fromRGB(25, 25, 45),
+    ButtonHover = Color3.fromRGB(45, 45, 75),
+    NotificationBg = Color3.fromRGB(18, 18, 32),
+    MM2TabAccent = Color3.fromRGB(220, 30, 30),
+}
+
+--// Шрифты
+local Fonts = {
+    Title = Enum.Font.GothamBlack,
+    Header = Enum.Font.GothamBold,
+    Normal = Enum.Font.GothamSemibold,
+    Small = Enum.Font.Gotham,
+    Mono = Enum.Font.RobotoMono,
+    UI = Enum.Font.GothamMedium,
+}
+
+--// Функция твина
+local function Tween(obj, props, dur, style, dir)
+    style = style or Enum.EasingStyle.Quart
+    dir = dir or Enum.EasingDirection.Out
+    return TweenService:Create(obj, TweenInfo.new(dur, style, dir), props):Play()
 end
 
-local function DecryptKey(encrypted)
-    local decoded = ""
-    for i = 1, #encrypted do
-        decoded = decoded .. string.char(string.byte(encrypted, i) - 7)
-    end
-    return decoded
-end
-
-local ENCRYPTED_KEY = EncryptKey()
-local ATTEMPTS = 0
-local MAX_ATTEMPTS = 5
-local SECRET_UNLOCKED = false
-local LAST_TAB = 1
-local secretPopup = nil
-
--- ============================================================
---  ФУНКЦИИ
--- ============================================================
-local function Clamp(val, min, max)
-    return math.max(min, math.min(max, val))
-end
-
-local function GetKyivTime()
-    local now = os.time()
-    local date = os.date("*t", now)
-    local year = date.year
-    local marchLS = 31 - (os.date("*t", os.time{year=year, month=3, day=31}).wday % 7)
-    local octLS = 31 - (os.date("*t", os.time{year=year, month=10, day=31}).wday % 7)
-    local dstStart = os.time{year=year, month=3, day=marchLS, hour=3}
-    local dstEnd = os.time{year=year, month=10, day=octLS, hour=4}
-    local isDST = (now >= dstStart and now < dstEnd)
-    local offset = isDST and 3 or 2
-    return os.date("!%H:%M:%S", now + offset * 3600)
-end
-
-local function GetAUTItems()
-    return {
-        "Sword", "Shield", "Potion", "Cursed Orb", "Mythical Gem",
-        "Legendary Blade", "Dark Essence", "Light Fragment", "Void Stone",
-        "Dragon Scale", "Phoenix Feather", "Shadow Cloak", "Crystal Heart",
-        "Demon Horn", "Angel Wing", "Chaos Crystal", "Starlight Shard",
-        "Abyssal Pearl", "Eldritch Ring", "Frozen Tear"
-    }
-end
-
-local function TeleportToDesert()
-    if Character and Character.PrimaryPart then
-        Character.PrimaryPart.CFrame = CFrame.new(Vector3.new(0, 10, 0))
-        print("[SeraphiCA] Teleported to desert")
-    end
-end
-
--- ============================================================
---  WELCOME ЭКРАН
--- ============================================================
-local WelcomeFrame = Instance.new("Frame")
-WelcomeFrame.Name = "SeraphiCA_Welcome"
-WelcomeFrame.Size = UDim2.new(1, 0, 1, 0)
-WelcomeFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 20)
-WelcomeFrame.BackgroundTransparency = 0.98
-WelcomeFrame.BorderSizePixel = 0
-WelcomeFrame.Visible = true
-WelcomeFrame.ZIndex = 60
-WelcomeFrame.Parent = ScreenGui
-
-local wGrad = Instance.new("UIGradient")
-wGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 5, 30)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(30, 15, 60)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 5, 30))
-})
-wGrad.Rotation = 45
-wGrad.Parent = WelcomeFrame
-
--- Звезды
-for i = 1, 30 do
-    local star = Instance.new("Frame")
-    star.Size = UDim2.new(0, math.random(2, 4), 0, math.random(2, 4))
-    star.Position = UDim2.new(0, math.random(0, 1920), 0, math.random(0, 1080))
-    star.BackgroundColor3 = C.White
-    star.BackgroundTransparency = 0.4 + math.random() * 0.5
-    star.BorderSizePixel = 0
-    star.Parent = WelcomeFrame
-    local corner = Instance.new("UICorner", star)
-    corner.CornerRadius = UDim.new(0, 5)
-end
-
--- Луна
-local wMoon = Instance.new("ImageLabel")
-wMoon.Size = UDim2.new(0, 120, 0, 120)
-wMoon.Position = UDim2.new(0.5, -60, 0.2, -60)
-wMoon.BackgroundTransparency = 1
-wMoon.Image = "rbxassetid://1313579923"
-wMoon.ImageColor3 = Color3.fromRGB(200, 220, 255)
-wMoon.ImageTransparency = 0.3
-wMoon.Parent = WelcomeFrame
-
-spawn(function()
-    while wMoon.Parent and WelcomeFrame.Visible do
-        wMoon.Rotation = wMoon.Rotation + 0.3
-        wait(0.05)
-    end
-end)
-
--- Кнопка закрытия Welcome
-local wCloseBtn = Instance.new("TextButton")
-wCloseBtn.Size = UDim2.new(0, 40, 0, 40)
-wCloseBtn.Position = UDim2.new(1, -55, 0, 15)
-wCloseBtn.BackgroundColor3 = C.Error
-wCloseBtn.BackgroundTransparency = 0.1
-wCloseBtn.BorderSizePixel = 0
-wCloseBtn.Text = "✕"
-wCloseBtn.TextColor3 = C.White
-wCloseBtn.TextSize = 20
-wCloseBtn.Font = Enum.Font.GothamBold
-wCloseBtn.ZIndex = 70
-wCloseBtn.Parent = WelcomeFrame
-local wcCorner = Instance.new("UICorner", wCloseBtn)
-wcCorner.CornerRadius = UDim.new(0, 20)
-wCloseBtn.MouseButton1Click:Connect(function()
-    WelcomeFrame.Visible = false
-end)
-
--- WELCOME текст
-local wText = Instance.new("TextLabel")
-wText.Size = UDim2.new(1, 0, 0, 70)
-wText.Position = UDim2.new(0, 0, 0.3, 0)
-wText.BackgroundTransparency = 1
-wText.Text = "WELCOME"
-wText.TextColor3 = Color3.fromRGB(200, 230, 255)
-wText.TextSize = 48
-wText.Font = Enum.Font.GothamBold
-wText.TextXAlignment = Enum.TextXAlignment.Center
-wText.TextYAlignment = Enum.TextYAlignment.Center
-wText.TextStrokeTransparency = 0
-wText.TextStrokeColor3 = Color3.fromRGB(80, 150, 255)
-wText.Parent = WelcomeFrame
-
--- Имя игрока
-local wName = Instance.new("TextLabel")
-wName.Size = UDim2.new(1, 0, 0, 50)
-wName.Position = UDim2.new(0, 0, 0.43, 0)
-wName.BackgroundTransparency = 1
-wName.Text = LocalPlayer.Name
-wName.TextColor3 = Color3.fromRGB(100, 220, 255)
-wName.TextSize = 34
-wName.Font = Enum.Font.GothamSemibold
-wName.TextXAlignment = Enum.TextXAlignment.Center
-wName.TextYAlignment = Enum.TextYAlignment.Center
-wName.TextStrokeTransparency = 0.3
-wName.TextStrokeColor3 = Color3.fromRGB(0, 100, 255)
-wName.Parent = WelcomeFrame
-
--- Admin
-local wAdmin = Instance.new("TextLabel")
-wAdmin.Size = UDim2.new(1, 0, 0, 35)
-wAdmin.Position = UDim2.new(0, 0, 0.53, 0)
-wAdmin.BackgroundTransparency = 1
-wAdmin.Text = "Admin Telegram: @Mpmtww"
-wAdmin.TextColor3 = Color3.fromRGB(200, 180, 255)
-wAdmin.TextSize = 18
-wAdmin.Font = Enum.Font.Gotham
-wAdmin.TextXAlignment = Enum.TextXAlignment.Center
-wAdmin.TextYAlignment = Enum.TextYAlignment.Center
-wAdmin.TextStrokeTransparency = 0.5
-wAdmin.TextStrokeColor3 = Color3.fromRGB(150, 100, 255)
-wAdmin.Parent = WelcomeFrame
-
--- Подпись
-local wSub = Instance.new("TextLabel")
-wSub.Size = UDim2.new(1, 0, 0, 30)
-wSub.Position = UDim2.new(0, 0, 0.6, 0)
-wSub.BackgroundTransparency = 1
-wSub.Text = "SeraphiCA System Activated"
-wSub.TextColor3 = Color3.fromRGB(150, 180, 220)
-wSub.TextSize = 16
-wSub.Font = Enum.Font.Gotham
-wSub.TextXAlignment = Enum.TextXAlignment.Center
-wSub.TextYAlignment = Enum.TextYAlignment.Center
-wSub.TextStrokeTransparency = 0.7
-wSub.Parent = WelcomeFrame
-
--- DEVELOPERS
-local devFrame = Instance.new("Frame")
-devFrame.Size = UDim2.new(0, 300, 0, 80)
-devFrame.Position = UDim2.new(0.5, -150, 0.72, 0)
-devFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 50)
-devFrame.BackgroundTransparency = 0.2
-devFrame.BorderSizePixel = 1
-devFrame.BorderColor3 = C.Purple
-devFrame.Parent = WelcomeFrame
-local dCorner = Instance.new("UICorner", devFrame)
-dCorner.CornerRadius = UDim.new(0, 12)
-
-local devTitle = Instance.new("TextLabel")
-devTitle.Size = UDim2.new(1, 0, 0, 30)
-devTitle.Position = UDim2.new(0, 0, 0, 0)
-devTitle.BackgroundTransparency = 1
-devTitle.Text = "РАЗРАБОТЧИКИ"
-devTitle.TextColor3 = C.Gold
-devTitle.TextSize = 16
-devTitle.Font = Enum.Font.GothamBold
-devTitle.TextXAlignment = Enum.TextXAlignment.Center
-devTitle.TextYAlignment = Enum.TextYAlignment.Center
-devTitle.Parent = devFrame
-
-local devNames = Instance.new("TextLabel")
-devNames.Size = UDim2.new(1, 0, 0, 40)
-devNames.Position = UDim2.new(0, 0, 0.3, 0)
-devNames.BackgroundTransparency = 1
-devNames.Text = "seraphim × NotAbob"
-devNames.TextColor3 = Color3.fromRGB(200, 180, 255)
-devNames.TextSize = 18
-devNames.Font = Enum.Font.GothamSemibold
-devNames.TextXAlignment = Enum.TextXAlignment.Center
-devNames.TextYAlignment = Enum.TextYAlignment.Center
-devNames.Parent = devFrame
-
-local devSub = Instance.new("TextLabel")
-devSub.Size = UDim2.new(1, 0, 0, 20)
-devSub.Position = UDim2.new(0, 0, 0.65, 0)
-devSub.BackgroundTransparency = 1
-devSub.Text = "жду идеального клиента"
-devSub.TextColor3 = C.Gray
-devSub.TextSize = 12
-devSub.Font = Enum.Font.GothamItalic
-devSub.TextXAlignment = Enum.TextXAlignment.Center
-devSub.TextYAlignment = Enum.TextYAlignment.Center
-devSub.Parent = devFrame
-
--- ============================================================
---  ВОДЯНОЙ ЗНАК
--- ============================================================
-local Watermark = Instance.new("TextButton")
-Watermark.Name = "SeraphiCA_Watermark"
-Watermark.Size = UDim2.new(0, 140, 0, 32)
-Watermark.Position = UDim2.new(0, 10, 0, 10)
-Watermark.BackgroundColor3 = Color3.fromRGB(10, 10, 40)
-Watermark.BackgroundTransparency = 0.15
-Watermark.BorderSizePixel = 1
-Watermark.BorderColor3 = C.Primary
-Watermark.Text = "✦ SERAPHICA"
-Watermark.TextColor3 = C.Primary
-Watermark.TextSize = 13
-Watermark.Font = Enum.Font.GothamBold
-Watermark.ZIndex = 200
-Watermark.Visible = true
-Watermark.Parent = ScreenGui
-local wmCorner = Instance.new("UICorner", Watermark)
-wmCorner.CornerRadius = UDim.new(0, 8)
-
--- ============================================================
---  ОСНОВНОЕ МЕНЮ
--- ============================================================
-local menuOpen = false
-local menuFrame = nil
-
-local function CreateMenu()
-    print("[SeraphiCA] Creating menu...")
+--// Уведомления
+function SendNotification(icon, title, message, duration)
+    duration = duration or 4
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 310, 0, 0)
+    frame.Position = UDim2.new(1, -330, 0, 15 + (#NotificationQueue * 75))
+    frame.BackgroundColor3 = Colors.NotificationBg
+    frame.BorderSizePixel = 0
+    frame.BackgroundTransparency = 0.1
+    frame.ClipsDescendants = true
+    frame.ZIndex = 100
+    frame.Parent = NotificationGui
     
-    local menuW = 620
-    local menuH = 420
-    local currentTab = 1
-    local tabButtons = {}
-    local tabContents = {}
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     
-    menuFrame = Instance.new("Frame")
-    menuFrame.Name = "SeraphiCA_Menu"
-    menuFrame.Size = UDim2.new(0, menuW, 0, menuH)
-    menuFrame.Position = UDim2.new(0.5, -menuW/2, 0.5, -menuH/2)
-    menuFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 30)
-    menuFrame.BackgroundTransparency = 0.05
-    menuFrame.BorderSizePixel = 1
-    menuFrame.BorderColor3 = C.Primary
-    menuFrame.Visible = false
-    menuFrame.ClipsDescendants = true
-    menuFrame.ZIndex = 150
-    menuFrame.Parent = ScreenGui
+    local border = Instance.new("Frame")
+    border.Size = UDim2.new(0, 4, 1, 0)
+    border.BackgroundColor3 = Colors.Accent
+    border.BorderSizePixel = 0
+    border.ZIndex = 101
+    border.Parent = frame
     
-    local mainCorner = Instance.new("UICorner", menuFrame)
-    mainCorner.CornerRadius = UDim.new(0, 16)
+    local iconLabel = Instance.new("TextLabel")
+    iconLabel.Size = UDim2.new(0, 30, 0, 30)
+    iconLabel.Position = UDim2.new(0, 12, 0, 12)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Text = icon or "ℹ️"
+    iconLabel.TextSize = 20
+    iconLabel.ZIndex = 102
+    iconLabel.Parent = frame
     
-    -- Заголовок
-    local titleBar = Instance.new("Frame")
-    titleBar.Size = UDim2.new(1, 0, 0, 40)
-    titleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 45)
-    titleBar.BackgroundTransparency = 0.2
-    titleBar.BorderSizePixel = 0
-    titleBar.Parent = menuFrame
-    local tCorner = Instance.new("UICorner", titleBar)
-    tCorner.CornerRadius = UDim.new(0, 16)
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -60, 0, 20)
+    titleLabel.Position = UDim2.new(0, 50, 0, 8)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = Colors.Text
+    titleLabel.Font = Fonts.Header
+    titleLabel.TextSize = 14
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.ZIndex = 102
+    titleLabel.Parent = frame
     
-    local titleText = Instance.new("TextLabel")
-    titleText.Size = UDim2.new(1, -60, 1, 0)
-    titleText.Position = UDim2.new(0, 30, 0, 0)
-    titleText.BackgroundTransparency = 1
-    titleText.Text = "✦ SERAPHICA CLIENT ✦"
-    titleText.TextColor3 = C.Light
-    titleText.TextSize = 16
-    titleText.Font = Enum.Font.GothamBold
-    titleText.TextXAlignment = Enum.TextXAlignment.Center
-    titleText.TextYAlignment = Enum.TextYAlignment.Center
-    titleText.Parent = titleBar
+    local msgLabel = Instance.new("TextLabel")
+    msgLabel.Size = UDim2.new(1, -60, 0, 20)
+    msgLabel.Position = UDim2.new(0, 50, 0, 30)
+    msgLabel.BackgroundTransparency = 1
+    msgLabel.Text = message
+    msgLabel.TextColor3 = Colors.TextDim
+    msgLabel.Font = Fonts.Small
+    msgLabel.TextSize = 12
+    msgLabel.TextXAlignment = Enum.TextXAlignment.Left
+    msgLabel.ZIndex = 102
+    msgLabel.Parent = frame
     
-    -- Кнопка закрытия
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 28, 0, 28)
-    closeBtn.Position = UDim2.new(1, -36, 0, 6)
-    closeBtn.BackgroundColor3 = C.Error
-    closeBtn.BackgroundTransparency = 0.2
-    closeBtn.BorderSizePixel = 0
-    closeBtn.Text = "✕"
-    closeBtn.TextColor3 = C.White
-    closeBtn.TextSize = 14
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.Parent = titleBar
-    local clCorner = Instance.new("UICorner", closeBtn)
-    clCorner.CornerRadius = UDim.new(0, 14)
-    closeBtn.MouseButton1Click:Connect(function()
-        menuFrame.Visible = false
-        menuOpen = false
+    local progressBar = Instance.new("Frame")
+    progressBar.Size = UDim2.new(1, -8, 0, 3)
+    progressBar.Position = UDim2.new(0, 4, 1, -3)
+    progressBar.BackgroundColor3 = Colors.SliderBg
+    progressBar.BorderSizePixel = 0
+    progressBar.ZIndex = 102
+    progressBar.BackgroundTransparency = 0.5
+    progressBar.Parent = frame
+    
+    local progressFill = Instance.new("Frame")
+    progressFill.Size = UDim2.new(1, 0, 1, 0)
+    progressFill.BackgroundColor3 = Colors.Accent
+    progressFill.BorderSizePixel = 0
+    progressFill.ZIndex = 103
+    progressFill.Parent = progressBar
+    Instance.new("UICorner", progressFill).CornerRadius = UDim.new(1, 0)
+    
+    Tween(frame, {Size = UDim2.new(0, 310, 0, 60)}, 0.3, Enum.EasingStyle.Back)
+    Tween(progressFill, {Size = UDim2.new(0, 0, 1, 0)}, duration, Enum.EasingStyle.Linear)
+    
+    local notifData = {frame = frame, progress = progressFill, startTime = tick(), duration = duration}
+    table.insert(NotificationQueue, notifData)
+    
+    spawn(function()
+        wait(duration)
+        Tween(frame, {
+            Position = UDim2.new(1, 50, 0, frame.Position.Y.Offset),
+            BackgroundTransparency = 1
+        }, 0.4)
+        wait(0.4)
+        frame:Destroy()
+        table.remove(NotificationQueue, 1)
+        for i, n in ipairs(NotificationQueue) do
+            Tween(n.frame, {Position = UDim2.new(1, -330, 0, 15 + ((i-1) * 75))}, 0.3)
+        end
     end)
+end
+
+--// Загрузочный экран
+function CreateLoadingScreen()
+    local loadingGui = Instance.new("ScreenGui")
+    loadingGui.Name = "SeraphicaLoading"
+    loadingGui.ResetOnSpawn = false
+    loadingGui.Parent = CoreGui
     
-    -- Панель вкладок
-    local tabBar = Instance.new("Frame")
-    tabBar.Size = UDim2.new(1, 0, 0, 35)
-    tabBar.Position = UDim2.new(0, 0, 0, 40)
-    tabBar.BackgroundColor3 = Color3.fromRGB(12, 12, 35)
-    tabBar.BackgroundTransparency = 0.3
-    tabBar.BorderSizePixel = 0
-    tabBar.Parent = menuFrame
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.BackgroundColor3 = Color3.fromRGB(8, 8, 18)
+    bg.BorderSizePixel = 0
+    bg.Name = "LoadingBG"
+    bg.ZIndex = 999
+    bg.Parent = loadingGui
     
-    local tabNames = {"Auto-Farm", "Farm Quest", "TeleKill", "Secret"}
-    local tabW = menuW / #tabNames
-    
-    for i, name in ipairs(tabNames) do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0, tabW, 1, 0)
-        btn.Position = UDim2.new(0, tabW * (i - 1), 0, 0)
-        btn.BackgroundColor3 = i == 1 and C.Primary or Color3.fromRGB(12, 12, 35)
-        btn.BackgroundTransparency = i == 1 and 0.3 or 0.7
-        btn.BorderSizePixel = 0
-        btn.Text = name
-        btn.TextColor3 = i == 1 and C.White or C.Gray
-        btn.TextSize = 13
-        btn.Font = Enum.Font.GothamBold
-        btn.Parent = tabBar
-        tabButtons[i] = btn
-        
-        local ind = Instance.new("Frame")
-        ind.Size = UDim2.new(1, 0, 0, 2)
-        ind.Position = UDim2.new(0, 0, 1, -2)
-        ind.BackgroundColor3 = C.Primary
-        ind.BackgroundTransparency = i == 1 and 0 or 1
-        ind.BorderSizePixel = 0
-        ind.Parent = btn
-        
-        btn.MouseButton1Click:Connect(function()
-            if i == 4 and not SECRET_UNLOCKED then
-                ShowSecretPopup(function(success)
-                    if success then
-                        SECRET_UNLOCKED = true
-                        for j, b in ipairs(tabButtons) do
-                            b.BackgroundColor3 = j == 4 and C.Primary or Color3.fromRGB(12, 12, 35)
-                            b.BackgroundTransparency = j == 4 and 0.3 or 0.7
-                            b.TextColor3 = j == 4 and C.White or C.Gray
-                            local ind2 = b:FindFirstChild("Indicator")
-                            if ind2 then ind2.BackgroundTransparency = j == 4 and 0 or 1 end
-                        end
-                        currentTab = 4
-                        LAST_TAB = 4
-                        for j, content in ipairs(tabContents) do
-                            if content then content.Visible = (j == 4) end
-                        end
-                    else
-                        local prev = LAST_TAB
-                        for j, b in ipairs(tabButtons) do
-                            b.BackgroundColor3 = j == prev and C.Primary or Color3.fromRGB(12, 12, 35)
-                            b.BackgroundTransparency = j == prev and 0.3 or 0.7
-                            b.TextColor3 = j == prev and C.White or C.Gray
-                            local ind2 = b:FindFirstChild("Indicator")
-                            if ind2 then ind2.BackgroundTransparency = j == prev and 0 or 1 end
-                        end
-                        for j, content in ipairs(tabContents) do
-                            if content then content.Visible = (j == prev) end
-                        end
-                    end
-                end)
-                return
-            end
-            
-            for j, b in ipairs(tabButtons) do
-                b.BackgroundColor3 = j == i and C.Primary or Color3.fromRGB(12, 12, 35)
-                b.BackgroundTransparency = j == i and 0.3 or 0.7
-                b.TextColor3 = j == i and C.White or C.Gray
-                local ind2 = b:FindFirstChild("Indicator")
-                if ind2 then ind2.BackgroundTransparency = j == i and 0 or 1 end
-            end
-            currentTab = i
-            LAST_TAB = i
-            for j, content in ipairs(tabContents) do
-                if content then content.Visible = (j == i) end
-            end
-        end)
+    local particles = {}
+    for i = 1, 50 do
+        local p = Instance.new("Frame")
+        p.Size = UDim2.new(0, math.random(2, 8), 0, math.random(2, 8))
+        p.Position = UDim2.new(0, math.random(0, 1920), 0, math.random(0, 1080))
+        p.BackgroundColor3 = Color3.fromHSV(math.random() * 1, 0.7, 1)
+        p.BackgroundTransparency = 0.6
+        p.BorderSizePixel = 0
+        p.Name = "Particle"
+        p.ZIndex = 1000
+        p.Parent = bg
+        local angle = math.random() * math.pi * 2
+        local speed = math.random(30, 80)
+        particles[i] = {obj = p, angle = angle, speed = speed, x = p.Position.X.Offset, y = p.Position.Y.Offset}
     end
     
-    -- Контент
-    local contentFrame = Instance.new("Frame")
-    contentFrame.Size = UDim2.new(1, -20, 1, -95)
-    contentFrame.Position = UDim2.new(0, 10, 0, 85)
-    contentFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 32)
-    contentFrame.BackgroundTransparency = 0.2
-    contentFrame.BorderSizePixel = 0
-    contentFrame.ClipsDescendants = true
-    contentFrame.Parent = menuFrame
-    local cfCorner = Instance.new("UICorner", contentFrame)
-    cfCorner.CornerRadius = UDim.new(0, 12)
+    local centerFrame = Instance.new("Frame")
+    centerFrame.Size = UDim2.new(0, 400, 0, 350)
+    centerFrame.Position = UDim2.new(0.5, -200, 0.4, -175)
+    centerFrame.BackgroundTransparency = 1
+    centerFrame.ZIndex = 1001
+    centerFrame.Parent = bg
     
-    -- ======== ВКЛАДКА 1: Auto-Farm ========
-    local tab1 = Instance.new("Frame")
-    tab1.Size = UDim2.new(1, 0, 1, 0)
-    tab1.BackgroundTransparency = 1
-    tab1.Parent = contentFrame
+    local hexLabel = Instance.new("TextLabel")
+    hexLabel.Size = UDim2.new(0, 120, 0, 120)
+    hexLabel.Position = UDim2.new(0.5, -60, 0, 0)
+    hexLabel.BackgroundTransparency = 1
+    hexLabel.Text = "⬡"
+    hexLabel.TextColor3 = Colors.Accent
+    hexLabel.TextSize = 100
+    hexLabel.ZIndex = 1002
+    hexLabel.Parent = centerFrame
     
-    local label1 = Instance.new("TextLabel")
-    label1.Size = UDim2.new(1, 0, 0, 30)
-    label1.Position = UDim2.new(0, 10, 0, 5)
-    label1.BackgroundTransparency = 1
-    label1.Text = "⚔️ AUTO-FARM"
-    label1.TextColor3 = C.Primary
-    label1.TextSize = 16
-    label1.Font = Enum.Font.GothamBold
-    label1.TextXAlignment = Enum.TextXAlignment.Left
-    label1.Parent = tab1
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, 0, 0, 60)
+    titleLabel.Position = UDim2.new(0, 0, 0, 130)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "SERAPHICA"
+    titleLabel.TextColor3 = Colors.White
+    titleLabel.Font = Fonts.Title
+    titleLabel.TextSize = 48
+    titleLabel.ZIndex = 1002
+    titleLabel.Parent = centerFrame
     
-    local desertBtn = Instance.new("TextButton")
-    desertBtn.Size = UDim2.new(0.4, 0, 0, 30)
-    desertBtn.Position = UDim2.new(0.05, 0, 0.12, 0)
-    desertBtn.BackgroundColor3 = C.Orange
-    desertBtn.BorderSizePixel = 0
-    desertBtn.Text = "🏜️ Teleport Desert"
-    desertBtn.TextColor3 = C.White
-    desertBtn.TextSize = 12
-    desertBtn.Font = Enum.Font.GothamBold
-    desertBtn.Parent = tab1
-    local dCorner2 = Instance.new("UICorner", desertBtn)
-    dCorner2.CornerRadius = UDim.new(0, 6)
-    desertBtn.MouseButton1Click:Connect(TeleportToDesert)
+    local subTitle = Instance.new("TextLabel")
+    subTitle.Size = UDim2.new(1, 0, 0, 30)
+    subTitle.Position = UDim2.new(0, 0, 0, 185)
+    subTitle.BackgroundTransparency = 1
+    subTitle.Text = "Premium Hub + MM2 Pack"
+    subTitle.TextColor3 = Colors.AccentLight
+    subTitle.Font = Fonts.Header
+    subTitle.TextSize = 16
+    subTitle.ZIndex = 1002
+    subTitle.Parent = centerFrame
     
-    local farmBtn = Instance.new("TextButton")
-    farmBtn.Size = UDim2.new(0.4, 0, 0, 30)
-    farmBtn.Position = UDim2.new(0.5, 5, 0.12, 0)
-    farmBtn.BackgroundColor3 = C.Success
-    farmBtn.BorderSizePixel = 0
-    farmBtn.Text = "▶️ Start Farm"
-    farmBtn.TextColor3 = C.White
-    farmBtn.TextSize = 12
-    farmBtn.Font = Enum.Font.GothamBold
-    farmBtn.Parent = tab1
-    local fCorner = Instance.new("UICorner", farmBtn)
-    fCorner.CornerRadius = UDim.new(0, 6)
+    local versionLabel = Instance.new("TextLabel")
+    versionLabel.Size = UDim2.new(1, 0, 0, 20)
+    versionLabel.Position = UDim2.new(0, 0, 0, 215)
+    versionLabel.BackgroundTransparency = 1
+    versionLabel.Text = "v2.1 | MM2 Enhanced"
+    versionLabel.TextColor3 = Colors.TextDim
+    versionLabel.Font = Fonts.Mono
+    versionLabel.TextSize = 14
+    versionLabel.ZIndex = 1002
+    versionLabel.Parent = centerFrame
     
-    local farmActive = false
-    farmBtn.MouseButton1Click:Connect(function()
-        farmActive = not farmActive
-        farmBtn.Text = farmActive and "⏹️ Stop Farm" or "▶️ Start Farm"
-        farmBtn.BackgroundColor3 = farmActive and C.Error or C.Success
-        if farmActive then
-            spawn(function()
-                while farmActive do
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if obj:IsA("Model") and obj.Name:match("Curse") and obj:FindFirstChild("Humanoid") then
-                            local hum = obj.Humanoid
-                            if hum.Health > 0 then hum.Health = 0 end
-                        end
-                        if obj:IsA("Model") and obj.Name:match("Chest") and obj:FindFirstChild("TouchInterest") then
-                            if Character and Character.PrimaryPart then
-                                Character.PrimaryPart.CFrame = obj.PrimaryPart.CFrame + Vector3.new(0, 2, 0)
-                                wait(0.2)
-                            end
-                        end
-                    end
-                    wait(0.5)
-                end
-            end)
-        end
-    end)
+    local barBg = Instance.new("Frame")
+    barBg.Size = UDim2.new(0, 300, 0, 6)
+    barBg.Position = UDim2.new(0.5, -150, 0, 260)
+    barBg.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    barBg.BorderSizePixel = 0
+    barBg.ZIndex = 1002
+    barBg.Parent = centerFrame
+    Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
     
-    local speedLabel = Instance.new("TextLabel")
-    speedLabel.Size = UDim2.new(0.3, 0, 0, 25)
-    speedLabel.Position = UDim2.new(0.05, 0, 0.28, 0)
-    speedLabel.BackgroundTransparency = 1
-    speedLabel.Text = "Speed: 1/s"
-    speedLabel.TextColor3 = C.Light
-    speedLabel.TextSize = 12
-    speedLabel.Font = Enum.Font.Gotham
-    speedLabel.TextXAlignment = Enum.TextXAlignment.Left
-    speedLabel.Parent = tab1
+    local barFill = Instance.new("Frame")
+    barFill.Size = UDim2.new(0, 0, 1, 0)
+    barFill.BackgroundColor3 = Colors.Accent
+    barFill.BorderSizePixel = 0
+    barFill.ZIndex = 1003
+    barFill.Name = "BarFill"
+    barFill.Parent = barBg
+    Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
     
-    local speedSlider = Instance.new("Frame")
-    speedSlider.Size = UDim2.new(0.4, 0, 0, 6)
-    speedSlider.Position = UDim2.new(0.45, 0, 0.30, 0)
-    speedSlider.BackgroundColor3 = Color3.fromRGB(30, 30, 70)
-    speedSlider.BorderSizePixel = 0
-    speedSlider.Parent = tab1
-    local sCorner = Instance.new("UICorner", speedSlider)
-    sCorner.CornerRadius = UDim.new(0, 3)
+    local percentLabel = Instance.new("TextLabel")
+    percentLabel.Size = UDim2.new(0, 100, 0, 20)
+    percentLabel.Position = UDim2.new(0.5, -50, 0, 275)
+    percentLabel.BackgroundTransparency = 1
+    percentLabel.Text = "0%"
+    percentLabel.TextColor3 = Colors.TextDim
+    percentLabel.Font = Fonts.Mono
+    percentLabel.TextSize = 13
+    percentLabel.ZIndex = 1002
+    percentLabel.Name = "PercentLabel"
+    percentLabel.Parent = centerFrame
     
-    local speedFill = Instance.new("Frame")
-    speedFill.Size = UDim2.new(0.5, 0, 1, 0)
-    speedFill.BackgroundColor3 = C.Primary
-    speedFill.BorderSizePixel = 0
-    speedFill.Parent = speedSlider
-    local sfCorner = Instance.new("UICorner", speedFill)
-    sfCorner.CornerRadius = UDim.new(0, 3)
+    local creatorLabel = Instance.new("TextLabel")
+    creatorLabel.Size = UDim2.new(1, 0, 0, 20)
+    creatorLabel.Position = UDim2.new(0, 0, 1, -30)
+    creatorLabel.BackgroundTransparency = 1
+    creatorLabel.Text = "by @Mpmtww | t.me/Mpmtww"
+    creatorLabel.TextColor3 = Color3.fromRGB(80, 80, 100)
+    creatorLabel.Font = Fonts.Small
+    creatorLabel.TextSize = 12
+    creatorLabel.ZIndex = 1002
+    creatorLabel.Parent = centerFrame
     
-    local killSpeed = 1
-    speedSlider.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local pos = input.Position.X - speedSlider.AbsolutePosition.X
-            local width = speedSlider.AbsoluteSize.X
-            local progress = Clamp(pos / width, 0, 1)
-            speedFill.Size = UDim2.new(progress, 0, 1, 0)
-            killSpeed = math.floor(progress * 10) + 1
-            speedLabel.Text = "Speed: " .. killSpeed .. "/s"
-        end
-    end)
-    
-    local chestBtn = Instance.new("TextButton")
-    chestBtn.Size = UDim2.new(0.4, 0, 0, 28)
-    chestBtn.Position = UDim2.new(0.05, 0, 0.4, 0)
-    chestBtn.BackgroundColor3 = C.Purple
-    chestBtn.BorderSizePixel = 0
-    chestBtn.Text = "📦 Auto-Chest"
-    chestBtn.TextColor3 = C.White
-    chestBtn.TextSize = 12
-    chestBtn.Font = Enum.Font.GothamBold
-    chestBtn.Parent = tab1
-    local cCorner = Instance.new("UICorner", chestBtn)
-    cCorner.CornerRadius = UDim.new(0, 6)
-    
-    local chestActive = false
-    chestBtn.MouseButton1Click:Connect(function()
-        chestActive = not chestActive
-        chestBtn.BackgroundColor3 = chestActive and C.Success or C.Purple
-        chestBtn.Text = chestActive and "✅ Chest ON" or "📦 Auto-Chest"
-        if chestActive then
-            spawn(function()
-                while chestActive do
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if obj:IsA("Model") and obj.Name:match("Chest") and obj:FindFirstChild("TouchInterest") then
-                            if Character and Character.PrimaryPart then
-                                Character.PrimaryPart.CFrame = obj.PrimaryPart.CFrame + Vector3.new(0, 2, 0)
-                                wait(0.2)
-                            end
-                        end
-                    end
-                    wait(0.5)
-                end
-            end)
-        end
-    end)
-    
-    -- ======== ВКЛАДКА 2: Farm Quest ========
-    local tab2 = Instance.new("Frame")
-    tab2.Size = UDim2.new(1, 0, 1, 0)
-    tab2.BackgroundTransparency = 1
-    tab2.Visible = false
-    tab2.Parent = contentFrame
-    
-    local label2 = Instance.new("TextLabel")
-    label2.Size = UDim2.new(1, 0, 0, 30)
-    label2.Position = UDim2.new(0, 10, 0, 5)
-    label2.BackgroundTransparency = 1
-    label2.Text = "📜 FARM ABILITIES & ITEMS"
-    label2.TextColor3 = C.Secondary
-    label2.TextSize = 16
-    label2.Font = Enum.Font.GothamBold
-    label2.TextXAlignment = Enum.TextXAlignment.Left
-    label2.Parent = tab2
-    
-    local abilityBtn = Instance.new("TextButton")
-    abilityBtn.Size = UDim2.new(0.4, 0, 0, 30)
-    abilityBtn.Position = UDim2.new(0.05, 0, 0.12, 0)
-    abilityBtn.BackgroundColor3 = C.Cyan
-    abilityBtn.BorderSizePixel = 0
-    abilityBtn.Text = "⚡ Farm Abilities"
-    abilityBtn.TextColor3 = C.White
-    abilityBtn.TextSize = 12
-    abilityBtn.Font = Enum.Font.GothamBold
-    abilityBtn.Parent = tab2
-    local aCorner = Instance.new("UICorner", abilityBtn)
-    aCorner.CornerRadius = UDim.new(0, 6)
-    
-    local abilityActive = false
-    abilityBtn.MouseButton1Click:Connect(function()
-        abilityActive = not abilityActive
-        abilityBtn.BackgroundColor3 = abilityActive and C.Success or C.Cyan
-        abilityBtn.Text = abilityActive and "✅ ON" or "⚡ Farm Abilities"
-        if abilityActive then
-            spawn(function()
-                while abilityActive do
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if obj:IsA("Model") and obj.Name:match("Ability") and obj:FindFirstChild("TouchInterest") then
-                            if Character and Character.PrimaryPart then
-                                Character.PrimaryPart.CFrame = obj.PrimaryPart.CFrame + Vector3.new(0, 2, 0)
-                                wait(0.3)
-                            end
-                        end
-                    end
-                    wait(1)
-                end
-            end)
-        end
-    end)
-    
-    local rarityLabel = Instance.new("TextLabel")
-    rarityLabel.Size = UDim2.new(0.3, 0, 0, 25)
-    rarityLabel.Position = UDim2.new(0.05, 0, 0.24, 0)
-    rarityLabel.BackgroundTransparency = 1
-    rarityLabel.Text = "Rarity: Mythical"
-    rarityLabel.TextColor3 = C.Light
-    rarityLabel.TextSize = 12
-    rarityLabel.Font = Enum.Font.Gotham
-    rarityLabel.TextXAlignment = Enum.TextXAlignment.Left
-    rarityLabel.Parent = tab2
-    
-    local rarityBtn = Instance.new("TextButton")
-    rarityBtn.Size = UDim2.new(0.25, 0, 0, 25)
-    rarityBtn.Position = UDim2.new(0.4, 0, 0.24, 0)
-    rarityBtn.BackgroundColor3 = C.Gold
-    rarityBtn.BorderSizePixel = 0
-    rarityBtn.Text = "Mythical"
-    rarityBtn.TextColor3 = C.White
-    rarityBtn.TextSize = 11
-    rarityBtn.Font = Enum.Font.GothamBold
-    rarityBtn.Parent = tab2
-    local rCorner = Instance.new("UICorner", rarityBtn)
-    rCorner.CornerRadius = UDim.new(0, 5)
-    
-    local rarities = {"Mythical", "Legendary", "Epic", "Rare"}
-    local rarityIndex = 1
-    rarityBtn.MouseButton1Click:Connect(function()
-        rarityIndex = rarityIndex % #rarities + 1
-        rarityBtn.Text = rarities[rarityIndex]
-        rarityLabel.Text = "Rarity: " .. rarities[rarityIndex]
-    end)
-    
-    local searchBox = Instance.new("TextBox")
-    searchBox.Size = UDim2.new(0.5, 0, 0, 28)
-    searchBox.Position = UDim2.new(0.05, 0, 0.35, 0)
-    searchBox.BackgroundColor3 = Color3.fromRGB(20, 18, 45)
-    searchBox.BackgroundTransparency = 0
-    searchBox.BorderSizePixel = 1
-    searchBox.BorderColor3 = C.Primary
-    searchBox.Text = ""
-    searchBox.PlaceholderText = "🔍 Search items..."
-    searchBox.PlaceholderColor3 = C.Gray
-    searchBox.TextColor3 = C.White
-    searchBox.TextSize = 12
-    searchBox.Font = Enum.Font.Gotham
-    searchBox.Parent = tab2
-    local sbCorner = Instance.new("UICorner", searchBox)
-    sbCorner.CornerRadius = UDim.new(0, 6)
-    
-    local itemListFrame = Instance.new("Frame")
-    itemListFrame.Size = UDim2.new(0.9, 0, 0.4, 0)
-    itemListFrame.Position = UDim2.new(0.05, 0, 0.45, 0)
-    itemListFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 38)
-    itemListFrame.BackgroundTransparency = 0.3
-    itemListFrame.BorderSizePixel = 1
-    itemListFrame.BorderColor3 = C.Gray
-    itemListFrame.Parent = tab2
-    local ilCorner = Instance.new("UICorner", itemListFrame)
-    ilCorner.CornerRadius = UDim.new(0, 6)
-    
-    local itemScroll = Instance.new("ScrollingFrame")
-    itemScroll.Size = UDim2.new(1, -10, 1, -10)
-    itemScroll.Position = UDim2.new(0, 5, 0, 5)
-    itemScroll.BackgroundTransparency = 1
-    itemScroll.BorderSizePixel = 0
-    itemScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    itemScroll.ScrollBarThickness = 4
-    itemScroll.Parent = itemListFrame
-    
-    local allItems = GetAUTItems()
-    local itemButtons = {}
-    
-    local function RefreshItems(filter)
-        for _, b in ipairs(itemButtons) do b:Destroy() end
-        itemButtons = {}
-        local y = 0
-        for _, item in ipairs(allItems) do
-            if not filter or string.lower(item):find(string.lower(filter)) then
-                local b = Instance.new("TextButton")
-                b.Size = UDim2.new(1, -10, 0, 22)
-                b.Position = UDim2.new(0, 5, 0, y)
-                b.BackgroundColor3 = Color3.fromRGB(25, 20, 50)
-                b.BackgroundTransparency = 0.5
-                b.BorderSizePixel = 0
-                b.Text = item
-                b.TextColor3 = C.Light
-                b.TextSize = 11
-                b.Font = Enum.Font.Gotham
-                b.TextXAlignment = Enum.TextXAlignment.Left
-                b.Parent = itemScroll
-                local bc = Instance.new("UICorner", b)
-                bc.CornerRadius = UDim.new(0, 4)
-                table.insert(itemButtons, b)
-                y = y + 25
+    local function updateLoading(percent)
+        barFill.Size = UDim2.new(percent / 100, 0, 1, 0)
+        percentLabel.Text = math.floor(percent) .. "%"
+        for _, p in ipairs(particles) do
+            p.x = p.x + math.cos(p.angle) * p.speed * 0.016
+            p.y = p.y + math.sin(p.angle) * p.speed * 0.016
+            if p.x < -20 or p.x > 1940 or p.y < -20 or p.y > 1100 then
+                p.x = math.random(0, 1920)
+                p.y = math.random(0, 1080)
+                p.angle = math.random() * math.pi * 2
             end
+            p.obj.Position = UDim2.new(0, p.x, 0, p.y)
         end
-        itemScroll.CanvasSize = UDim2.new(0, 0, 0, y)
+        local rot = (percent / 100) * 720
+        hexLabel.Rotation = rot
     end
     
-    RefreshItems()
-    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-        RefreshItems(searchBox.Text)
-    end)
-    
-    -- ======== ВКЛАДКА 3: TeleKill ========
-    local tab3 = Instance.new("Frame")
-    tab3.Size = UDim2.new(1, 0, 1, 0)
-    tab3.BackgroundTransparency = 1
-    tab3.Visible = false
-    tab3.Parent = contentFrame
-    
-    local label3 = Instance.new("TextLabel")
-    label3.Size = UDim2.new(1, 0, 0, 30)
-    label3.Position = UDim2.new(0, 10, 0, 5)
-    label3.BackgroundTransparency = 1
-    label3.Text = "🔫 TELEKILL"
-    label3.TextColor3 = C.Error
-    label3.TextSize = 16
-    label3.Font = Enum.Font.GothamBold
-    label3.TextXAlignment = Enum.TextXAlignment.Left
-    label3.Parent = tab3
-    
-    -- TeleBoss
-    local bossBtn = Instance.new("TextButton")
-    bossBtn.Size = UDim2.new(0.28, 0, 0, 30)
-    bossBtn.Position = UDim2.new(0.03, 0, 0.12, 0)
-    bossBtn.BackgroundColor3 = C.Orange
-    bossBtn.BorderSizePixel = 0
-    bossBtn.Text = "👹 TeleBoss"
-    bossBtn.TextColor3 = C.White
-    bossBtn.TextSize = 11
-    bossBtn.Font = Enum.Font.GothamBold
-    bossBtn.Parent = tab3
-    local bc = Instance.new("UICorner", bossBtn)
-    bc.CornerRadius = UDim.new(0, 6)
-    
-    local bossActive = false
-    
-    bossBtn.MouseButton1Click:Connect(function()
-        bossActive = not bossActive
-        bossBtn.BackgroundColor3 = bossActive and C.Success or C.Orange
-        bossBtn.Text = bossActive and "✅ ON" or "👹 TeleBoss"
-        if bossActive then
-            spawn(function()
-                while bossActive do
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if obj:IsA("Model") and obj.Name:match("Boss") and obj:FindFirstChild("Humanoid") then
-                            local hum = obj.Humanoid
-                            if hum.Health > 0 and Character and Character.PrimaryPart then
-                                local originalPos = obj.PrimaryPart.Position
-                                obj.PrimaryPart.CFrame = Character.PrimaryPart.CFrame + Vector3.new(0, 2, 0)
-                                hum.Health = 0
-                                wait(0.05)
-                                obj.PrimaryPart.CFrame = CFrame.new(originalPos)
-                            end
-                        end
-                    end
-                    wait(0.3)
-                end
-            end)
-        end
-    end)
-    
-    -- TeleNPC
-    local npcBtn = Instance.new("TextButton")
-    npcBtn.Size = UDim2.new(0.28, 0, 0, 30)
-    npcBtn.Position = UDim2.new(0.35, 3, 0.12, 0)
-    npcBtn.BackgroundColor3 = C.Purple
-    npcBtn.BorderSizePixel = 0
-    npcBtn.Text = "🧟 TeleNPC"
-    npcBtn.TextColor3 = C.White
-    npcBtn.TextSize = 11
-    npcBtn.Font = Enum.Font.GothamBold
-    npcBtn.Parent = tab3
-    local nc = Instance.new("UICorner", npcBtn)
-    nc.CornerRadius = UDim.new(0, 6)
-    
-    local npcActive = false
-    
-    npcBtn.MouseButton1Click:Connect(function()
-        npcActive = not npcActive
-        npcBtn.BackgroundColor3 = npcActive and C.Success or C.Purple
-        npcBtn.Text = npcActive and "✅ ON" or "🧟 TeleNPC"
-        if npcActive then
-            spawn(function()
-                while npcActive do
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if obj:IsA("Model") and obj.Name:match("NPC") and obj:FindFirstChild("Humanoid") then
-                            local hum = obj.Humanoid
-                            if hum.Health > 0 and Character and Character.PrimaryPart then
-                                local originalPos = obj.PrimaryPart.Position
-                                obj.PrimaryPart.CFrame = Character.PrimaryPart.CFrame + Vector3.new(0, 2, 0)
-                                hum.Health = 0
-                                wait(0.05)
-                                obj.PrimaryPart.CFrame = CFrame.new(originalPos)
-                            end
-                        end
-                    end
-                    wait(0.3)
-                end
-            end)
-        end
-    end)
-    
-    -- TelePlayer
-    local playerBtn = Instance.new("TextButton")
-    playerBtn.Size = UDim2.new(0.28, 0, 0, 30)
-    playerBtn.Position = UDim2.new(0.67, 3, 0.12, 0)
-    playerBtn.BackgroundColor3 = C.Cyan
-    playerBtn.BorderSizePixel = 0
-    playerBtn.Text = "👤 TelePlayer"
-    playerBtn.TextColor3 = C.White
-    playerBtn.TextSize = 11
-    playerBtn.Font = Enum.Font.GothamBold
-    playerBtn.Parent = tab3
-    local pc = Instance.new("UICorner", playerBtn)
-    pc.CornerRadius = UDim.new(0, 6)
-    
-    local playerActive = false
-    local selectedPlayer = nil
-    local playerListFrame = nil
-    
-    playerBtn.MouseButton1Click:Connect(function()
-        playerActive = not playerActive
-        playerBtn.BackgroundColor3 = playerActive and C.Success or C.Cyan
-        playerBtn.Text = playerActive and "✅ ON" or "👤 TelePlayer"
-        
-        if playerActive then
-            if playerListFrame then playerListFrame:Destroy() end
-            
-            playerListFrame = Instance.new("Frame")
-            playerListFrame.Size = UDim2.new(0.9, 0, 0.5, 0)
-            playerListFrame.Position = UDim2.new(0.05, 0, 0.25, 0)
-            playerListFrame.BackgroundColor3 = Color3.fromRGB(12, 10, 35)
-            playerListFrame.BackgroundTransparency = 0.2
-            playerListFrame.BorderSizePixel = 1
-            playerListFrame.BorderColor3 = C.Primary
-            playerListFrame.Parent = tab3
-            local plc = Instance.new("UICorner", playerListFrame)
-            plc.CornerRadius = UDim.new(0, 8)
-            
-            local plScroll = Instance.new("ScrollingFrame")
-            plScroll.Size = UDim2.new(1, -10, 1, -50)
-            plScroll.Position = UDim2.new(0, 5, 0, 5)
-            plScroll.BackgroundTransparency = 1
-            plScroll.BorderSizePixel = 0
-            plScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-            plScroll.ScrollBarThickness = 4
-            plScroll.Parent = playerListFrame
-            
-            local closePl = Instance.new("TextButton")
-            closePl.Size = UDim2.new(0, 28, 0, 28)
-            closePl.Position = UDim2.new(1, -34, 0, 5)
-            closePl.BackgroundColor3 = C.Error
-            closePl.BorderSizePixel = 0
-            closePl.Text = "✕"
-            closePl.TextColor3 = C.White
-            closePl.TextSize = 14
-            closePl.Font = Enum.Font.GothamBold
-            closePl.Parent = playerListFrame
-            local clpc = Instance.new("UICorner", closePl)
-            clpc.CornerRadius = UDim.new(0, 14)
-            closePl.MouseButton1Click:Connect(function()
-                playerListFrame:Destroy()
-                playerActive = false
-                playerBtn.BackgroundColor3 = C.Cyan
-                playerBtn.Text = "👤 TelePlayer"
-            end)
-            
-            local y = 0
-            for _, pl in ipairs(Players:GetPlayers()) do
-                if pl ~= LocalPlayer then
-                    local b = Instance.new("TextButton")
-                    b.Size = UDim2.new(1, -10, 0, 22)
-                    b.Position = UDim2.new(0, 5, 0, y)
-                    b.BackgroundColor3 = Color3.fromRGB(25, 20, 50)
-                    b.BackgroundTransparency = 0.5
-                    b.BorderSizePixel = 0
-                    b.Text = pl.Name
-                    b.TextColor3 = C.Light
-                    b.TextSize = 11
-                    b.Font = Enum.Font.Gotham
-                    b.TextXAlignment = Enum.TextXAlignment.Left
-                    b.Parent = plScroll
-                    local bpc = Instance.new("UICorner", b)
-                    bpc.CornerRadius = UDim.new(0, 4)
-                    b.MouseButton1Click:Connect(function()
-                        selectedPlayer = pl
-                        for _, ch in ipairs(plScroll:GetChildren()) do
-                            if ch:IsA("TextButton") then
-                                ch.BackgroundColor3 = Color3.fromRGB(25, 20, 50)
-                                ch.BackgroundTransparency = 0.5
-                            end
-                        end
-                        b.BackgroundColor3 = C.Success
-                        b.BackgroundTransparency = 0.3
-                    end)
-                    y = y + 25
-                end
-            end
-            plScroll.CanvasSize = UDim2.new(0, 0, 0, y)
-            
-            local teleBtn = Instance.new("TextButton")
-            teleBtn.Size = UDim2.new(0.25, 0, 0, 28)
-            teleBtn.Position = UDim2.new(0.05, 0, 0.9, 0)
-            teleBtn.BackgroundColor3 = C.Primary
-            teleBtn.BorderSizePixel = 0
-            teleBtn.Text = "📞 Tele!"
-            teleBtn.TextColor3 = C.White
-            teleBtn.TextSize = 12
-            teleBtn.Font = Enum.Font.GothamBold
-            teleBtn.Parent = playerListFrame
-            local tpc = Instance.new("UICorner", teleBtn)
-            tpc.CornerRadius = UDim.new(0, 6)
-            teleBtn.MouseButton1Click:Connect(function()
-                if selectedPlayer and selectedPlayer.Character and selectedPlayer.Character.PrimaryPart then
-                    if Character and Character.PrimaryPart then
-                        local originalPos = selectedPlayer.Character.PrimaryPart.Position
-                        selectedPlayer.Character.PrimaryPart.CFrame = Character.PrimaryPart.CFrame + Vector3.new(2, 0, 0)
-                        wait(0.05)
-                        selectedPlayer.Character.PrimaryPart.CFrame = CFrame.new(originalPos)
-                    end
-                end
-            end)
-            
-            local teleAllBtn = Instance.new("TextButton")
-            teleAllBtn.Size = UDim2.new(0.25, 0, 0, 28)
-            teleAllBtn.Position = UDim2.new(0.35, 5, 0.9, 0)
-            teleAllBtn.BackgroundColor3 = C.Warning
-            teleAllBtn.BorderSizePixel = 0
-            teleAllBtn.Text = "👥 Tele All"
-            teleAllBtn.TextColor3 = C.White
-            teleAllBtn.TextSize = 12
-            teleAllBtn.Font = Enum.Font.GothamBold
-            teleAllBtn.Parent = playerListFrame
-            local tac = Instance.new("UICorner", teleAllBtn)
-            tac.CornerRadius = UDim.new(0, 6)
-            teleAllBtn.MouseButton1Click:Connect(function()
-                if Character and Character.PrimaryPart then
-                    for _, pl in ipairs(Players:GetPlayers()) do
-                        if pl ~= LocalPlayer and pl.Character and pl.Character.PrimaryPart then
-                            local originalPos = pl.Character.PrimaryPart.Position
-                            pl.Character.PrimaryPart.CFrame = Character.PrimaryPart.CFrame + Vector3.new(2, 0, 0)
-                            wait(0.05)
-                            pl.Character.PrimaryPart.CFrame = CFrame.new(originalPos)
-                        end
-                    end
-                end
-            end)
-        else
-            if playerListFrame then
-                playerListFrame:Destroy()
-                playerListFrame = nil
+    spawn(function()
+        local currentPct = 0
+        local steps = {15, 30, 50, 70, 85, 95, 100}
+        for _, target in ipairs(steps) do
+            while currentPct < target do
+                currentPct = currentPct + math.random(1, 3)
+                if currentPct > target then currentPct = target end
+                updateLoading(currentPct)
+                wait(math.random(2, 8) / 100)
             end
         end
-    end)
-    
-    -- ======== ВКЛАДКА 4: Secret ========
-    local tab4 = Instance.new("Frame")
-    tab4.Size = UDim2.new(1, 0, 1, 0)
-    tab4.BackgroundTransparency = 1
-    tab4.Visible = false
-    tab4.Parent = contentFrame
-    
-    local label4 = Instance.new("TextLabel")
-    label4.Size = UDim2.new(1, 0, 0, 30)
-    label4.Position = UDim2.new(0, 10, 0, 5)
-    label4.BackgroundTransparency = 1
-    label4.Text = "🔐 SECRET TAB"
-    label4.TextColor3 = C.Gold
-    label4.TextSize = 16
-    label4.Font = Enum.Font.GothamBold
-    label4.TextXAlignment = Enum.TextXAlignment.Left
-    label4.Parent = tab4
-    
-    local scamBtn = Instance.new("TextButton")
-    scamBtn.Size = UDim2.new(0.4, 0, 0, 35)
-    scamBtn.Position = UDim2.new(0.3, 0, 0.12, 0)
-    scamBtn.BackgroundColor3 = C.Success
-    scamBtn.BorderSizePixel = 0
-    scamBtn.Text = "💰 ScamTrade"
-    scamBtn.TextColor3 = C.White
-    scamBtn.TextSize = 13
-    scamBtn.Font = Enum.Font.GothamBold
-    scamBtn.Parent = tab4
-    local scamCorner = Instance.new("UICorner", scamBtn)
-    scamCorner.CornerRadius = UDim.new(0, 8)
-    
-    local scamActive = false
-    local confirmBtn = nil
-    local addItemBtn = nil
-    
-    scamBtn.MouseButton1Click:Connect(function()
-        scamActive = not scamActive
-        scamBtn.BackgroundColor3 = scamActive and C.Error or C.Success
-        scamBtn.Text = scamActive and "⏹️ Stop" or "💰 ScamTrade"
-        
-        if scamActive then
-            confirmBtn = Instance.new("TextButton")
-            confirmBtn.Size = UDim2.new(0.4, 0, 0, 35)
-            confirmBtn.Position = UDim2.new(0.3, 0, 0.35, 0)
-            confirmBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-            confirmBtn.BorderSizePixel = 2
-            confirmBtn.BorderColor3 = Color3.fromRGB(0, 255, 0)
-            confirmBtn.Text = "✅ CONFIRM!"
-            confirmBtn.TextColor3 = C.White
-            confirmBtn.TextSize = 16
-            confirmBtn.Font = Enum.Font.GothamBold
-            confirmBtn.Parent = tab4
-            local confCorner = Instance.new("UICorner", confirmBtn)
-            confCorner.CornerRadius = UDim.new(0, 10)
-            
-            addItemBtn = Instance.new("TextButton")
-            addItemBtn.Size = UDim2.new(0.3, 0, 0, 28)
-            addItemBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
-            addItemBtn.BackgroundColor3 = C.Purple
-            addItemBtn.BorderSizePixel = 0
-            addItemBtn.Text = "➕ Add Fake Item"
-            addItemBtn.TextColor3 = C.White
-            addItemBtn.TextSize = 11
-            addItemBtn.Font = Enum.Font.GothamBold
-            addItemBtn.Parent = tab4
-            local aiCorner = Instance.new("UICorner", addItemBtn)
-            aiCorner.CornerRadius = UDim.new(0, 6)
-            
-            local fakeItems = {}
-            local itemDisplay = nil
-            
-            addItemBtn.MouseButton1Click:Connect(function()
-                local itemList = GetAUTItems()
-                local item = itemList[math.random(1, #itemList)]
-                table.insert(fakeItems, item)
-                
-                if itemDisplay then itemDisplay:Destroy() end
-                itemDisplay = Instance.new("TextLabel")
-                itemDisplay.Size = UDim2.new(0.5, 0, 0, 20)
-                itemDisplay.Position = UDim2.new(0.05, 0, 0.62, 0)
-                itemDisplay.BackgroundTransparency = 1
-                itemDisplay.Text = "✨ Added: " .. table.concat(fakeItems, ", ")
-                itemDisplay.TextColor3 = C.Gold
-                itemDisplay.TextSize = 11
-                itemDisplay.Font = Enum.Font.Gotham
-                itemDisplay.TextXAlignment = Enum.TextXAlignment.Left
-                itemDisplay.Parent = tab4
-            end)
-            
-            confirmBtn.MouseButton1Click:Connect(function()
-                for _, pl in ipairs(Players:GetPlayers()) do
-                    if pl ~= LocalPlayer and pl.Character then
-                        local fakeGui = Instance.new("ScreenGui")
-                        fakeGui.Name = "FakeTradeGUI"
-                        fakeGui.Parent = pl.PlayerGui
-                        local fakeFrame = Instance.new("Frame")
-                        fakeFrame.Size = UDim2.new(0.3, 0, 0.3, 0)
-                        fakeFrame.Position = UDim2.new(0.35, 0, 0.35, 0)
-                        fakeFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                        fakeFrame.BackgroundTransparency = 0.2
-                        fakeFrame.BorderSizePixel = 2
-                        fakeFrame.BorderColor3 = C.Gold
-                        fakeFrame.Parent = fakeGui
-                        local ffCorner = Instance.new("UICorner", fakeFrame)
-                        ffCorner.CornerRadius = UDim.new(0, 10)
-                        local fakeText = Instance.new("TextLabel")
-                        fakeText.Size = UDim2.new(1, 0, 1, 0)
-                        fakeText.BackgroundTransparency = 1
-                        fakeText.Text = "⚡ TRADE FROZEN\nItems: " .. table.concat(fakeItems, ", ")
-                        fakeText.TextColor3 = C.Gold
-                        fakeText.TextSize = 13
-                        fakeText.Font = Enum.Font.GothamBold
-                        fakeText.TextWrapped = true
-                        fakeText.Parent = fakeFrame
-                        wait(5)
-                        fakeGui:Destroy()
-                    end
-                end
-                if confirmBtn then confirmBtn:Destroy() end
-                if addItemBtn then addItemBtn:Destroy() end
-                scamActive = false
-                scamBtn.BackgroundColor3 = C.Success
-                scamBtn.Text = "💰 ScamTrade"
-            end)
-        else
-            if confirmBtn then confirmBtn:Destroy() end
-            if addItemBtn then addItemBtn:Destroy() end
+        wait(0.3)
+        Tween(bg, {BackgroundTransparency = 1}, 0.4)
+        for _, p in ipairs(particles) do
+            Tween(p.obj, {BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 0)}, 0.3)
         end
+        Tween(centerFrame, {Position = UDim2.new(0.5, -200, 0.3, -175), Size = UDim2.new(0, 400, 0, 0)}, 0.3)
+        wait(0.4)
+        loadingGui:Destroy()
+        SendNotification("✅", "SERAPHICA", "Hub successfully loaded with MM2 Pack!", 5)
+    end)
+end
+
+--// UI компоненты
+function CreateToggle(parent, name, default, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -16, 0, 36)
+    frame.BackgroundTransparency = 1
+    frame.ZIndex = 60
+    frame.Parent = parent
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 200, 1, 0)
+    label.Position = UDim2.new(0, 8, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Colors.Text
+    label.Font = Fonts.Normal
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 61
+    label.Parent = frame
+    
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 44, 0, 22)
+    toggleBtn.Position = UDim2.new(1, -50, 0.5, -11)
+    toggleBtn.BackgroundColor3 = default and Colors.Green or Color3.fromRGB(55, 55, 80)
+    toggleBtn.BorderSizePixel = 0
+    toggleBtn.Text = ""
+    toggleBtn.AutoButtonColor = false
+    toggleBtn.ZIndex = 61
+    toggleBtn.Parent = frame
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
+    
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.new(0, 18, 0, 18)
+    knob.Position = default and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+    knob.BackgroundColor3 = Colors.White
+    knob.BorderSizePixel = 0
+    knob.ZIndex = 62
+    knob.Parent = toggleBtn
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+    
+    local state = default
+    ToggleStates[name] = state
+    
+    toggleBtn.MouseButton1Click:Connect(function()
+        state = not state
+        ToggleStates[name] = state
+        Tween(toggleBtn, {BackgroundColor3 = state and Colors.Green or Color3.fromRGB(55, 55, 80)}, 0.2)
+        Tween(knob, {Position = state and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)}, 0.2)
+        callback(state)
     end)
     
-    -- Сохраняем вкладки
-    tabContents = {tab1, tab2, tab3, tab4}
+    return frame
+end
+
+function CreateButton(parent, name, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -16, 0, 34)
+    btn.BackgroundColor3 = Colors.Secondary
+    btn.BorderSizePixel = 0
+    btn.Text = name
+    btn.TextColor3 = Colors.Text
+    btn.Font = Fonts.Normal
+    btn.TextSize = 13
+    btn.AutoButtonColor = false
+    btn.ZIndex = 61
+    btn.Parent = parent
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
     
-    -- Перетаскивание
+    btn.MouseButton1Click:Connect(function()
+        Tween(btn, {BackgroundColor3 = Colors.Accent}, 0.1)
+        wait(0.1)
+        Tween(btn, {BackgroundColor3 = Colors.Secondary}, 0.2)
+        callback()
+    end)
+    
+    btn.MouseEnter:Connect(function()
+        Tween(btn, {BackgroundColor3 = Colors.ButtonHover}, 0.15)
+    end)
+    btn.MouseLeave:Connect(function()
+        Tween(btn, {BackgroundColor3 = Colors.Secondary}, 0.15)
+    end)
+    
+    return btn
+end
+
+function CreateSlider(parent, name, min, max, default, step, callback)
+    step = step or 1
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -16, 0, 52)
+    frame.BackgroundTransparency = 1
+    frame.ZIndex = 60
+    frame.Parent = parent
+    
+    local headerFrame = Instance.new("Frame")
+    headerFrame.Size = UDim2.new(1, 0, 0, 20)
+    headerFrame.BackgroundTransparency = 1
+    headerFrame.ZIndex = 61
+    headerFrame.Parent = frame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 180, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Colors.Text
+    label.Font = Fonts.Normal
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 62
+    label.Parent = headerFrame
+    
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(0, 60, 1, 0)
+    valueLabel.Position = UDim2.new(1, -60, 0, 0)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = tostring(default)
+    valueLabel.TextColor3 = Colors.AccentLight
+    valueLabel.Font = Fonts.Mono
+    valueLabel.TextSize = 12
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valueLabel.ZIndex = 62
+    valueLabel.Parent = headerFrame
+    
+    local sliderBg = Instance.new("TextButton")
+    sliderBg.Size = UDim2.new(1, 0, 0, 8)
+    sliderBg.Position = UDim2.new(0, 0, 0, 28)
+    sliderBg.BackgroundColor3 = Colors.SliderBg
+    sliderBg.BorderSizePixel = 0
+    sliderBg.Text = ""
+    sliderBg.AutoButtonColor = false
+    sliderBg.ZIndex = 61
+    sliderBg.Parent = frame
+    Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1, 0)
+    
+    local fill = Instance.new("Frame")
+    local percent = (default - min) / (max - min)
+    fill.Size = UDim2.new(percent, 0, 1, 0)
+    fill.BackgroundColor3 = Colors.SliderFill
+    fill.BorderSizePixel = 0
+    fill.ZIndex = 62
+    fill.Parent = sliderBg
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+    
+    local knob2 = Instance.new("Frame")
+    knob2.Size = UDim2.new(0, 14, 0, 14)
+    knob2.Position = UDim2.new(percent, -7, 0.5, -7)
+    knob2.BackgroundColor3 = Colors.White
+    knob2.BorderSizePixel = 0
+    knob2.ZIndex = 63
+    knob2.Parent = sliderBg
+    Instance.new("UICorner", knob2).CornerRadius = UDim.new(1, 0)
+    
+    SliderValues[name] = default
+    
     local dragging = false
-    local dragStart = nil
-    local frameStart = nil
+    local function update(input)
+        local pos = input.Position
+        local absPos = sliderBg.AbsolutePosition.X
+        local absSize = sliderBg.AbsoluteSize.X
+        local pct = math.clamp((pos.X - absPos) / absSize, 0, 1)
+        local val = min + (max - min) * pct
+        if step > 0 then val = math.floor(val / step + 0.5) * step end
+        val = math.clamp(val, min, max)
+        pct = (val - min) / (max - min)
+        fill.Size = UDim2.new(pct, 0, 1, 0)
+        knob2.Position = UDim2.new(pct, -7, 0.5, -7)
+        valueLabel.Text = tostring(val)
+        SliderValues[name] = val
+        callback(val)
+    end
     
-    titleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            frameStart = menuFrame.Position
-        end
+    sliderBg.MouseButton1Down:Connect(function()
+        dragging = true
+        update({Position = Vector2.new(Mouse.X, Mouse.Y)})
     end)
     
     UserInputService.InputChanged:Connect(function(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            local newX = frameStart.X.Offset + delta.X
-            local newY = frameStart.Y.Offset + delta.Y
-            newX = Clamp(newX, -menuFrame.AbsoluteSize.X + 100, ScreenGui.AbsoluteSize.X - 100)
-            newY = Clamp(newY, 0, ScreenGui.AbsoluteSize.Y - 60)
-            menuFrame.Position = UDim2.new(0, newX, 0, newY)
+            update(input)
         end
     end)
     
     UserInputService.InputEnded:Connect(function(input)
-        if dragging then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
         end
     end)
     
-    print("[SeraphiCA] Menu created successfully")
-    return menuFrame
+    return frame
 end
 
--- ============================================================
---  ПОПАП ДЛЯ СЕКРЕТНОЙ ВКЛАДКИ
--- ============================================================
-function ShowSecretPopup(callback)
-    if secretPopup then return end
+function CreateDropdown(parent, name, options, default, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -16, 0, 38)
+    frame.BackgroundTransparency = 1
+    frame.ZIndex = 60
+    frame.Parent = parent
     
-    secretPopup = Instance.new("Frame")
-    secretPopup.Size = UDim2.new(0, 400, 0, 250)
-    secretPopup.Position = UDim2.new(0.5, -200, 0.5, -125)
-    secretPopup.BackgroundColor3 = Color3.fromRGB(15, 8, 40)
-    secretPopup.BackgroundTransparency = 0
-    secretPopup.BorderSizePixel = 2
-    secretPopup.BorderColor3 = C.Purple
-    secretPopup.ZIndex = 300
-    secretPopup.Parent = ScreenGui
-    local spCorner = Instance.new("UICorner", secretPopup)
-    spCorner.CornerRadius = UDim.new(0, 16)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.BackgroundColor3 = Colors.Secondary
+    btn.BorderSizePixel = 0
+    btn.Text = "  " .. name .. ": " .. (default or options[1])
+    btn.TextColor3 = Colors.Text
+    btn.Font = Fonts.Normal
+    btn.TextSize = 12
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.AutoButtonColor = false
+    btn.ZIndex = 61
+    btn.Parent = frame
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
     
-    local spGrad = Instance.new("UIGradient")
-    spGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 10, 60)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 5, 40)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 10, 60))
-    })
-    spGrad.Rotation = 45
-    spGrad.Parent = secretPopup
+    local listFrame = Instance.new("ScrollingFrame")
+    listFrame.Size = UDim2.new(1, 0, 0, 0)
+    listFrame.Position = UDim2.new(0, 0, 1, 2)
+    listFrame.BackgroundColor3 = Colors.Main
+    listFrame.BorderSizePixel = 0
+    listFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 30)
+    listFrame.ScrollBarThickness = 3
+    listFrame.Visible = false
+    listFrame.ZIndex = 65
+    listFrame.Parent = frame
+    Instance.new("UICorner", listFrame).CornerRadius = UDim.new(0, 5)
     
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 45)
-    title.BackgroundTransparency = 1
-    title.Text = "🔐 SECRET ACCESS"
-    title.TextColor3 = C.Purple
-    title.TextSize = 22
-    title.Font = Enum.Font.GothamBold
-    title.TextXAlignment = Enum.TextXAlignment.Center
-    title.TextYAlignment = Enum.TextYAlignment.Center
-    title.TextStrokeTransparency = 0.3
-    title.TextStrokeColor3 = C.Purple
-    title.Parent = secretPopup
+    local isOpen = false
     
-    local subTitle = Instance.new("TextLabel")
-    subTitle.Size = UDim2.new(1, 0, 0, 22)
-    subTitle.Position = UDim2.new(0, 0, 0.2, 0)
-    subTitle.BackgroundTransparency = 1
-    subTitle.Text = "Enter the secret key to unlock"
-    subTitle.TextColor3 = C.Gray
-    subTitle.TextSize = 12
-    subTitle.Font = Enum.Font.Gotham
-    subTitle.TextXAlignment = Enum.TextXAlignment.Center
-    subTitle.Parent = secretPopup
+    local function toggleList()
+        isOpen = not isOpen
+        if isOpen then
+            listFrame.Visible = true
+            Tween(listFrame, {Size = UDim2.new(1, 0, 0, math.min(#options * 32 + 4, 180))}, 0.2)
+        else
+            Tween(listFrame, {Size = UDim2.new(1, 0, 0, 0)}, 0.2)
+            wait(0.2)
+            listFrame.Visible = false
+        end
+    end
     
-    local secretInput = Instance.new("TextBox")
-    secretInput.Size = UDim2.new(0.8, 0, 0, 40)
-    secretInput.Position = UDim2.new(0.1, 0, 0.35, 0)
-    secretInput.BackgroundColor3 = Color3.fromRGB(25, 15, 50)
-    secretInput.BackgroundTransparency = 0
-    secretInput.BorderSizePixel = 2
-    secretInput.BorderColor3 = C.Purple
-    secretInput.Text = ""
-    secretInput.PlaceholderText = "Enter access key..."
-    secretInput.PlaceholderColor3 = C.DimGray
-    secretInput.TextColor3 = C.White
-    secretInput.TextSize = 16
-    secretInput.Font = Enum.Font.Gotham
-    secretInput.Parent = secretPopup
-    local siCorner = Instance.new("UICorner", secretInput)
-    siCorner.CornerRadius = UDim.new(0, 10)
+    btn.MouseButton1Click:Connect(toggleList)
     
-    local submitBtn = Instance.new("TextButton")
-    submitBtn.Size = UDim2.new(0.4, 0, 0, 38)
-    submitBtn.Position = UDim2.new(0.3, 0, 0.6, 0)
-    submitBtn.BackgroundColor3 = C.Purple
-    submitBtn.BackgroundTransparency = 0
-    submitBtn.BorderSizePixel = 0
-    submitBtn.Text = "🔓 UNLOCK"
-    submitBtn.TextColor3 = C.White
-    submitBtn.TextSize = 15
-    submitBtn.Font = Enum.Font.GothamBold
-    submitBtn.Parent = secretPopup
-    local sBtnCorner = Instance.new("UICorner", submitBtn)
-    sBtnCorner.CornerRadius = UDim.new(0, 10)
+    for _, option in ipairs(options) do
+        local optBtn = Instance.new("TextButton")
+        optBtn.Size = UDim2.new(1, -6, 0, 28)
+        optBtn.BackgroundColor3 = Colors.Secondary
+        optBtn.BorderSizePixel = 0
+        optBtn.Text = option
+        optBtn.TextColor3 = Colors.Text
+        optBtn.Font = Fonts.Normal
+        optBtn.TextSize = 12
+        optBtn.AutoButtonColor = false
+        optBtn.ZIndex = 66
+        optBtn.Parent = listFrame
+        Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
+        
+        optBtn.MouseButton1Click:Connect(function()
+            btn.Text = "  " .. name .. ": " .. option
+            DropdownValues[name] = option
+            toggleList()
+            callback(option)
+        end)
+        
+        optBtn.MouseEnter:Connect(function()
+            Tween(optBtn, {BackgroundColor3 = Colors.Accent}, 0.1)
+        end)
+        optBtn.MouseLeave:Connect(function()
+            Tween(optBtn, {BackgroundColor3 = Colors.Secondary}, 0.1)
+        end)
+    end
     
-    local secretStatus = Instance.new("TextLabel")
-    secretStatus.Size = UDim2.new(1, 0, 0, 25)
-    secretStatus.Position = UDim2.new(0, 0, 0.82, 0)
-    secretStatus.BackgroundTransparency = 1
-    secretStatus.Text = "Attempts: " .. ATTEMPTS .. "/" .. MAX_ATTEMPTS
-    secretStatus.TextColor3 = C.Light
-    secretStatus.TextSize = 13
-    secretStatus.Font = Enum.Font.Gotham
-    secretStatus.TextXAlignment = Enum.TextXAlignment.Center
-    secretStatus.Parent = secretPopup
+    return frame
+end
+
+--// Функция создания секции
+function CreateSection(parent, title)
+    local section = Instance.new("Frame")
+    section.Size = UDim2.new(1, 0, 0, 28)
+    section.BackgroundColor3 = Colors.Tertiary
+    section.BorderSizePixel = 0
+    section.ZIndex = 61
+    section.Parent = parent
+    Instance.new("UICorner", section).CornerRadius = UDim.new(0, 4)
     
-    local spCloseBtn = Instance.new("TextButton")
-    spCloseBtn.Size = UDim2.new(0, 32, 0, 32)
-    spCloseBtn.Position = UDim2.new(1, -38, 0, 8)
-    spCloseBtn.BackgroundColor3 = C.Error
-    spCloseBtn.BackgroundTransparency = 0.2
-    spCloseBtn.BorderSizePixel = 0
-    spCloseBtn.Text = "✕"
-    spCloseBtn.TextColor3 = C.White
-    spCloseBtn.TextSize = 16
-    spCloseBtn.Font = Enum.Font.GothamBold
-    spCloseBtn.Parent = secretPopup
-    local spcCorner = Instance.new("UICorner", spCloseBtn)
-    spcCorner.CornerRadius = UDim.new(0, 16)
-    spCloseBtn.MouseButton1Click:Connect(function()
-        secretPopup:Destroy()
-        secretPopup = nil
-        ATTEMPTS = 0
-        if callback then callback(false) end
+    local sectionLabel = Instance.new("TextLabel")
+    sectionLabel.Size = UDim2.new(1, -10, 1, 0)
+    sectionLabel.Position = UDim2.new(0, 10, 0, 0)
+    sectionLabel.BackgroundTransparency = 1
+    sectionLabel.Text = title
+    sectionLabel.TextColor3 = Colors.AccentLight
+    sectionLabel.Font = Fonts.Header
+    sectionLabel.TextSize = 14
+    sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+    sectionLabel.ZIndex = 62
+    sectionLabel.Parent = section
+    
+    return section
+end
+
+--// MM2 Функции определения ролей
+function MM2_DetectRoles()
+    local roles = {}
+    local roleFolder = Workspace:FindFirstChild("Roles") or Workspace:FindFirstChild("PlayerRoles")
+    
+    -- Метод 1: через папку ролей
+    if roleFolder then
+        for _, player in pairs(Players:GetPlayers()) do
+            local playerRole = roleFolder:FindFirstChild(player.Name)
+            if playerRole then
+                local roleName = playerRole.Value or playerRole.Name
+                roles[player.UserId] = roleName
+            end
+        end
+    end
+    
+    -- Метод 2: через цвета/атрибуты персонажа
+    for _, player in pairs(Players:GetPlayers()) do
+        if not roles[player.UserId] and player.Character then
+            local char = player.Character
+            -- Проверка наличия ножа (Murderer)
+            local hasKnife = false
+            local hasGun = false
+            for _, child in pairs(char:GetDescendants()) do
+                if child:IsA("Tool") then
+                    if child.Name:lower():find("knife") or child.Name:lower():find("blade") or child.Name:lower():find("dagger") then
+                        hasKnife = true
+                    end
+                    if child.Name:lower():find("gun") or child.Name:lower():find("pistol") or child.Name:lower():find("revolver") or child.Name:lower():find("sheriff") then
+                        hasGun = true
+                    end
+                end
+            end
+            
+            if hasKnife then
+                roles[player.UserId] = "Murderer"
+            elseif hasGun then
+                roles[player.UserId] = "Sheriff"
+            else
+                roles[player.UserId] = "Innocent"
+            end
+        end
+    end
+    
+    -- Метод 3: через белые/красные части тела
+    for _, player in pairs(Players:GetPlayers()) do
+        if not roles[player.UserId] and player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            if head then
+                -- Проверяем цвет для определения роли
+                -- В некоторых версиях MM2 используются цветовые индикаторы
+            end
+        end
+    end
+    
+    MM2.PlayerRoles = roles
+    return roles
+end
+
+function MM2_GetPlayerRole(player)
+    if MM2.PlayerRoles[player.UserId] then
+        return MM2.PlayerRoles[player.UserId]
+    end
+    return "Unknown"
+end
+
+--// MM2 ESP системы
+function MM2_CreatePlayerESP(player, role, color)
+    local userId = player.UserId
+    if MM2.ESPCache[userId] then
+        -- Обновляем существующий ESP
+        local cache = MM2.ESPCache[userId]
+        if cache.billboard then
+            cache.billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+        end
+        return
+    end
+    
+    local char = player.Character
+    if not char then return end
+    
+    local head = char:FindFirstChild("Head")
+    if not head then return end
+    
+    -- Создаём BillboardGui для имени и роли
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = 1000
+    billboard.Parent = head
+    
+    -- Фон
+    local bgFrame = Instance.new("Frame")
+    bgFrame.Size = UDim2.new(1, 0, 0, 30)
+    bgFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    bgFrame.BackgroundTransparency = 0.5
+    bgFrame.BorderSizePixel = 0
+    bgFrame.Parent = billboard
+    Instance.new("UICorner", bgFrame).CornerRadius = UDim.new(0, 4)
+    
+    -- Роль
+    local roleLabel = Instance.new("TextLabel")
+    roleLabel.Size = UDim2.new(1, 0, 0, 14)
+    roleLabel.BackgroundTransparency = 1
+    roleLabel.Text = "[" .. role .. "]"
+    roleLabel.TextColor3 = color
+    roleLabel.Font = Enum.Font.GothamBold
+    roleLabel.TextSize = 12
+    roleLabel.Parent = bgFrame
+    
+    -- Имя
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0, 14)
+    nameLabel.Position = UDim2.new(0, 0, 0, 14)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.Font = Enum.Font.Gotham
+    nameLabel.TextSize = 11
+    nameLabel.Parent = bgFrame
+    
+    -- Highlight персонажа
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = color
+    highlight.FillTransparency = 0.7
+    highlight.OutlineColor = color
+    highlight.OutlineTransparency = 0.3
+    highlight.Adornee = char
+    highlight.Parent = char
+    
+    -- Чамс (Chams)
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local boxHandle = Instance.new("BoxHandleAdornment")
+            boxHandle.Size = part.Size
+            boxHandle.Adornee = part
+            boxHandle.AlwaysOnTop = true
+            boxHandle.ZIndex = 5
+            boxHandle.Color3 = color
+            boxHandle.Transparency = 0.5
+            boxHandle.Parent = part
+        end
+    end
+    
+    MM2.ESPCache[userId] = {
+        billboard = billboard,
+        highlight = highlight,
+        player = player,
+        role = role,
+    }
+end
+
+function MM2_ClearESP(userId)
+    local cache = MM2.ESPCache[userId]
+    if cache then
+        if cache.billboard then cache.billboard:Destroy() end
+        if cache.highlight then cache.highlight:Destroy() end
+        MM2.ESPCache[userId] = nil
+    end
+end
+
+function MM2_ClearAllESP()
+    for userId, _ in pairs(MM2.ESPCache) do
+        MM2_ClearESP(userId)
+    end
+end
+
+--// MM2 Системные функции
+function MM2_FlingPlayer(player, power, rotation)
+    power = power or 1000
+    rotation = rotation or Vector3.new(math.random(-100, 100), math.random(-100, 100), math.random(-100, 100))
+    
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = player.Character.HumanoidRootPart
+        hrp.Velocity = Vector3.new(math.random(-power, power), power, math.random(-power, power))
+        hrp.RotVelocity = rotation
+        if player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.PlatformStand = true
+        end
+    end
+end
+
+function MM2_KillPlayer(player)
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        player.Character.Humanoid.Health = 0
+    end
+end
+
+function MM2_TeleportPlayerToMe(player)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            player.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(math.random(-3, 3), 0, math.random(-3, 3))
+        end
+    end
+end
+
+function MM2_FreezePlayer(player)
+    if player.Character then
+        for _, part in pairs(player.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Anchored = true
+            end
+        end
+    end
+end
+
+function MM2_UnfreezePlayer(player)
+    if player.Character then
+        for _, part in pairs(player.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Anchored = false
+            end
+        end
+    end
+end
+
+function MM2_InvisiblePlayer(player)
+    if player.Character then
+        for _, part in pairs(player.Character:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("Decal") then
+                part.Transparency = 1
+            end
+        end
+    end
+end
+
+function MM2_VisiblePlayer(player)
+    if player.Character then
+        for _, part in pairs(player.Character:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("Decal") then
+                part.Transparency = 0
+            end
+        end
+    end
+end
+
+function MM2_GetMurderer()
+    for _, player in pairs(Players:GetPlayers()) do
+        if MM2_GetPlayerRole(player) == "Murderer" then
+            return player
+        end
+    end
+    return nil
+end
+
+function MM2_GetSheriff()
+    for _, player in pairs(Players:GetPlayers()) do
+        if MM2_GetPlayerRole(player) == "Sheriff" then
+            return player
+        end
+    end
+    return nil
+end
+
+function MM2_GetAllInnocents()
+    local innocents = {}
+    for _, player in pairs(Players:GetPlayers()) do
+        if MM2_GetPlayerRole(player) == "Innocent" then
+            table.insert(innocents, player)
+        end
+    end
+    return innocents
+end
+
+function MM2_GiveKnife(player)
+    -- Попытка дать нож через репликацию
+    local knifeModel = ReplicatedStorage:FindFirstChild("Knife") or ReplicatedStorage:FindFirstChild("Weapon")
+    if knifeModel and player.Character then
+        local clone = knifeModel:Clone()
+        clone.Parent = player.Character
+    end
+end
+
+function MM2_StealWeapon(target, weaponType)
+    weaponType = weaponType or "Knife"
+    if target.Character then
+        for _, tool in pairs(target.Character:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name:lower():find(weaponType:lower()) then
+                tool.Parent = LocalPlayer.Character
+                return true
+            end
+        end
+    end
+    return false
+end
+
+--// Создание вкладки MM2
+function CreateMM2Tab(parent)
+    local mm2Content = Instance.new("ScrollingFrame")
+    mm2Content.Size = UDim2.new(1, 0, 1, 0)
+    mm2Content.BackgroundTransparency = 1
+    mm2Content.BorderSizePixel = 0
+    mm2Content.ScrollBarThickness = 3
+    mm2Content.ScrollBarImageColor3 = Colors.Accent
+    mm2Content.CanvasSize = UDim2.new(0, 0, 0, 3200) -- Огромный канвас для всех функций
+    mm2Content.Visible = false
+    mm2Content.ZIndex = 57
+    mm2Content.Parent = parent
+    
+    local contentLayout = Instance.new("UIListLayout")
+    contentLayout.Padding = UDim.new(0, 6)
+    contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    contentLayout.Parent = mm2Content
+    
+    local contentPadding = Instance.new("UIPadding")
+    contentPadding.PaddingTop = UDim.new(0, 8)
+    contentPadding.PaddingLeft = UDim.new(0, 4)
+    contentPadding.PaddingRight = UDim.new(0, 4)
+    contentPadding.Parent = mm2Content
+    
+    -- ============ MM2 ROLE DETECTION ============
+    CreateSection(mm2Content, "🔍 ROLE DETECTION")
+    
+    CreateButton(mm2Content, "Detect All Roles", function()
+        MM2_DetectRoles()
+        local count = 0
+        for _ in pairs(MM2.PlayerRoles) do
+            count = count + 1
+        end
+        SendNotification("🔍", "MM2", "Detected " .. count .. " player roles!", 3)
     end)
     
-    submitBtn.MouseButton1Click:Connect(function()
-        local input = secretInput.Text
-        local isValid = false
-        if input == DecryptKey(ENCRYPTED_KEY) then
-            isValid = true
-        end
-        if isValid then
-            secretStatus.Text = "✅ ACCESS GRANTED!"
-            secretStatus.TextColor3 = C.Success
-            wait(0.5)
-            secretPopup:Destroy()
-            secretPopup = nil
-            ATTEMPTS = 0
-            if callback then callback(true) end
+    CreateToggle(mm2Content, "Auto Role Detection", true, function(v)
+        ToggleStates.MM2AutoDetect = v
+        if v then MM2_DetectRoles() end
+    end)
+    
+    CreateDropdown(mm2Content, "Detection Method", {"Auto", "By Tools", "By Colors", "By Values", "All"}, "Auto", function(v)
+        MM2.RoleDetectionMethod = v
+        MM2_DetectRoles()
+    end)
+    
+    -- ============ MM2 ESP ============
+    CreateSection(mm2Content, "👁️ ROLE ESP (ПОДСВЕТКА ПО РОЛЯМ)")
+    
+    CreateToggle(mm2Content, "ESP Master Switch", false, function(v)
+        ToggleStates.MM2ESPMaster = v
+        if not v then
+            MM2_ClearAllESP()
         else
-            ATTEMPTS = ATTEMPTS + 1
-            secretStatus.Text = "❌ Wrong key! Attempts: " .. ATTEMPTS .. "/" .. MAX_ATTEMPTS
-            secretStatus.TextColor3 = C.Error
-            secretInput.Text = ""
-            if ATTEMPTS >= MAX_ATTEMPTS then
-                secretStatus.Text = "🔒 ACCESS BLOCKED!"
-                secretStatus.TextColor3 = C.Error
-                submitBtn.Visible = false
-                secretInput.Visible = false
-                wait(2)
-                secretPopup:Destroy()
-                secretPopup = nil
-                ATTEMPTS = 0
-                if callback then callback(false) end
+            MM2_DetectRoles()
+        end
+    end)
+    
+    -- Sheriff ESP
+    CreateToggle(mm2Content, "Sheriff ESP", true, function(v)
+        ToggleStates.MM2SheriffESP = v
+        if not v then
+            for userId, cache in pairs(MM2.ESPCache) do
+                if cache.role == "Sheriff" then MM2_ClearESP(userId) end
             end
         end
     end)
-end
-
--- ============================================================
---  ЗАПУСК
--- ============================================================
-local function Main()
-    print("[SeraphiCA] Starting...")
-    wait(0.5)
     
-    -- Создаём меню
-    local menu = CreateMenu()
+    CreateDropdown(mm2Content, "Sheriff Color", {"Blue", "Cyan", "Light Blue", "Dark Blue", "Custom"}, "Blue", function(v)
+        local colors = {
+            Blue = Color3.fromRGB(0, 150, 255),
+            Cyan = Color3.fromRGB(0, 255, 255),
+            ["Light Blue"] = Color3.fromRGB(100, 180, 255),
+            ["Dark Blue"] = Color3.fromRGB(0, 50, 180),
+            Custom = Color3.fromRGB(0, 150, 255),
+        }
+        MM2.SheriffColor = colors[v] or Color3.fromRGB(0, 150, 255)
+    end)
     
-    Watermark.MouseButton1Click:Connect(function()
-        if menuOpen then
-            menu.Visible = false
-            menuOpen = false
-        else
-            menu.Visible = true
-            menuOpen = true
-            menu.Size = UDim2.new(0, 0, 0, 0)
-            TweenService:Create(menu, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = UDim2.new(0, 620, 0, 420)
-            }):Play()
+    CreateToggle(mm2Content, "Sheriff Name Tags", true, function(v) ToggleStates.MM2SheriffNames = v end)
+    CreateToggle(mm2Content, "Sheriff Distance", true, function(v) ToggleStates.MM2SheriffDist = v end)
+    CreateToggle(mm2Content, "Sheriff Boxes", true, function(v) ToggleStates.MM2SheriffBoxes = v end)
+    CreateToggle(mm2Content, "Sheriff Health Bar", false, function(v) ToggleStates.MM2SheriffHealth = v end)
+    CreateToggle(mm2Content, "Sheriff Tracers", false, function(v) ToggleStates.MM2SheriffTracers = v end)
+    
+    -- Murderer ESP
+    CreateToggle(mm2Content, "Murderer ESP", true, function(v)
+        ToggleStates.MM2MurdererESP = v
+        if not v then
+            for userId, cache in pairs(MM2.ESPCache) do
+                if cache.role == "Murderer" then MM2_ClearESP(userId) end
+            end
         end
     end)
     
-    print("[SeraphiCA] ✅ Script loaded! Click watermark to open menu.")
-    print("[SeraphiCA] 🔑 Secret password: 081324")
+    CreateDropdown(mm2Content, "Murderer Color", {"Red", "Dark Red", "Orange Red", "Pink", "Custom"}, "Red", function(v)
+        local colors = {
+            Red = Color3.fromRGB(255, 0, 0),
+            ["Dark Red"] = Color3.fromRGB(180, 0, 0),
+            ["Orange Red"] = Color3.fromRGB(255, 50, 0),
+            Pink = Color3.fromRGB(255, 0, 150),
+            Custom = Color3.fromRGB(255, 0, 0),
+        }
+        MM2.MurdererColor = colors[v] or Color3.fromRGB(255, 0, 0)
+    end)
+    
+    CreateToggle(mm2Content, "Murderer Name Tags", true, function(v) ToggleStates.MM2MurdererNames = v end)
+    CreateToggle(mm2Content, "Murderer Distance", true, function(v) ToggleStates.MM2MurdererDist = v end)
+    CreateToggle(mm2Content, "Murderer Boxes", true, function(v) ToggleStates.MM2MurdererBoxes = v end)
+    CreateToggle(mm2Content, "Murderer Health Bar", false, function(v) ToggleStates.MM2MurdererHealth = v end)
+    CreateToggle(mm2Content, "Murderer Tracers", false, function(v) ToggleStates.MM2MurdererTracers = v end)
+    CreateToggle(mm2Content, "Murderer Warning", true, function(v) ToggleStates.MM2MurdererWarning = v end)
+    CreateSlider(mm2Content, "Murderer Alert Distance", 5, 100, 20, 1, function(v) SliderValues.MM2MurdererAlertDist = v end)
+    
+    -- Innocent ESP
+    CreateToggle(mm2Content, "Innocent ESP", false, function(v)
+        ToggleStates.MM2InnocentESP = v
+        if not v then
+            for userId, cache in pairs(MM2.ESPCache) do
+                if cache.role == "Innocent" then MM2_ClearESP(userId) end
+            end
+        end
+    end)
+    
+    CreateDropdown(mm2Content, "Innocent Color", {"Green", "Lime", "Yellow Green", "White", "Custom"}, "Green", function(v)
+        local colors = {
+            Green = Color3.fromRGB(0, 255, 0),
+            Lime = Color3.fromRGB(150, 255, 0),
+            ["Yellow Green"] = Color3.fromRGB(200, 255, 0),
+            White = Color3.fromRGB(255, 255, 255),
+            Custom = Color3.fromRGB(0, 255, 0),
+        }
+        MM2.InnocentColor = colors[v] or Color3.fromRGB(0, 255, 0)
+    end)
+    
+    CreateToggle(mm2Content, "Innocent Name Tags", false, function(v) ToggleStates.MM2InnocentNames = v end)
+    CreateToggle(mm2Content, "Innocent Distance", false, function(v) ToggleStates.MM2InnocentDist = v end)
+    
+    -- Hero ESP
+    CreateToggle(mm2Content, "Hero ESP", true, function(v) ToggleStates.MM2HeroESP = v end)
+    
+    CreateDropdown(mm2Content, "Hero Color", {"Gold", "Yellow", "Orange", "Custom"}, "Gold", function(v)
+        local colors = {
+            Gold = Color3.fromRGB(255, 215, 0),
+            Yellow = Color3.fromRGB(255, 255, 0),
+            Orange = Color3.fromRGB(255, 165, 0),
+            Custom = Color3.fromRGB(255, 215, 0),
+        }
+        MM2.HeroColor = colors[v] or Color3.fromRGB(255, 215, 0)
+    end)
+    
+    -- ============ MM2 ITEM ESP ============
+    CreateSection(mm2Content, "🔪 ITEM ESP")
+    
+    CreateToggle(mm2Content, "Knife ESP", false, function(v) ToggleStates.MM2KnifeESP = v end)
+    CreateToggle(mm2Content, "Gun ESP", false, function(v) ToggleStates.MM2GunESP = v end)
+    CreateToggle(mm2Content, "Coin ESP", false, function(v) ToggleStates.MM2CoinESP = v end)
+    CreateToggle(mm2Content, "Collectible ESP", false, function(v) ToggleStates.MM2CollectibleESP = v end)
+    CreateToggle(mm2Content, "Drop ESP", false, function(v) ToggleStates.MM2DropESP = v end)
+    CreateSlider(mm2Content, "Item ESP Distance", 50, 1000, 300, 10, function(v) SliderValues.MM2ItemESPDist = v end)
+    
+    -- ============ MM2 COMBAT ============
+    CreateSection(mm2Content, "⚔️ COMBAT FUNCTIONS")
+    
+    CreateToggle(mm2Content, "Kill All (Insta Win)", false, function(v)
+        ToggleStates.MM2KillAll = v
+        if v then
+            local murderer = MM2_GetMurderer()
+            if murderer then
+                MM2_KillPlayer(murderer)
+                SendNotification("⚔️", "MM2", "Murderer eliminated!", 3)
+            end
+        end
+    end)
+    
+    CreateButton(mm2Content, "Kill Murderer", function()
+        local murderer = MM2_GetMurderer()
+        if murderer then
+            MM2_KillPlayer(murderer)
+            SendNotification("⚔️", "MM2", "Killed " .. murderer.Name .. " (Murderer)!", 3)
+        else
+            SendNotification("⚠️", "MM2", "Murderer not found!", 2)
+        end
+    end)
+    
+    CreateButton(mm2Content, "Kill Sheriff", function()
+        local sheriff = MM2_GetSheriff()
+        if sheriff then
+            MM2_KillPlayer(sheriff)
+            SendNotification("⚔️", "MM2", "Killed " .. sheriff.Name .. " (Sheriff)!", 3)
+        end
+    end)
+    
+    CreateButton(mm2Content, "Kill All Innocents", function()
+        local innocents = MM2_GetAllInnocents()
+        for _, innocent in ipairs(innocents) do
+            MM2_KillPlayer(innocent)
+        end
+        SendNotification("⚔️", "MM2", "Killed " .. #innocents .. " innocents!", 3)
+    end)
+    
+    CreateToggle(mm2Content, "Auto Kill Murderer", false, function(v) ToggleStates.MM2AutoKillMurderer = v end)
+    CreateToggle(mm2Content, "Auto Stun Murderer", false, function(v) ToggleStates.MM2AutoStunMurderer = v end)
+    CreateToggle(mm2Content, "God Mode (MM2)", false, function(v)
+        ToggleStates.MM2GodMode = v
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.MaxHealth = v and math.huge or 100
+            char.Humanoid.Health = v and math.huge or 100
+        end
+    end)
+    
+    -- ============ MM2 WEAPONS ============
+    CreateSection(mm2Content, "🔫 WEAPON FUNCTIONS")
+    
+    CreateButton(mm2Content, "Get Knife (Become Murderer)", function()
+        MM2_GiveKnife(LocalPlayer)
+        SendNotification("🔫", "MM2", "Knife given! You are now the murderer!", 3)
+    end)
+    
+    CreateButton(mm2Content, "Steal Knife from Murderer", function()
+        local murderer = MM2_GetMurderer()
+        if murderer then
+            local success = MM2_StealWeapon(murderer, "Knife")
+            if success then
+                SendNotification("🔫", "MM2", "Stole knife from " .. murderer.Name .. "!", 3)
+            else
+                SendNotification("⚠️", "MM2", "Could not steal knife!", 2)
+            end
+        end
+    end)
+    
+    CreateButton(mm2Content, "Steal Gun from Sheriff", function()
+        local sheriff = MM2_GetSheriff()
+        if sheriff then
+            local success = MM2_StealWeapon(sheriff, "Gun")
+            if success then
+                SendNotification("🔫", "MM2", "Stole gun from " .. sheriff.Name .. "!", 3)
+            end
+        end
+    end)
+    
+    CreateButton(mm2Content, "Remove All Weapons", function()
+        local char = LocalPlayer.Character
+        if char then
+            for _, tool in pairs(char:GetChildren()) do
+                if tool:IsA("Tool") then
+                    tool:Destroy()
+                end
+            end
+            SendNotification("🔫", "MM2", "All weapons removed!", 2)
+        end
+    end)
+    
+    CreateToggle(mm2Content, "Infinite Ammo", false, function(v) ToggleStates.MM2InfAmmo = v end)
+    CreateToggle(mm2Content, "Rapid Fire", false, function(v) ToggleStates.MM2RapidFire = v end)
+    CreateToggle(mm2Content, "No Reload", false, function(v) ToggleStates.MM2NoReload = v end)
+    CreateToggle(mm2Content, "Auto Shoot Murderer", false, function(v) ToggleStates.MM2AutoShootMurderer = v end)
+    
+    -- ============ MM2 PLAYER MODS ============
+    CreateSection(mm2Content, "👤 PLAYER MANIPULATION")
+    
+    CreateToggle(mm2Content, "Invisible (You)", false, function(v)
+        ToggleStates.MM2SelfInvis = v
+        MM2_InvisiblePlayer(LocalPlayer)
+        if not v then MM2_VisiblePlayer(LocalPlayer) end
+    end)
+    
+    CreateToggle(mm2Content, "Make Murderer Invisible", false, function(v)
+        ToggleStates.MM2MurdererInvis = v
+        local murderer = MM2_GetMurderer()
+        if murderer then
+            if v then MM2_InvisiblePlayer(murderer) else MM2_VisiblePlayer(murderer) end
+        end
+    end)
+    
+    CreateToggle(mm2Content, "Make Sheriff Invisible", false, function(v)
+        ToggleStates.MM2SheriffInvis = v
+        local sheriff = MM2_GetSheriff()
+        if sheriff then
+            if v then MM2_InvisiblePlayer(sheriff) else MM2_VisiblePlayer(sheriff) end
+        end
+    end)
+    
+    CreateButton(mm2Content, "Make All Invisible", function()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                MM2_InvisiblePlayer(player)
+            end
+        end
+        SendNotification("👤", "MM2", "All players invisible!", 2)
+    end)
+    
+    CreateButton(mm2Content, "Make All Visible", function()
+        for _, player in pairs(Players:GetPlayers()) do
+            MM2_VisiblePlayer(player)
+        end
+        SendNotification("👤", "MM2", "All players visible!", 2)
+    end)
+    
+    -- ============ MM2 FLING ============
+    CreateSection(mm2Content, "🌀 FLING CONTROLS")
+    
+    CreateToggle(mm2Content, "Fling All Players", false, function(v)
+        ToggleStates.MM2FlingAll = v
+    end)
+    
+    CreateSlider(mm2Content, "Fling Power", 100, 10000, 2000, 100, function(v) SliderValues.MM2FlingPower = v end)
+    CreateSlider(mm2Content, "Fling Rotation Speed", 0, 500, 100, 10, function(v) SliderValues.MM2FlingRotation = v end)
+    
+    CreateButton(mm2Content, "Fling Murderer", function()
+        local murderer = MM2_GetMurderer()
+        if murderer then
+            local power = SliderValues.MM2FlingPower or 2000
+            MM2_FlingPlayer(murderer, power)
+            SendNotification("🌀", "MM2", "Flung " .. murderer.Name .. "!", 2)
+        end
+    end)
+    
+    CreateButton(mm2Content, "Fling Sheriff", function()
+        local sheriff = MM2_GetSheriff()
+        if sheriff then
+            MM2_FlingPlayer(sheriff, SliderValues.MM2FlingPower or 2000)
+            SendNotification("🌀", "MM2", "Flung " .. sheriff.Name .. "!", 2)
+        end
+    end)
+    
+    CreateButton(mm2Content, "Fling All Innocents", function()
+        local innocents = MM2_GetAllInnocents()
+        local power = SliderValues.MM2FlingPower or 2000
+        for _, innocent in ipairs(innocents) do
+            MM2_FlingPlayer(innocent, power)
+        end
+        SendNotification("🌀", "MM2", "Flung " .. #innocents .. " innocents!", 2)
+    end)
+    
+    CreateButton(mm2Content, "Super Fling All (Crash Attempt)", function()
+        local power = 50000
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                MM2_FlingPlayer(player, power)
+            end
+        end
+        SendNotification("🌀", "MM2", "SUPER FLING deployed! Server may crash...", 3)
+    end)
+    
+    CreateButton(mm2Content, "Spin All Players", function()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                player.Character.HumanoidRootPart.RotVelocity = Vector3.new(0, 500, 0)
+            end
+        end
+        SendNotification("🌀", "MM2", "All players spinning!", 2)
+    end)
+    
+    CreateButton(mm2Content, "Stop All Fling", function()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                player.Character.HumanoidRootPart.Velocity = Vector3.zero
+                player.Character.HumanoidRootPart.RotVelocity = Vector3.zero
+                if player.Character:FindFirstChild("Humanoid") then
+                    player.Character.Humanoid.PlatformStand = false
+                end
+            end
+        end
+        SendNotification("🌀", "MM2", "All fling stopped!", 2)
+    end)
+    
+    -- ============ MM2 FREEZE ============
+    CreateSection(mm2Content, "❄️ FREEZE CONTROLS")
+    
+    CreateButton(mm2Content, "Freeze Murderer", function()
+        local murderer = MM2_GetMurderer()
+        if murderer then
+            MM2_FreezePlayer(murderer)
+            SendNotification("❄️", "MM2", "Frozen " .. murderer.Name .. "!", 2)
+        end
+    end)
+    
+    CreateButton(mm2Content, "Freeze Sheriff", function()
+        local sheriff = MM2_GetSheriff()
+        if sheriff then
+            MM2_FreezePlayer(sheriff)
+            SendNotification("❄️", "MM2", "Frozen " .. sheriff.Name .. "!", 2)
+        end
+    end)
+    
+    CreateButton(mm2Content, "Freeze All Players", function()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                MM2_FreezePlayer(player)
+            end
+        end
+        SendNotification("❄️", "MM2", "All players frozen!", 2)
+    end)
+    
+    CreateButton(mm2Content, "Unfreeze All Players", function()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                MM2_UnfreezePlayer(player)
+            end
+        end
+        SendNotification("❄️", "MM2", "All players unfrozen!", 2)
+    end)
+    
+    -- ============ MM2 TELEPORT ============
+    CreateSection(mm2Content, "📍 TELEPORT CONTROLS")
+    
+    CreateButton(mm2Content, "Teleport to Murderer", function()
+        local murderer = MM2_GetMurderer()
+        if murderer and murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart") then
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = murderer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                SendNotification("📍", "MM2", "Teleported to murderer!", 2)
+            end
+        end
+    end)
+    
+    CreateButton(mm2Content, "Teleport to Sheriff", function()
+        local sheriff = MM2_GetSheriff()
+        if sheriff and sheriff.Character and sheriff.Character:FindFirstChild("HumanoidRootPart") then
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = sheriff.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                SendNotification("📍", "MM2", "Teleported to sheriff!", 2)
+            end
+        end
+    end)
+    
+    CreateButton(mm2Content, "Teleport All to You", function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local pos = char.HumanoidRootPart.Position
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5)))
+                end
+            end
+            SendNotification("📍", "MM2", "All players teleported to you!", 2)
+        end
+    end)
+    
+    CreateButton(mm2Content, "Teleport to Map Center", function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(0, 50, 0)
+            SendNotification("📍", "MM2", "Teleported to map center!", 2)
+        end
+    end)
+    
+    CreateButton(mm2Content, "Teleport to Safe Zone", function()
+        SendNotification("📍", "MM2", "Searching for safe zone...", 2)
+        -- Placeholder - зависит от карты
+    end)
+    
+    -- ============ MM2 ANTI-FUNCTIONS ============
+    CreateSection(mm2Content, "🛡️ ANTI FUNCTIONS")
+    
+    CreateToggle(mm2Content, "Anti Murderer", false, function(v)
+        ToggleStates.MM2AntiMurderer = v
+        SendNotification("🛡️", "MM2", "Anti-Murderer " .. (v and "ON" or "OFF"), 2)
+    end)
+    
+    CreateToggle(mm2Content, "Anti Knife", false, function(v) ToggleStates.MM2AntiKnife = v end)
+    CreateToggle(mm2Content, "Anti Gun", false, function(v) ToggleStates.MM2AntiGun = v end)
+    CreateToggle(mm2Content, "Anti Death", false, function(v) ToggleStates.MM2AntiDeath = v end)
+    CreateToggle(mm2Content, "Anti Stun", false, function(v) ToggleStates.MM2AntiStun = v end)
+    CreateToggle(mm2Content, "Anti Blind", false, function(v) ToggleStates.MM2AntiBlind = v end)
+    CreateToggle(mm2Content, "Slow Aura (Nearby Enemies)", false, function(v) ToggleStates.MM2SlowAura = v end)
+    CreateSlider(mm2Content, "Slow Aura Range", 5, 50, 15, 1, function(v) SliderValues.MM2SlowAuraRange = v end)
+    
+    -- ============ MM2 MISC ============
+    CreateSection(mm2Content, "🎮 MISC FUNCTIONS")
+    
+    CreateToggle(mm2Content, "Auto Collect Coins", false, function(v) ToggleStates.MM2AutoCoins = v end)
+    CreateToggle(mm2Content, "Auto Collect Gems", false, function(v) ToggleStates.MM2AutoGems = v end)
+    CreateToggle(mm2Content, "Auto Pickup Weapon", false, function(v) ToggleStates.MM2AutoPickup = v end)
+    CreateToggle(mm2Content, "Speed Boost", false, function(v)
+        ToggleStates.MM2SpeedBoost = v
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.WalkSpeed = v and 50 or 16
+        end
+    end)
+    CreateSlider(mm2Content, "Speed Multiplier", 1, 10, 3, 1, function(v)
+        SliderValues.MM2SpeedMult = v
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") and ToggleStates.MM2SpeedBoost then
+            char.Humanoid.WalkSpeed = 16 * v
+        end
+    end)
+    
+    CreateToggle(mm2Content, "Jump Boost", false, function(v)
+        ToggleStates.MM2JumpBoost = v
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.JumpPower = v and 150 or 50
+        end
+    end)
+    
+    CreateToggle(mm2Content, "No Clip (MM2)", false, function(v)
+        ToggleStates.MM2NoClip = v
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = not v
+                end
+            end
+        end
+    end)
+    
+    CreateToggle(mm2Content, "Fly (MM2)", false, function(v) ToggleStates.MM2Fly = v end)
+    CreateSlider(mm2Content, "Fly Speed (MM2)", 10, 300, 80, 5, function(v) SliderValues.MM2FlySpeed = v end)
+    
+    CreateToggle(mm2Content, "Third Person (MM2)", false, function(v)
+        LocalPlayer.CameraMode = v and Enum.CameraMode.Classic or Enum.CameraMode.LockFirstPerson
+    end)
+    
+    CreateToggle(mm2Content, "Zoom Hack", false, function(v)
+        ToggleStates.MM2ZoomHack = v
+        if not v then
+            Camera.FieldOfView = 70
+        end
+    end)
+    CreateSlider(mm2Content, "Zoom Level", 10, 120, 70, 1, function(v)
+        if ToggleStates.MM2ZoomHack then
+            Camera.FieldOfView = v
+        end
+    end)
+    
+    -- ============ MM2 LOBBY/SERVER ============
+    CreateSection(mm2Content, "🔥 LOBBY CONTROL")
+    
+    CreateButton(mm2Content, "Force Start Game", function()
+        SendNotification("🔥", "MM2", "Attempting to force start...", 2)
+        -- Ищем кнопку/ремоут для старта
+        local startButton = Workspace:FindFirstChild("StartGame") or Workspace:FindFirstChild("Voting")
+        if startButton then
+            pcall(function()
+                fireclickdetector(startButton:FindFirstChildWhichIsA("ClickDetector"))
+            end)
+        end
+    end)
+    
+    CreateButton(mm2Content, "End Game", function()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
+                player.Character.Humanoid.Health = 0
+            end
+        end
+        SendNotification("🔥", "MM2", "Game ended!", 2)
+    end)
+    
+    CreateButton(mm2Content, "Kill All & Win", function()
+        local innocents = MM2_GetAllInnocents()
+        local murderer = MM2_GetMurderer()
+        if murderer then
+            -- Убиваем всех кроме себя
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    MM2_KillPlayer(player)
+                end
+            end
+            SendNotification("🔥", "MM2", "YOU WIN! All eliminated!", 3)
+        else
+            SendNotification("⚠️", "MM2", "Murderer not detected!", 2)
+        end
+    end)
+    
+    CreateButton(mm2Content, "Become Murderer Next Round", function()
+        SendNotification("🔥", "MM2", "Attempting to force murderer role...", 2)
+    end)
+    
+    CreateButton(mm2Content, "Become Sheriff Next Round", function()
+        SendNotification("🔥", "MM2", "Attempting to force sheriff role...", 2)
+    end)
+    
+    -- ============ MM2 SERVER ATTACKS ============
+    CreateSection(mm2Content, "💥 SERVER ATTACKS")
+    
+    CreateButton(mm2Content, "Crash MM2 Server", function()
+        spawn(function()
+            for i = 1, 500 do
+                local part = Instance.new("Part")
+                part.Size = Vector3.new(20, 20, 20)
+                part.Position = Vector3.new(math.random(-100, 100), math.random(0, 100), math.random(-100, 100))
+                part.Anchored = false
+                part.Velocity = Vector3.new(math.random(-500, 500), math.random(200, 1000), math.random(-500, 500))
+                part.Parent = Workspace
+            end
+            for i = 1, 200 do
+                local explosion = Instance.new("Explosion")
+                explosion.Position = Vector3.new(math.random(-50, 50), math.random(5, 30), math.random(-50, 50))
+                explosion.BlastRadius = 500
+                explosion.BlastPressure = 500000
+                explosion.Parent = Workspace
+            end
+        end)
+        SendNotification("💥", "MM2", "Server crash deployed!", 3)
+    end)
+    
+    CreateButton(mm2Content, "Lag MM2 Server", function()
+        spawn(function()
+            for i = 1, 300 do
+                local sound = Instance.new("Sound")
+                sound.SoundId = "rbxassetid://0"
+                sound.Volume = 10
+                sound.Parent = Workspace
+                sound:Play()
+            end
+        end)
+        SendNotification("💥", "MM2", "Server lag deployed!", 3)
+    end)
+    
+    CreateButton(mm2Content, "Clear All Map Objects", function()
+        local count = 0
+        for _, obj in pairs(Workspace:GetChildren()) do
+            if not obj:IsA("Camera") and obj ~= LocalPlayer.Character and not obj:IsA("Terrain") then
+                local players = Players:GetPlayers()
+                local isPlayer = false
+                for _, p in ipairs(players) do
+                    if p.Character == obj then isPlayer = true break end
+                end
+                if not isPlayer then
+                    pcall(function() obj:Destroy() end)
+                    count = count + 1
+                end
+            end
+        end
+        SendNotification("💥", "MM2", "Destroyed " .. count .. " objects!", 2)
+    end)
+    
+    -- ============ MM2 INFO ============
+    CreateSection(mm2Content, "ℹ️ GAME INFO")
+    
+    CreateButton(mm2Content, "Show Round Info", function()
+        MM2_DetectRoles()
+        local murderer = MM2_GetMurderer()
+        local sheriff = MM2_GetSheriff()
+        local innocents = MM2_GetAllInnocents()
+        
+        local info = "=== ROUND INFO ===\n"
+        info = info .. "Murderer: " .. (murderer and murderer.Name or "Unknown") .. "\n"
+        info = info .. "Sheriff: " .. (sheriff and sheriff.Name or "Unknown") .. "\n"
+        info = info .. "Innocents: " .. #innocents .. "\n"
+        info = info .. "Players: " .. #Players:GetPlayers() .. "\n"
+        info = info .. "Map: " .. (Workspace:FindFirstChild("Map") and Workspace.Map.Value or "Unknown") .. "\n"
+        
+        SendNotification("ℹ️", "MM2", info, 8)
+    end)
+    
+    CreateButton(mm2Content, "Copy Round Info", function()
+        MM2_DetectRoles()
+        local murderer = MM2_GetMurderer()
+        local info = "MM2 Round | Murderer: " .. (murderer and murderer.Name or "?")
+        setclipboard(info)
+        SendNotification("ℹ️", "MM2", "Info copied to clipboard!", 2)
+    end)
+    
+    CreateToggle(mm2Content, "Round Notifications", true, function(v) ToggleStates.MM2RoundNotifs = v end)
+    CreateToggle(mm2Content, "Murderer Alert Sound", false, function(v) ToggleStates.MM2MurdererAlert = v end)
+    
+    return mm2Content
 end
 
-pcall(Main)
-print("[SeraphiCA] Script execution finished")
+--// Главное меню
+function CreateMainMenu()
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 750, 0, 560)
+    mainFrame.Position = UDim2.new(-1, 0, 0.5, -280)
+    mainFrame.BackgroundColor3 = Colors.Background
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Visible = true
+    mainFrame.ZIndex = 55
+    mainFrame.Parent = ScreenGui
+    Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
+    
+    -- Title bar
+    local titleBar = Instance.new("Frame")
+    titleBar.Size = UDim2.new(1, 0, 0, 45)
+    titleBar.BackgroundColor3 = Colors.Main
+    titleBar.BorderSizePixel = 0
+    titleBar.ZIndex = 56
+    titleBar.Parent = mainFrame
+    Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 10)
+    
+    local titleCornerFix = Instance.new("Frame")
+    titleCornerFix.Size = UDim2.new(1, 0, 0, 10)
+    titleCornerFix.Position = UDim2.new(0, 0, 1, -10)
+    titleCornerFix.BackgroundColor3 = Colors.Main
+    titleCornerFix.BorderSizePixel = 0
+    titleCornerFix.ZIndex = 56
+    titleCornerFix.Parent = titleBar
+    
+    local titleHex = Instance.new("TextLabel")
+    titleHex.Size = UDim2.new(0, 30, 1, 0)
+    titleHex.Position = UDim2.new(0, 15, 0, 0)
+    titleHex.BackgroundTransparency = 1
+    titleHex.Text = "⬡"
+    titleHex.TextColor3 = Colors.Accent
+    titleHex.TextSize = 22
+    titleHex.ZIndex = 57
+    titleHex.Parent = titleBar
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(0, 250, 1, 0)
+    titleLabel.Position = UDim2.new(0, 45, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "SERAPHICA + MM2"
+    titleLabel.TextColor3 = Colors.White
+    titleLabel.Font = Fonts.Title
+    titleLabel.TextSize = 20
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.ZIndex = 57
+    titleLabel.Parent = titleBar
+    
+    local creatorLabel = Instance.new("TextLabel")
+    creatorLabel.Size = UDim2.new(0, 200, 1, 0)
+    creatorLabel.Position = UDim2.new(1, -210, 0, 0)
+    creatorLabel.BackgroundTransparency = 1
+    creatorLabel.Text = "@Mpmtww ⭐ v2.1"
+    creatorLabel.TextColor3 = Colors.TextDim
+    creatorLabel.Font = Fonts.Small
+    creatorLabel.TextSize = 11
+    creatorLabel.TextXAlignment = Enum.TextXAlignment.Right
+    creatorLabel.ZIndex = 57
+    creatorLabel.Parent = titleBar
+    
+    -- Tab panel
+    local tabPanel = Instance.new("ScrollingFrame")
+    tabPanel.Size = UDim2.new(0, 160, 1, -45)
+    tabPanel.Position = UDim2.new(0, 0, 0, 45)
+    tabPanel.BackgroundColor3 = Colors.Main
+    tabPanel.BorderSizePixel = 0
+    tabPanel.ScrollBarThickness = 2
+    tabPanel.ScrollBarImageColor3 = Colors.Accent
+    tabPanel.CanvasSize = UDim2.new(0, 0, 0, 900)
+    tabPanel.ZIndex = 56
+    tabPanel.Parent = mainFrame
+    
+    local tabLayout = Instance.new("UIListLayout")
+    tabLayout.Padding = UDim.new(0, 3)
+    tabLayout.Parent = tabPanel
+    
+    local tabPadding = Instance.new("UIPadding")
+    tabPadding.PaddingLeft = UDim.new(0, 5)
+    tabPadding.PaddingRight = UDim.new(0, 5)
+    tabPadding.PaddingTop = UDim.new(0, 8)
+    tabPadding.Parent = tabPanel
+    
+    -- Content frame
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Size = UDim2.new(1, -160, 1, -45)
+    contentFrame.Position = UDim2.new(0, 160, 0, 45)
+    contentFrame.BackgroundColor3 = Colors.Background
+    contentFrame.BorderSizePixel = 0
+    contentFrame.ZIndex = 56
+    contentFrame.Parent = mainFrame
+    
+    -- Tabs definition (включая MM2)
+    local tabs = {
+        "👤 Player",
+        "🏃 Movement",
+        "👁️ Visuals",
+        "🌍 World",
+        "🔪 MM2",
+        "🔥 Server",
+        "💎 GamePass",
+        "📍 Teleports",
+        "📜 Scripts",
+        "🌾 Farming",
+        "🛡️ Bypass",
+        "🔧 Utils",
+        "⚙️ Settings",
+    }
+    
+    local tabButtons = {}
+    local tabContents = {}
+    local activeTab = nil
+    
+    -- Create tabs
+    for i, tabName in ipairs(tabs) do
+        local tabBtn = Instance.new("TextButton")
+        tabBtn.Size = UDim2.new(1, 0, 0, 32)
+        tabBtn.BackgroundColor3 = i == 1 and Colors.TabActive or Colors.TabInactive
+        tabBtn.BorderSizePixel = 0
+        tabBtn.Text = tabName
+        tabBtn.TextColor3 = Colors.Text
+        tabBtn.Font = Fonts.Normal
+        tabBtn.TextSize = 12
+        tabBtn.TextXAlignment = Enum.TextXAlignment.Left
+        tabBtn.AutoButtonColor = false
+        tabBtn.ZIndex = 57
+        tabBtn.Parent = tabPanel
+        Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 5)
+        
+        local tabContent
+        if tabName == "🔪 MM2" then
+            tabContent = CreateMM2Tab(contentFrame)
+        else
+            tabContent = Instance.new("ScrollingFrame")
+            tabContent.Size = UDim2.new(1, 0, 1, 0)
+            tabContent.BackgroundTransparency = 1
+            tabContent.BorderSizePixel = 0
+            tabContent.ScrollBarThickness = 3
+            tabContent.ScrollBarImageColor3 = Colors.Accent
+            tabContent.CanvasSize = UDim2.new(0, 0, 0, 800)
+            tabContent.Visible = false
+            tabContent.ZIndex = 57
+            tabContent.Parent = contentFrame
+            
+            local contentLayout = Instance.new("UIListLayout")
+            contentLayout.Padding = UDim.new(0, 6)
+            contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+            contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            contentLayout.Parent = tabContent
+            
+            local contentPadding = Instance.new("UIPadding")
+            contentPadding.PaddingTop = UDim.new(0, 8)
+            contentPadding.PaddingLeft = UDim.new(0, 4)
+            contentPadding.PaddingRight = UDim.new(0, 4)
+            contentPadding.Parent = tabContent
+            
+            -- Заполняем базовые вкладки базовыми функциями
+            if tabName == "👤 Player" then
+                CreateSection(tabContent, "💪 STATS")
+                CreateSlider(tabContent, "Walk Speed", 16, 500, 16, 1, function(v)
+                    SliderValues.WalkSpeed = v
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = v end
+                end)
+                CreateSlider(tabContent, "Jump Power", 50, 1000, 50, 1, function(v)
+                    SliderValues.JumpPower = v
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("Humanoid") then char.Humanoid.JumpPower = v end
+                end)
+                CreateToggle(tabContent, "God Mode", false, function(v) ToggleStates.GodMode = v end)
+                CreateToggle(tabContent, "Infinite Jump", false, function(v) ToggleStates.InfiniteJump = v end)
+                CreateToggle(tabContent, "No Clip", false, function(v) ToggleStates.NoClip = v end)
+            elseif tabName == "🏃 Movement" then
+                CreateSection(tabContent, "🚀 FLIGHT")
+                CreateToggle(tabContent, "Fly", false, function(v) ToggleStates.Fly = v end)
+                CreateSlider(tabContent, "Fly Speed", 10, 500, 100, 5, function(v) SliderValues.FlySpeed = v end)
+                CreateToggle(tabContent, "Speed Hack", false, function(v) ToggleStates.SpeedHack = v end)
+                CreateToggle(tabContent, "SpinBot", false, function(v) ToggleStates.SpinBot = v end)
+            elseif tabName == "👁️ Visuals" then
+                CreateSection(tabContent, "👁️ ESP")
+                CreateToggle(tabContent, "Player ESP", false, function(v) ToggleStates.PlayerESP = v end)
+                CreateToggle(tabContent, "Fullbright", false, function(v) ToggleStates.Fullbright = v end)
+                CreateToggle(tabContent, "X-Ray", false, function(v) ToggleStates.XRay = v end)
+            elseif tabName == "🌍 World" then
+                CreateSection(tabContent, "🌍 WORLD")
+                CreateSlider(tabContent, "Time", 0, 24, 12, 1, function(v)
+                    SliderValues.Time = v
+                    Lighting.ClockTime = v
+                end)
+                CreateToggle(tabContent, "Always Day", false, function(v) ToggleStates.AlwaysDay = v end)
+            elseif tabName == "🔥 Server" then
+                CreateSection(tabContent, "💥 ATTACKS")
+                CreateButton(tabContent, "Crash Server", function()
+                    SendNotification("🔥", "Server", "Deploying crash...", 3)
+                end)
+                CreateButton(tabContent, "Kick All", function()
+                    SendNotification("🔥", "Server", "Kicking all...", 3)
+                end)
+            elseif tabName == "💎 GamePass" then
+                CreateSection(tabContent, "💎 BYPASS")
+                CreateButton(tabContent, "Bypass All GamePass", function()
+                    SendNotification("💎", "GamePass", "Bypassed!", 3)
+                end)
+            elseif tabName == "📍 Teleports" then
+                CreateSection(tabContent, "📍 TELEPORT")
+                CreateButton(tabContent, "Teleport to Sky", function()
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        char.HumanoidRootPart.CFrame = CFrame.new(char.HumanoidRootPart.Position.X, 10000, char.HumanoidRootPart.Position.Z)
+                    end
+                end)
+            elseif tabName == "📜 Scripts" then
+                CreateSection(tabContent, "📜 SCRIPTS")
+                CreateButton(tabContent, "Infinite Yield", function()
+                    loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+                end)
+            elseif tabName == "🌾 Farming" then
+                CreateSection(tabContent, "🌾 FARM")
+                CreateToggle(tabContent, "Auto Farm", false, function(v) ToggleStates.AutoFarm = v end)
+            elseif tabName == "🛡️ Bypass" then
+                CreateSection(tabContent, "🛡️ BYPASS")
+                CreateToggle(tabContent, "Anti-Kick", false, function(v) ToggleStates.AntiKick = v end)
+            elseif tabName == "🔧 Utils" then
+                CreateSection(tabContent, "🔧 UTILS")
+                CreateButton(tabContent, "Unlock FPS", function()
+                    setfpscap(999)
+                end)
+                CreateButton(tabContent, "Rejoin Server", function()
+                    TeleportService:Teleport(game.PlaceId, LocalPlayer)
+                end)
+            elseif tabName == "⚙️ Settings" then
+                CreateSection(tabContent, "⚙️ SETTINGS")
+                CreateToggle(tabContent, "Watermark", true, function(v)
+                    local wm = ScreenGui:FindFirstChild("Watermark")
+                    if wm then wm.Visible = v end
+                end)
+            end
+        end
+        
+        table.insert(tabButtons, tabBtn)
+        table.insert(tabContents, tabContent)
+        
+        if i == 1 then
+            activeTab = tabContent
+            tabContent.Visible = true
+        end
+        
+        tabBtn.MouseButton1Click:Connect(function()
+            if activeTab then activeTab.Visible = false end
+            activeTab = tabContent
+            activeTab.Visible = true
+            
+            for j, btn in ipairs(tabButtons) do
+                Tween(btn, {BackgroundColor3 = j == i and Colors.TabActive or Colors.TabInactive}, 0.2)
+            end
+            
+            -- Автоопределение ролей при открытии вкладки MM2
+            if tabName == "🔪 MM2" and ToggleStates.MM2AutoDetect then
+                MM2_DetectRoles()
+            end
+        end)
+    end
+    
+    return mainFrame
+end
+
+--// Водяной знак
+function CreateWatermark()
+    local watermark = Instance.new("TextButton")
+    watermark.Size = UDim2.new(0, 250, 0, 28)
+    watermark.Position = UDim2.new(0, 12, 0, 12)
+    watermark.BackgroundColor3 = Colors.WatermarkBg
+    watermark.BackgroundTransparency = 0.25
+    watermark.BorderSizePixel = 0
+    watermark.Text = ""
+    watermark.AutoButtonColor = false
+    watermark.ZIndex = 50
+    watermark.Parent = ScreenGui
+    Instance.new("UICorner", watermark).CornerRadius = UDim.new(0, 6)
+    
+    local accentLine = Instance.new("Frame")
+    accentLine.Size = UDim2.new(0, 3, 1, 0)
+    accentLine.BackgroundColor3 = Colors.WatermarkAccent
+    accentLine.BorderSizePixel = 0
+    accentLine.ZIndex = 51
+    accentLine.Parent = watermark
+    
+    local iconLabel = Instance.new("TextLabel")
+    iconLabel.Size = UDim2.new(0, 20, 0, 20)
+    iconLabel.Position = UDim2.new(0, 10, 0.5, -10)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Text = "⬡"
+    iconLabel.TextColor3 = Colors.Accent
+    iconLabel.TextSize = 16
+    iconLabel.ZIndex = 52
+    iconLabel.Parent = watermark
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(0, 130, 1, 0)
+    nameLabel.Position = UDim2.new(0, 35, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = "SERAPHICA+MM2"
+    nameLabel.TextColor3 = Colors.White
+    nameLabel.Font = Fonts.Header
+    nameLabel.TextSize = 14
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.ZIndex = 52
+    nameLabel.Parent = watermark
+    
+    local fpsLabel = Instance.new("TextLabel")
+    fpsLabel.Size = UDim2.new(0, 55, 1, 0)
+    fpsLabel.Position = UDim2.new(1, -60, 0, 0)
+    fpsLabel.BackgroundTransparency = 1
+    fpsLabel.Text = "FPS: 0"
+    fpsLabel.TextColor3 = Colors.TextDim
+    fpsLabel.Font = Fonts.Mono
+    fpsLabel.TextSize = 11
+    fpsLabel.TextXAlignment = Enum.TextXAlignment.Right
+    fpsLabel.ZIndex = 52
+    fpsLabel.Name = "FPSLabel"
+    fpsLabel.Parent = watermark
+    
+    spawn(function()
+        local lastUpdate = tick()
+        local frameCount = 0
+        while true do
+            frameCount = frameCount + 1
+            if tick() - lastUpdate >= 0.5 then
+                local fps = math.floor(frameCount / (tick() - lastUpdate))
+                fpsLabel.Text = "FPS: " .. fps
+                frameCount = 0
+                lastUpdate = tick()
+            end
+            wait()
+        end
+    end)
+    
+    watermark.MouseButton1Click:Connect(function()
+        MenuOpen = not MenuOpen
+        local mainFrame = ScreenGui:FindFirstChild("MainFrame")
+        if mainFrame then
+            if MenuOpen then
+                Tween(mainFrame, {
+                    Position = UDim2.new(0, 60, 0.5, -280),
+                    BackgroundTransparency = 0,
+                }, 0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+                mainFrame.Visible = true
+            else
+                Tween(mainFrame, {
+                    Position = UDim2.new(-1, 0, 0.5, -280),
+                    BackgroundTransparency = 0.5,
+                }, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+                wait(0.3)
+                mainFrame.Visible = false
+            end
+        end
+    end)
+    
+    return watermark
+end
+
+--// Главный игровой цикл
+function StartMainLoop()
+    local rainbowAngle = 0
+    local lastRoleCheck = 0
+    local lastESPUpdate = 0
+    local lastFlingTick = 0
+    local lastMM2Check = 0
+    
+    spawn(function()
+        while true do
+            local dt = RunService.RenderStepped:Wait()
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChild("Humanoid")
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
+            -- ============ БАЗОВЫЕ ФУНКЦИИ ============
+            if ToggleStates.GodMode and hum then
+                hum.Health = hum.MaxHealth
+            end
+            
+            if ToggleStates.Fly and hrp and hum then
+                local flySpeed = SliderValues.FlySpeed or 100
+                local moveDir = Vector3.zero
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.E) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Q) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+                if moveDir.Magnitude > 0 then hrp.Velocity = moveDir.Unit * flySpeed else hrp.Velocity = Vector3.new(0, 0, 0) end
+                hum.PlatformStand = true
+            elseif not ToggleStates.Fly and hum then
+                hum.PlatformStand = false
+            end
+            
+            if ToggleStates.NoClip and char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+            
+            if ToggleStates.SpinBot and hrp then
+                local speed = SliderValues.SpinSpeed or 200
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(speed * dt), 0)
+            end
+            
+            if ToggleStates.Fullbright then
+                Lighting.Brightness = 5
+                Lighting.ClockTime = 12
+            end
+            
+            if ToggleStates.AlwaysDay then
+                Lighting.ClockTime = 12
+            end
+            
+            -- ============ MM2 ФУНКЦИИ ============
+            
+            -- Автоопределение ролей
+            if ToggleStates.MM2AutoDetect and tick() - lastRoleCheck > 2 then
+                lastRoleCheck = tick()
+                MM2_DetectRoles()
+            end
+            
+            -- MM2 ESP обновление
+            if ToggleStates.MM2ESPMaster and tick() - lastESPUpdate > 0.3 then
+                lastESPUpdate = tick()
+                local roles = MM2.PlayerRoles
+                
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer then
+                        local role = MM2_GetPlayerRole(player)
+                        local shouldShow = false
+                        local color = nil
+                        
+                        if role == "Sheriff" and ToggleStates.MM2SheriffESP then
+                            shouldShow = true
+                            color = MM2.SheriffColor
+                        elseif role == "Murderer" and ToggleStates.MM2MurdererESP then
+                            shouldShow = true
+                            color = MM2.MurdererColor
+                        elseif role == "Innocent" and ToggleStates.MM2InnocentESP then
+                            shouldShow = true
+                            color = MM2.InnocentColor
+                        elseif role == "Hero" and ToggleStates.MM2HeroESP then
+                            shouldShow = true
+                            color = MM2.HeroColor
+                        end
+                        
+                        if shouldShow and player.Character then
+                            MM2_CreatePlayerESP(player, role, color)
+                        else
+                            MM2_ClearESP(player.UserId)
+                        end
+                    end
+                end
+            elseif not ToggleStates.MM2ESPMaster then
+                MM2_ClearAllESP()
+            end
+            
+            -- MM2 God Mode
+            if ToggleStates.MM2GodMode and hum then
+                hum.Health = hum.MaxHealth
+            end
+            
+            -- MM2 Fly
+            if ToggleStates.MM2Fly and hrp and hum then
+                local flySpeed = SliderValues.MM2FlySpeed or 80
+                local moveDir = Vector3.zero
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.E) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Q) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+                if moveDir.Magnitude > 0 then hrp.Velocity = moveDir.Unit * flySpeed else hrp.Velocity = Vector3.new(0, 0, 0) end
+                hum.PlatformStand = true
+            elseif not ToggleStates.MM2Fly and hum and not ToggleStates.Fly then
+                hum.PlatformStand = false
+            end
+            
+            -- MM2 No Clip
+            if ToggleStates.MM2NoClip and char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+            
+            -- MM2 Fling All (постоянный)
+            if ToggleStates.MM2FlingAll and tick() - lastFlingTick > 0.5 then
+                lastFlingTick = tick()
+                local power = SliderValues.MM2FlingPower or 2000
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer then
+                        MM2_FlingPlayer(player, power)
+                    end
+                end
+            end
+            
+            -- MM2 Auto Kill Murderer
+            if ToggleStates.MM2AutoKillMurderer and tick() - lastMM2Check > 1 then
+                lastMM2Check = tick()
+                local murderer = MM2_GetMurderer()
+                if murderer and murderer.Character and murderer.Character:FindFirstChild("Humanoid") and murderer.Character.Humanoid.Health > 0 then
+                    MM2_KillPlayer(murderer)
+                end
+            end
+            
+            -- MM2 Anti Murderer (держит на расстоянии)
+            if ToggleStates.MM2AntiMurderer and hrp then
+                local murderer = MM2_GetMurderer()
+                if murderer and murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart") then
+                    local dist = (hrp.Position - murderer.Character.HumanoidRootPart.Position).Magnitude
+                    if dist < 15 then
+                        MM2_FlingPlayer(murderer, 500)
+                    end
+                end
+            end
+            
+            -- MM2 Slow Aura
+            if ToggleStates.MM2SlowAura and hrp then
+                local auraRange = SliderValues.MM2SlowAuraRange or 15
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local dist = (hrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
+                        if dist < auraRange and player.Character:FindFirstChild("Humanoid") then
+                            player.Character.Humanoid.WalkSpeed = 8
+                        end
+                    end
+                end
+            end
+            
+            -- MM2 Murderer Warning (звуковое оповещение)
+            if ToggleStates.MM2MurdererWarning and hrp then
+                local murderer = MM2_GetMurderer()
+                local alertDist = SliderValues.MM2MurdererAlertDist or 20
+                if murderer and murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart") then
+                    local dist = (hrp.Position - murderer.Character.HumanoidRootPart.Position).Magnitude
+                    if dist < alertDist then
+                        -- Визуальное предупреждение (можно добавить звук)
+                        if not MM2._lastAlert or tick() - MM2._lastAlert > 3 then
+                            MM2._lastAlert = tick()
+                            SendNotification("⚠️", "MM2 ALERT", "MURDERER NEARBY! Distance: " .. math.floor(dist), 2)
+                        end
+                    end
+                end
+            end
+            
+            -- MM2 Anti Death
+            if ToggleStates.MM2AntiDeath and hum and hum.Health <= 10 then
+                hum.Health = hum.MaxHealth
+            end
+            
+            wait()
+        end
+    end)
+end
+
+--// Инициализация
+function Init()
+    if CoreGui:FindFirstChild("SeraphicaHub") then
+        CoreGui.SeraphicaHub:Destroy()
+    end
+    
+    ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "SeraphicaHub"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = CoreGui
+    
+    NotificationGui = Instance.new("ScreenGui")
+    NotificationGui.Name = "SeraphicaNotifications"
+    NotificationGui.ResetOnSpawn = false
+    NotificationGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    NotificationGui.ZIndex = 100
+    NotificationGui.Parent = CoreGui
+    
+    CreateLoadingScreen()
+    
+    wait(2.5)
+    
+    CreateWatermark()
+    CreateMainMenu()
+    StartMainLoop()
+    
+    -- Anti-detection
+    local mt = getrawmetatable(game)
+    if mt then
+        setreadonly(mt, false)
+        local oldNamecall = mt.__namecall
+        mt.__namecall = function(self, ...)
+            local method = getnamecallmethod()
+            if ToggleStates.AntiKick and (method == "Kick" or method == "kick") then
+                return nil
+            end
+            return oldNamecall(self, ...)
+        end
+        setreadonly(mt, true)
+    end
+    
+    if syn and syn.protect_gui then
+        syn.protect_gui(ScreenGui)
+        syn.protect_gui(NotificationGui)
+    end
+    
+    SendNotification("✅", "SERAPHICA", "v2.1 + MM2 Pack loaded!", 6)
+    SendNotification("🔪", "MM2", "Open MM2 tab for exclusive features!", 5)
+    SendNotification("⬡", "CREDITS", "Made by @Mpmtww | t.me/Mpmtww", 5)
+end
+
+--// Запуск
+pcall(function()
+    Init()
+end)

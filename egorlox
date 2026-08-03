@@ -1,2238 +1,867 @@
---[[
-    SERAPHICA HUB v2.1 by @Mpmtww
-    Инжект через Delta Executor / Synapse X / Script-Ware
-    Добавлена вкладка MM2 (Murder Mystery 2) с эксклюзивными функциями
---]]
+-- SeraphiCA.lua
+-- Эксклюзивно для Delta Executor (Android)
+-- Рукописный шрифт + кликабельный Telegram @Mpmtww
 
---// Сервисы
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
-local HttpService = game:GetService("HttpService")
-local MarketplaceService = game:GetService("MarketplaceService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Lighting = game:GetService("Lighting")
-local TeleportService = game:GetService("TeleportService")
-local StarterGui = game:GetService("StarterGui")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local ContextActionService = game:GetService("ContextActionService")
-local PhysicsService = game:GetService("PhysicsService")
-local Debris = game:GetService("Debris")
 local LocalPlayer = Players.LocalPlayer
-local Workspace = game:GetService("Workspace")
-local Camera = Workspace.CurrentCamera
-local Mouse = LocalPlayer:GetMouse()
+local GuiService = game:GetService("GuiService")
 
---// MM2 Специфичные сервисы
-local MM2 = {
-    Roles = {},
-    SheriffColor = Color3.fromRGB(0, 150, 255),
-    MurdererColor = Color3.fromRGB(255, 0, 0),
-    InnocentColor = Color3.fromRGB(0, 255, 0),
-    HeroColor = Color3.fromRGB(255, 255, 0),
-    ESPCache = {},
-    KnifeESP = {},
-    GunESP = {},
-    CoinESP = {},
-    HighlightObjects = {},
-    AntiAfkConnection = nil,
-    AutoFarmConnection = nil,
-    TeleportLocations = {},
-    SavedPositions = {},
-    PlayerRoles = {},
-    RoleDetectionMethod = "Auto",
-}
+-- Проверка: только Delta
+if not identifyexecutor or identifyexecutor():lower() ~= "delta" then
+    warn("SeraphiCA: Этот скрипт только для Delta Executor.")
+    return
+end
 
---// Переменные окружения
-local ScreenGui = nil
-local NotificationGui = nil
+-- Константы шрифта
+local HANDWRITING_FONT = Enum.Font.FredokaOne -- стилизованный "рукописный" аналог в Roblox
+local FALLBACK_FONT = Enum.Font.Arcade -- запасной вариант
+local HANDWRITING_BOLD = Enum.Font.FredokaOne
+
+-- GUI
+local SeraphiCA = Instance.new("ScreenGui")
+SeraphiCA.Name = "SeraphiCA"
+SeraphiCA.Parent = CoreGui
+SeraphiCA.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+SeraphiCA.ResetOnSpawn = false
+
+-- Переменные состояния
 local MenuOpen = false
-local ToggleStates = {}
-local SliderValues = {}
-local DropdownValues = {}
-local ColorValues = {}
-local Connections = {}
-local CachedObjects = {}
-local ESPObjects = {}
-local TracerLines = {}
-local BoxObjects = {}
-local DrawingLines = {}
-local RainbowHue = 0
-local NotificationQueue = {}
-local MM2Highlights = {}
-local MM2ESPData = {}
+local WatermarkLocked = false
+local MenuColor = Color3.fromRGB(12, 12, 12)
+local WatermarkColor = Color3.fromRGB(12, 12, 12)
+local AccentColor = Color3.fromRGB(255, 255, 255)
 
---// Цветовая схема Seraphica
-local Colors = {
-    Background = Color3.fromRGB(12, 12, 20),
-    Main = Color3.fromRGB(18, 18, 32),
-    Secondary = Color3.fromRGB(28, 28, 48),
-    Tertiary = Color3.fromRGB(35, 35, 60),
-    Accent = Color3.fromRGB(140, 80, 255),
-    AccentLight = Color3.fromRGB(170, 120, 255),
-    Accent2 = Color3.fromRGB(255, 70, 130),
-    Accent3 = Color3.fromRGB(0, 200, 255),
-    Text = Color3.fromRGB(230, 230, 245),
-    TextDim = Color3.fromRGB(160, 160, 180),
-    Green = Color3.fromRGB(50, 255, 100),
-    Red = Color3.fromRGB(255, 60, 60),
-    Yellow = Color3.fromRGB(255, 200, 40),
-    Orange = Color3.fromRGB(255, 140, 40),
-    Blue = Color3.fromRGB(0, 150, 255),
-    Pink = Color3.fromRGB(255, 80, 180),
-    Cyan = Color3.fromRGB(80, 230, 255),
-    White = Color3.fromRGB(255, 255, 255),
-    Black = Color3.fromRGB(0, 0, 0),
-    Border = Color3.fromRGB(50, 50, 75),
-    WatermarkBg = Color3.fromRGB(18, 18, 32),
-    SliderFill = Color3.fromRGB(100, 60, 200),
-    SliderBg = Color3.fromRGB(35, 35, 60),
-    TabActive = Color3.fromRGB(120, 70, 230),
-    TabInactive = Color3.fromRGB(25, 25, 45),
-    ButtonHover = Color3.fromRGB(45, 45, 75),
-    NotificationBg = Color3.fromRGB(18, 18, 32),
-    MM2TabAccent = Color3.fromRGB(220, 30, 30),
-}
+-- Утилита Drag (заточена под тач)
+local DragHandler = {}
+DragHandler.__index = DragHandler
 
---// Шрифты
-local Fonts = {
-    Title = Enum.Font.GothamBlack,
-    Header = Enum.Font.GothamBold,
-    Normal = Enum.Font.GothamSemibold,
-    Small = Enum.Font.Gotham,
-    Mono = Enum.Font.RobotoMono,
-    UI = Enum.Font.GothamMedium,
-}
-
---// Функция твина
-local function Tween(obj, props, dur, style, dir)
-    style = style or Enum.EasingStyle.Quart
-    dir = dir or Enum.EasingDirection.Out
-    return TweenService:Create(obj, TweenInfo.new(dur, style, dir), props):Play()
+function DragHandler.new(frame, leaveTrail)
+    local self = setmetatable({}, DragHandler)
+    self.Frame = frame
+    self.Dragging = false
+    self.MouseOffset = nil
+    self.LeaveTrail = leaveTrail or false
+    self.TrailObjects = {}
+    self.LastPosition = nil
+    self:Initialize()
+    return self
 end
 
---// Уведомления
-function SendNotification(icon, title, message, duration)
-    duration = duration or 4
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 310, 0, 0)
-    frame.Position = UDim2.new(1, -330, 0, 15 + (#NotificationQueue * 75))
-    frame.BackgroundColor3 = Colors.NotificationBg
-    frame.BorderSizePixel = 0
-    frame.BackgroundTransparency = 0.1
-    frame.ClipsDescendants = true
-    frame.ZIndex = 100
-    frame.Parent = NotificationGui
-    
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-    
-    local border = Instance.new("Frame")
-    border.Size = UDim2.new(0, 4, 1, 0)
-    border.BackgroundColor3 = Colors.Accent
-    border.BorderSizePixel = 0
-    border.ZIndex = 101
-    border.Parent = frame
-    
-    local iconLabel = Instance.new("TextLabel")
-    iconLabel.Size = UDim2.new(0, 30, 0, 30)
-    iconLabel.Position = UDim2.new(0, 12, 0, 12)
-    iconLabel.BackgroundTransparency = 1
-    iconLabel.Text = icon or "ℹ️"
-    iconLabel.TextSize = 20
-    iconLabel.ZIndex = 102
-    iconLabel.Parent = frame
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -60, 0, 20)
-    titleLabel.Position = UDim2.new(0, 50, 0, 8)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
-    titleLabel.TextColor3 = Colors.Text
-    titleLabel.Font = Fonts.Header
-    titleLabel.TextSize = 14
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.ZIndex = 102
-    titleLabel.Parent = frame
-    
-    local msgLabel = Instance.new("TextLabel")
-    msgLabel.Size = UDim2.new(1, -60, 0, 20)
-    msgLabel.Position = UDim2.new(0, 50, 0, 30)
-    msgLabel.BackgroundTransparency = 1
-    msgLabel.Text = message
-    msgLabel.TextColor3 = Colors.TextDim
-    msgLabel.Font = Fonts.Small
-    msgLabel.TextSize = 12
-    msgLabel.TextXAlignment = Enum.TextXAlignment.Left
-    msgLabel.ZIndex = 102
-    msgLabel.Parent = frame
-    
-    local progressBar = Instance.new("Frame")
-    progressBar.Size = UDim2.new(1, -8, 0, 3)
-    progressBar.Position = UDim2.new(0, 4, 1, -3)
-    progressBar.BackgroundColor3 = Colors.SliderBg
-    progressBar.BorderSizePixel = 0
-    progressBar.ZIndex = 102
-    progressBar.BackgroundTransparency = 0.5
-    progressBar.Parent = frame
-    
-    local progressFill = Instance.new("Frame")
-    progressFill.Size = UDim2.new(1, 0, 1, 0)
-    progressFill.BackgroundColor3 = Colors.Accent
-    progressFill.BorderSizePixel = 0
-    progressFill.ZIndex = 103
-    progressFill.Parent = progressBar
-    Instance.new("UICorner", progressFill).CornerRadius = UDim.new(1, 0)
-    
-    Tween(frame, {Size = UDim2.new(0, 310, 0, 60)}, 0.3, Enum.EasingStyle.Back)
-    Tween(progressFill, {Size = UDim2.new(0, 0, 1, 0)}, duration, Enum.EasingStyle.Linear)
-    
-    local notifData = {frame = frame, progress = progressFill, startTime = tick(), duration = duration}
-    table.insert(NotificationQueue, notifData)
-    
-    spawn(function()
-        wait(duration)
-        Tween(frame, {
-            Position = UDim2.new(1, 50, 0, frame.Position.Y.Offset),
-            BackgroundTransparency = 1
-        }, 0.4)
-        wait(0.4)
-        frame:Destroy()
-        table.remove(NotificationQueue, 1)
-        for i, n in ipairs(NotificationQueue) do
-            Tween(n.frame, {Position = UDim2.new(1, -330, 0, 15 + ((i-1) * 75))}, 0.3)
+function DragHandler:Initialize()
+    self.Frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            self.Dragging = true
+            self.MouseOffset = Vector2.new(input.Position.X, input.Position.Y) - self.Frame.AbsolutePosition
+            self.LastPosition = self.Frame.AbsolutePosition
         end
     end)
-end
 
---// Загрузочный экран
-function CreateLoadingScreen()
-    local loadingGui = Instance.new("ScreenGui")
-    loadingGui.Name = "SeraphicaLoading"
-    loadingGui.ResetOnSpawn = false
-    loadingGui.Parent = CoreGui
-    
-    local bg = Instance.new("Frame")
-    bg.Size = UDim2.new(1, 0, 1, 0)
-    bg.BackgroundColor3 = Color3.fromRGB(8, 8, 18)
-    bg.BorderSizePixel = 0
-    bg.Name = "LoadingBG"
-    bg.ZIndex = 999
-    bg.Parent = loadingGui
-    
-    local particles = {}
-    for i = 1, 50 do
-        local p = Instance.new("Frame")
-        p.Size = UDim2.new(0, math.random(2, 8), 0, math.random(2, 8))
-        p.Position = UDim2.new(0, math.random(0, 1920), 0, math.random(0, 1080))
-        p.BackgroundColor3 = Color3.fromHSV(math.random() * 1, 0.7, 1)
-        p.BackgroundTransparency = 0.6
-        p.BorderSizePixel = 0
-        p.Name = "Particle"
-        p.ZIndex = 1000
-        p.Parent = bg
-        local angle = math.random() * math.pi * 2
-        local speed = math.random(30, 80)
-        particles[i] = {obj = p, angle = angle, speed = speed, x = p.Position.X.Offset, y = p.Position.Y.Offset}
-    end
-    
-    local centerFrame = Instance.new("Frame")
-    centerFrame.Size = UDim2.new(0, 400, 0, 350)
-    centerFrame.Position = UDim2.new(0.5, -200, 0.4, -175)
-    centerFrame.BackgroundTransparency = 1
-    centerFrame.ZIndex = 1001
-    centerFrame.Parent = bg
-    
-    local hexLabel = Instance.new("TextLabel")
-    hexLabel.Size = UDim2.new(0, 120, 0, 120)
-    hexLabel.Position = UDim2.new(0.5, -60, 0, 0)
-    hexLabel.BackgroundTransparency = 1
-    hexLabel.Text = "⬡"
-    hexLabel.TextColor3 = Colors.Accent
-    hexLabel.TextSize = 100
-    hexLabel.ZIndex = 1002
-    hexLabel.Parent = centerFrame
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, 0, 0, 60)
-    titleLabel.Position = UDim2.new(0, 0, 0, 130)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "SERAPHICA"
-    titleLabel.TextColor3 = Colors.White
-    titleLabel.Font = Fonts.Title
-    titleLabel.TextSize = 48
-    titleLabel.ZIndex = 1002
-    titleLabel.Parent = centerFrame
-    
-    local subTitle = Instance.new("TextLabel")
-    subTitle.Size = UDim2.new(1, 0, 0, 30)
-    subTitle.Position = UDim2.new(0, 0, 0, 185)
-    subTitle.BackgroundTransparency = 1
-    subTitle.Text = "Premium Hub + MM2 Pack"
-    subTitle.TextColor3 = Colors.AccentLight
-    subTitle.Font = Fonts.Header
-    subTitle.TextSize = 16
-    subTitle.ZIndex = 1002
-    subTitle.Parent = centerFrame
-    
-    local versionLabel = Instance.new("TextLabel")
-    versionLabel.Size = UDim2.new(1, 0, 0, 20)
-    versionLabel.Position = UDim2.new(0, 0, 0, 215)
-    versionLabel.BackgroundTransparency = 1
-    versionLabel.Text = "v2.1 | MM2 Enhanced"
-    versionLabel.TextColor3 = Colors.TextDim
-    versionLabel.Font = Fonts.Mono
-    versionLabel.TextSize = 14
-    versionLabel.ZIndex = 1002
-    versionLabel.Parent = centerFrame
-    
-    local barBg = Instance.new("Frame")
-    barBg.Size = UDim2.new(0, 300, 0, 6)
-    barBg.Position = UDim2.new(0.5, -150, 0, 260)
-    barBg.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-    barBg.BorderSizePixel = 0
-    barBg.ZIndex = 1002
-    barBg.Parent = centerFrame
-    Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
-    
-    local barFill = Instance.new("Frame")
-    barFill.Size = UDim2.new(0, 0, 1, 0)
-    barFill.BackgroundColor3 = Colors.Accent
-    barFill.BorderSizePixel = 0
-    barFill.ZIndex = 1003
-    barFill.Name = "BarFill"
-    barFill.Parent = barBg
-    Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
-    
-    local percentLabel = Instance.new("TextLabel")
-    percentLabel.Size = UDim2.new(0, 100, 0, 20)
-    percentLabel.Position = UDim2.new(0.5, -50, 0, 275)
-    percentLabel.BackgroundTransparency = 1
-    percentLabel.Text = "0%"
-    percentLabel.TextColor3 = Colors.TextDim
-    percentLabel.Font = Fonts.Mono
-    percentLabel.TextSize = 13
-    percentLabel.ZIndex = 1002
-    percentLabel.Name = "PercentLabel"
-    percentLabel.Parent = centerFrame
-    
-    local creatorLabel = Instance.new("TextLabel")
-    creatorLabel.Size = UDim2.new(1, 0, 0, 20)
-    creatorLabel.Position = UDim2.new(0, 0, 1, -30)
-    creatorLabel.BackgroundTransparency = 1
-    creatorLabel.Text = "by @Mpmtww | t.me/Mpmtww"
-    creatorLabel.TextColor3 = Color3.fromRGB(80, 80, 100)
-    creatorLabel.Font = Fonts.Small
-    creatorLabel.TextSize = 12
-    creatorLabel.ZIndex = 1002
-    creatorLabel.Parent = centerFrame
-    
-    local function updateLoading(percent)
-        barFill.Size = UDim2.new(percent / 100, 0, 1, 0)
-        percentLabel.Text = math.floor(percent) .. "%"
-        for _, p in ipairs(particles) do
-            p.x = p.x + math.cos(p.angle) * p.speed * 0.016
-            p.y = p.y + math.sin(p.angle) * p.speed * 0.016
-            if p.x < -20 or p.x > 1940 or p.y < -20 or p.y > 1100 then
-                p.x = math.random(0, 1920)
-                p.y = math.random(0, 1080)
-                p.angle = math.random() * math.pi * 2
-            end
-            p.obj.Position = UDim2.new(0, p.x, 0, p.y)
-        end
-        local rot = (percent / 100) * 720
-        hexLabel.Rotation = rot
-    end
-    
-    spawn(function()
-        local currentPct = 0
-        local steps = {15, 30, 50, 70, 85, 95, 100}
-        for _, target in ipairs(steps) do
-            while currentPct < target do
-                currentPct = currentPct + math.random(1, 3)
-                if currentPct > target then currentPct = target end
-                updateLoading(currentPct)
-                wait(math.random(2, 8) / 100)
+    self.Frame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            self.Dragging = false
+            if self.LeaveTrail and self.LastPosition then
+                self:CreateTrail()
             end
         end
-        wait(0.3)
-        Tween(bg, {BackgroundTransparency = 1}, 0.4)
-        for _, p in ipairs(particles) do
-            Tween(p.obj, {BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 0)}, 0.3)
-        end
-        Tween(centerFrame, {Position = UDim2.new(0.5, -200, 0.3, -175), Size = UDim2.new(0, 400, 0, 0)}, 0.3)
-        wait(0.4)
-        loadingGui:Destroy()
-        SendNotification("✅", "SERAPHICA", "Hub successfully loaded with MM2 Pack!", 5)
     end)
 end
 
---// UI компоненты
-function CreateToggle(parent, name, default, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -16, 0, 36)
-    frame.BackgroundTransparency = 1
-    frame.ZIndex = 60
-    frame.Parent = parent
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 200, 1, 0)
-    label.Position = UDim2.new(0, 8, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.TextColor3 = Colors.Text
-    label.Font = Fonts.Normal
-    label.TextSize = 13
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.ZIndex = 61
-    label.Parent = frame
-    
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 44, 0, 22)
-    toggleBtn.Position = UDim2.new(1, -50, 0.5, -11)
-    toggleBtn.BackgroundColor3 = default and Colors.Green or Color3.fromRGB(55, 55, 80)
-    toggleBtn.BorderSizePixel = 0
-    toggleBtn.Text = ""
-    toggleBtn.AutoButtonColor = false
-    toggleBtn.ZIndex = 61
-    toggleBtn.Parent = frame
-    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
-    
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 18, 0, 18)
-    knob.Position = default and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
-    knob.BackgroundColor3 = Colors.White
-    knob.BorderSizePixel = 0
-    knob.ZIndex = 62
-    knob.Parent = toggleBtn
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
-    
-    local state = default
-    ToggleStates[name] = state
-    
-    toggleBtn.MouseButton1Click:Connect(function()
-        state = not state
-        ToggleStates[name] = state
-        Tween(toggleBtn, {BackgroundColor3 = state and Colors.Green or Color3.fromRGB(55, 55, 80)}, 0.2)
-        Tween(knob, {Position = state and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)}, 0.2)
-        callback(state)
-    end)
-    
-    return frame
-end
-
-function CreateButton(parent, name, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -16, 0, 34)
-    btn.BackgroundColor3 = Colors.Secondary
-    btn.BorderSizePixel = 0
-    btn.Text = name
-    btn.TextColor3 = Colors.Text
-    btn.Font = Fonts.Normal
-    btn.TextSize = 13
-    btn.AutoButtonColor = false
-    btn.ZIndex = 61
-    btn.Parent = parent
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
-    
-    btn.MouseButton1Click:Connect(function()
-        Tween(btn, {BackgroundColor3 = Colors.Accent}, 0.1)
-        wait(0.1)
-        Tween(btn, {BackgroundColor3 = Colors.Secondary}, 0.2)
-        callback()
-    end)
-    
-    btn.MouseEnter:Connect(function()
-        Tween(btn, {BackgroundColor3 = Colors.ButtonHover}, 0.15)
-    end)
-    btn.MouseLeave:Connect(function()
-        Tween(btn, {BackgroundColor3 = Colors.Secondary}, 0.15)
-    end)
-    
-    return btn
-end
-
-function CreateSlider(parent, name, min, max, default, step, callback)
-    step = step or 1
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -16, 0, 52)
-    frame.BackgroundTransparency = 1
-    frame.ZIndex = 60
-    frame.Parent = parent
-    
-    local headerFrame = Instance.new("Frame")
-    headerFrame.Size = UDim2.new(1, 0, 0, 20)
-    headerFrame.BackgroundTransparency = 1
-    headerFrame.ZIndex = 61
-    headerFrame.Parent = frame
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 180, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.TextColor3 = Colors.Text
-    label.Font = Fonts.Normal
-    label.TextSize = 13
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.ZIndex = 62
-    label.Parent = headerFrame
-    
-    local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(0, 60, 1, 0)
-    valueLabel.Position = UDim2.new(1, -60, 0, 0)
-    valueLabel.BackgroundTransparency = 1
-    valueLabel.Text = tostring(default)
-    valueLabel.TextColor3 = Colors.AccentLight
-    valueLabel.Font = Fonts.Mono
-    valueLabel.TextSize = 12
-    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valueLabel.ZIndex = 62
-    valueLabel.Parent = headerFrame
-    
-    local sliderBg = Instance.new("TextButton")
-    sliderBg.Size = UDim2.new(1, 0, 0, 8)
-    sliderBg.Position = UDim2.new(0, 0, 0, 28)
-    sliderBg.BackgroundColor3 = Colors.SliderBg
-    sliderBg.BorderSizePixel = 0
-    sliderBg.Text = ""
-    sliderBg.AutoButtonColor = false
-    sliderBg.ZIndex = 61
-    sliderBg.Parent = frame
-    Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1, 0)
-    
-    local fill = Instance.new("Frame")
-    local percent = (default - min) / (max - min)
-    fill.Size = UDim2.new(percent, 0, 1, 0)
-    fill.BackgroundColor3 = Colors.SliderFill
-    fill.BorderSizePixel = 0
-    fill.ZIndex = 62
-    fill.Parent = sliderBg
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
-    
-    local knob2 = Instance.new("Frame")
-    knob2.Size = UDim2.new(0, 14, 0, 14)
-    knob2.Position = UDim2.new(percent, -7, 0.5, -7)
-    knob2.BackgroundColor3 = Colors.White
-    knob2.BorderSizePixel = 0
-    knob2.ZIndex = 63
-    knob2.Parent = sliderBg
-    Instance.new("UICorner", knob2).CornerRadius = UDim.new(1, 0)
-    
-    SliderValues[name] = default
-    
-    local dragging = false
-    local function update(input)
-        local pos = input.Position
-        local absPos = sliderBg.AbsolutePosition.X
-        local absSize = sliderBg.AbsoluteSize.X
-        local pct = math.clamp((pos.X - absPos) / absSize, 0, 1)
-        local val = min + (max - min) * pct
-        if step > 0 then val = math.floor(val / step + 0.5) * step end
-        val = math.clamp(val, min, max)
-        pct = (val - min) / (max - min)
-        fill.Size = UDim2.new(pct, 0, 1, 0)
-        knob2.Position = UDim2.new(pct, -7, 0.5, -7)
-        valueLabel.Text = tostring(val)
-        SliderValues[name] = val
-        callback(val)
+function DragHandler:Update()
+    if self.Dragging then
+        local touchPos = UserInputService:GetMouseLocation()
+        self.Frame.Position = UDim2.new(0, touchPos.X - self.MouseOffset.X, 0, touchPos.Y - self.MouseOffset.Y)
+        self.LastPosition = self.Frame.AbsolutePosition
     end
-    
-    sliderBg.MouseButton1Down:Connect(function()
-        dragging = true
-        update({Position = Vector2.new(Mouse.X, Mouse.Y)})
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            update(input)
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    
-    return frame
 end
 
-function CreateDropdown(parent, name, options, default, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -16, 0, 38)
-    frame.BackgroundTransparency = 1
-    frame.ZIndex = 60
-    frame.Parent = parent
-    
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 30)
-    btn.BackgroundColor3 = Colors.Secondary
-    btn.BorderSizePixel = 0
-    btn.Text = "  " .. name .. ": " .. (default or options[1])
-    btn.TextColor3 = Colors.Text
-    btn.Font = Fonts.Normal
-    btn.TextSize = 12
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.AutoButtonColor = false
-    btn.ZIndex = 61
-    btn.Parent = frame
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
-    
-    local listFrame = Instance.new("ScrollingFrame")
-    listFrame.Size = UDim2.new(1, 0, 0, 0)
-    listFrame.Position = UDim2.new(0, 0, 1, 2)
-    listFrame.BackgroundColor3 = Colors.Main
-    listFrame.BorderSizePixel = 0
-    listFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 30)
-    listFrame.ScrollBarThickness = 3
-    listFrame.Visible = false
-    listFrame.ZIndex = 65
-    listFrame.Parent = frame
-    Instance.new("UICorner", listFrame).CornerRadius = UDim.new(0, 5)
-    
-    local isOpen = false
-    
-    local function toggleList()
-        isOpen = not isOpen
-        if isOpen then
-            listFrame.Visible = true
-            Tween(listFrame, {Size = UDim2.new(1, 0, 0, math.min(#options * 32 + 4, 180))}, 0.2)
-        else
-            Tween(listFrame, {Size = UDim2.new(1, 0, 0, 0)}, 0.2)
-            wait(0.2)
-            listFrame.Visible = false
-        end
-    end
-    
-    btn.MouseButton1Click:Connect(toggleList)
-    
-    for _, option in ipairs(options) do
-        local optBtn = Instance.new("TextButton")
-        optBtn.Size = UDim2.new(1, -6, 0, 28)
-        optBtn.BackgroundColor3 = Colors.Secondary
-        optBtn.BorderSizePixel = 0
-        optBtn.Text = option
-        optBtn.TextColor3 = Colors.Text
-        optBtn.Font = Fonts.Normal
-        optBtn.TextSize = 12
-        optBtn.AutoButtonColor = false
-        optBtn.ZIndex = 66
-        optBtn.Parent = listFrame
-        Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
-        
-        optBtn.MouseButton1Click:Connect(function()
-            btn.Text = "  " .. name .. ": " .. option
-            DropdownValues[name] = option
-            toggleList()
-            callback(option)
-        end)
-        
-        optBtn.MouseEnter:Connect(function()
-            Tween(optBtn, {BackgroundColor3 = Colors.Accent}, 0.1)
-        end)
-        optBtn.MouseLeave:Connect(function()
-            Tween(optBtn, {BackgroundColor3 = Colors.Secondary}, 0.1)
+function DragHandler:CreateTrail()
+    if not self.LeaveTrail or not self.LastPosition then return end
+
+    local trail = Instance.new("Frame")
+    trail.Size = self.Frame.Size
+    trail.Position = UDim2.new(0, self.LastPosition.X, 0, self.LastPosition.Y)
+    trail.BackgroundColor3 = self.Frame.BackgroundColor3
+    trail.BackgroundTransparency = 0.6
+    trail.BorderSizePixel = 0
+    trail.Parent = self.Frame.Parent
+    trail.ZIndex = self.Frame.ZIndex - 1
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = trail
+
+    table.insert(self.TrailObjects, trail)
+
+    local tweenInfo = TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local fadeTween = TweenService:Create(trail, tweenInfo, {BackgroundTransparency = 1})
+    fadeTween:Play()
+
+    fadeTween.Completed:Connect(function()
+        trail:Destroy()
+        table.remove(self.TrailObjects, table.find(self.TrailObjects, trail))
+    end)
+end
+
+-- Цветовая палитра (оптимизирована под тач)
+local ColorPicker = {}
+ColorPicker.__index = ColorPicker
+
+function ColorPicker.new(parent, defaultColor, onColorChange)
+    local self = setmetatable({}, ColorPicker)
+    self.Parent = parent
+    self.CurrentColor = defaultColor
+    self.OnColorChange = onColorChange
+
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -20, 0, 180)
+    container.Position = UDim2.new(0, 10, 0, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+
+    -- HSV холст
+    local canvas = Instance.new("ImageButton")
+    canvas.Size = UDim2.new(1, 0, 0, 130)
+    canvas.Position = UDim2.new(0, 0, 0, 0)
+    canvas.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    canvas.Image = "rbxassetid://4155801252"
+    canvas.AutoButtonColor = false
+    canvas.Parent = container
+
+    local canvasCorner = Instance.new("UICorner")
+    canvasCorner.CornerRadius = UDim.new(0, 6)
+    canvasCorner.Parent = canvas
+
+    -- Hue слайдер
+    local hueFrame = Instance.new("Frame")
+    hueFrame.Size = UDim2.new(1, 0, 0, 18)
+    hueFrame.Position = UDim2.new(0, 0, 0, 138)
+    hueFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    hueFrame.Parent = container
+
+    local hueCorner = Instance.new("UICorner")
+    hueCorner.CornerRadius = UDim.new(0, 6)
+    hueCorner.Parent = hueFrame
+
+    local hueGradient = Instance.new("UIGradient")
+    hueGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+    })
+    hueGradient.Parent = hueFrame
+
+    local hueKnob = Instance.new("Frame")
+    hueKnob.Size = UDim2.new(0, 10, 0, 22)
+    hueKnob.AnchorPoint = Vector2.new(0.5, 0.5)
+    hueKnob.Position = UDim2.new(0, 0, 0.5, 0)
+    hueKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    hueKnob.BorderSizePixel = 0
+    hueKnob.Parent = hueFrame
+
+    local knobCorner = Instance.new("UICorner")
+    knobCorner.CornerRadius = UDim.new(0, 4)
+    knobCorner.Parent = hueKnob
+
+    -- Быстрые цвета (кружки для тача — крупнее)
+    local presetColors = {
+        Color3.fromRGB(12, 12, 12),
+        Color3.fromRGB(25, 25, 35),
+        Color3.fromRGB(35, 15, 25),
+        Color3.fromRGB(15, 25, 15),
+        Color3.fromRGB(25, 15, 15),
+        Color3.fromRGB(15, 15, 25),
+        Color3.fromRGB(30, 10, 30),
+        Color3.fromRGB(10, 30, 30)
+    }
+
+    local presetFrame = Instance.new("Frame")
+    presetFrame.Size = UDim2.new(1, 0, 0, 24)
+    presetFrame.Position = UDim2.new(0, 0, 0, 162)
+    presetFrame.BackgroundTransparency = 1
+    presetFrame.Parent = container
+
+    local presetLayout = Instance.new("UIListLayout")
+    presetLayout.FillDirection = Enum.FillDirection.Horizontal
+    presetLayout.Padding = UDim.new(0, 5)
+    presetLayout.Parent = presetFrame
+
+    for _, color in ipairs(presetColors) do
+        local preset = Instance.new("ImageButton")
+        preset.Size = UDim2.new(0, 24, 0, 24)
+        preset.BackgroundColor3 = color
+        preset.AutoButtonColor = false
+        preset.Parent = presetFrame
+
+        local presetCorner = Instance.new("UICorner")
+        presetCorner.CornerRadius = UDim.new(0, 12)
+        presetCorner.Parent = preset
+
+        preset.MouseButton1Click:Connect(function()
+            self:SetColor(color)
         end)
     end
-    
-    return frame
+
+    -- Логика выбора цвета
+    local hueValue = 0
+    local saturationValue = 1
+    local brightnessValue = 1
+
+    canvas.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            local pos = Vector2.new(input.Position.X, input.Position.Y)
+            local relX = math.clamp(pos.X / canvas.AbsoluteSize.X, 0, 1)
+            local relY = math.clamp(pos.Y / canvas.AbsoluteSize.Y, 0, 1)
+            saturationValue = relX
+            brightnessValue = 1 - relY
+            self:UpdateColorFromHSV(hueValue, saturationValue, brightnessValue)
+        end
+    end)
+
+    canvas.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            local pos = Vector2.new(input.Position.X, input.Position.Y)
+            local relX = math.clamp(pos.X / canvas.AbsoluteSize.X, 0, 1)
+            local relY = math.clamp(pos.Y / canvas.AbsoluteSize.Y, 0, 1)
+            saturationValue = relX
+            brightnessValue = 1 - relY
+            self:UpdateColorFromHSV(hueValue, saturationValue, brightnessValue)
+        end
+    end)
+
+    hueFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            local pos = Vector2.new(input.Position.X, input.Position.Y)
+            hueValue = math.clamp((pos.X - hueFrame.AbsolutePosition.X) / hueFrame.AbsoluteSize.X, 0, 1)
+            hueKnob.Position = UDim2.new(hueValue, 0, 0.5, 0)
+            self:UpdateColorFromHSV(hueValue, saturationValue, brightnessValue)
+        end
+    end)
+
+    hueFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            local pos = Vector2.new(input.Position.X, input.Position.Y)
+            hueValue = math.clamp((pos.X - hueFrame.AbsolutePosition.X) / hueFrame.AbsoluteSize.X, 0, 1)
+            hueKnob.Position = UDim2.new(hueValue, 0, 0.5, 0)
+            self:UpdateColorFromHSV(hueValue, saturationValue, brightnessValue)
+        end
+    end)
+
+    self.Container = container
+    self.Canvas = canvas
+    self.HueKnob = hueKnob
+    self.HueValue = hueValue
+    self.SaturationValue = saturationValue
+    self.BrightnessValue = brightnessValue
+
+    return self
 end
 
---// Функция создания секции
-function CreateSection(parent, title)
+function ColorPicker:UpdateColorFromHSV(h, s, v)
+    local color = Color3.fromHSV(h, s, v)
+    self.CurrentColor = color
+    if self.OnColorChange then
+        self.OnColorChange(color)
+    end
+end
+
+function ColorPicker:SetColor(color)
+    local h, s, v = color:ToHSV()
+    self.HueValue = h
+    self.SaturationValue = s
+    self.BrightnessValue = v
+    self.CurrentColor = color
+    if self.OnColorChange then
+        self.OnColorChange(color)
+    end
+end
+
+-- ===== ВОДЯНОЙ ЗНАК =====
+local Watermark = Instance.new("Frame")
+Watermark.Size = UDim2.new(0, 230, 0, 38)
+Watermark.Position = UDim2.new(0, 15, 0, 15)
+Watermark.BackgroundColor3 = WatermarkColor
+Watermark.BorderSizePixel = 0
+Watermark.Active = true
+Watermark.Parent = SeraphiCA
+
+local WatermarkCorner = Instance.new("UICorner")
+WatermarkCorner.CornerRadius = UDim.new(0, 10)
+WatermarkCorner.Parent = Watermark
+
+local WatermarkStroke = Instance.new("UIStroke")
+WatermarkStroke.Color = AccentColor
+WatermarkStroke.Thickness = 1.5
+WatermarkStroke.Transparency = 0.4
+WatermarkStroke.Parent = Watermark
+
+-- Иконка
+local WMIcon = Instance.new("Frame")
+WMIcon.Size = UDim2.new(0, 28, 0, 28)
+WMIcon.Position = UDim2.new(0, 8, 0.5, -14)
+WMIcon.BackgroundColor3 = AccentColor
+WMIcon.BackgroundTransparency = 0.75
+WMIcon.Parent = Watermark
+
+local WMIconCorner = Instance.new("UICorner")
+WMIconCorner.CornerRadius = UDim.new(0, 14)
+WMIconCorner.Parent = WMIcon
+
+local WMIconInner = Instance.new("Frame")
+WMIconInner.Size = UDim2.new(0, 10, 0, 10)
+WMIconInner.Position = UDim2.new(0.5, -5, 0.5, -5)
+WMIconInner.BackgroundColor3 = AccentColor
+WMIconInner.Parent = WMIcon
+
+local WMIconInnerCorner = Instance.new("UICorner")
+WMIconInnerCorner.CornerRadius = UDim.new(0, 5)
+WMIconInnerCorner.Parent = WMIconInner
+
+-- Текст ватермарка (рукописный шрифт)
+local WMTitle = Instance.new("TextLabel")
+WMTitle.Size = UDim2.new(1, -48, 0, 18)
+WMTitle.Position = UDim2.new(0, 42, 0, 2)
+WMTitle.BackgroundTransparency = 1
+WMTitle.Text = "SeraphiCA"
+WMTitle.Font = HANDWRITING_BOLD
+WMTitle.TextSize = 14
+WMTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+WMTitle.TextXAlignment = Enum.TextXAlignment.Left
+WMTitle.Parent = Watermark
+
+local WMTime = Instance.new("TextLabel")
+WMTime.Size = UDim2.new(1, -48, 0, 16)
+WMTime.Position = UDim2.new(0, 42, 0, 20)
+WMTime.BackgroundTransparency = 1
+WMTime.Text = "00:00:00"
+WMTime.Font = HANDWRITING_FONT
+WMTime.TextSize = 12
+WMTime.TextColor3 = Color3.fromRGB(180, 180, 180)
+WMTime.TextXAlignment = Enum.TextXAlignment.Left
+WMTime.Parent = Watermark
+
+-- Обновление времени
+local function UpdateTime()
+    local time = os.date("*t")
+    WMTime.Text = string.format("%02d:%02d:%02d", time.hour, time.min, time.sec)
+end
+
+coroutine.wrap(function()
+    while true do
+        UpdateTime()
+        task.wait(1)
+    end
+end)()
+
+-- ===== ОСНОВНОЕ МЕНЮ =====
+local Menu = Instance.new("Frame")
+Menu.Size = UDim2.new(0, 700, 0, 480)
+Menu.Position = UDim2.new(0.5, -350, 0.5, -240)
+Menu.BackgroundColor3 = MenuColor
+Menu.BorderSizePixel = 0
+Menu.Visible = false
+Menu.Active = true
+Menu.Parent = SeraphiCA
+
+local MenuCorner = Instance.new("UICorner")
+MenuCorner.CornerRadius = UDim.new(0, 14)
+MenuCorner.Parent = Menu
+
+local MenuStroke = Instance.new("UIStroke")
+MenuStroke.Color = AccentColor
+MenuStroke.Thickness = 1.5
+MenuStroke.Transparency = 0.5
+MenuStroke.Parent = Menu
+
+-- Заголовок меню
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 48)
+Header.Position = UDim2.new(0, 0, 0, 0)
+Header.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Header.BackgroundTransparency = 0.4
+Header.Parent = Menu
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 14)
+HeaderCorner.Parent = Header
+
+local HeaderTitle = Instance.new("TextLabel")
+HeaderTitle.Size = UDim2.new(1, -20, 1, 0)
+HeaderTitle.Position = UDim2.new(0, 20, 0, 0)
+HeaderTitle.BackgroundTransparency = 1
+HeaderTitle.Text = "SeraphiCA"
+HeaderTitle.Font = HANDWRITING_BOLD
+HeaderTitle.TextSize = 20
+HeaderTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
+HeaderTitle.Parent = Header
+
+-- Вкладки
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(0, 150, 1, -48)
+TabContainer.Position = UDim2.new(0, 0, 0, 48)
+TabContainer.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+TabContainer.BackgroundTransparency = 0.55
+TabContainer.Parent = Menu
+
+local TabContainerCorner = Instance.new("UICorner")
+TabContainerCorner.CornerRadius = UDim.new(0, 14)
+TabContainerCorner.Parent = TabContainer
+
+local TabList = Instance.new("UIListLayout")
+TabList.Padding = UDim.new(0, 3)
+TabList.VerticalAlignment = Enum.VerticalAlignment.Top
+TabList.Parent = TabContainer
+
+-- Контент вкладок
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -158, 1, -58)
+ContentFrame.Position = UDim2.new(0, 153, 0, 53)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = Menu
+
+-- Функция создания вкладки
+local function CreateTab(name, icon)
+    local tab = Instance.new("ImageButton")
+    tab.Size = UDim2.new(1, -12, 0, 42)
+    tab.Position = UDim2.new(0, 6, 0, 5)
+    tab.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    tab.BackgroundTransparency = 0.9
+    tab.AutoButtonColor = false
+    tab.Parent = TabContainer
+
+    local tabCorner = Instance.new("UICorner")
+    tabCorner.CornerRadius = UDim.new(0, 10)
+    tabCorner.Parent = tab
+
+    local tabLabel = Instance.new("TextLabel")
+    tabLabel.Size = UDim2.new(1, -12, 1, 0)
+    tabLabel.Position = UDim2.new(0, 12, 0, 0)
+    tabLabel.BackgroundTransparency = 1
+    tabLabel.Text = icon .. "  " .. name
+    tabLabel.Font = HANDWRITING_FONT
+    tabLabel.TextSize = 14
+    tabLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    tabLabel.TextXAlignment = Enum.TextXAlignment.Left
+    tabLabel.Parent = tab
+
+    local page = Instance.new("Frame")
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1
+    page.Visible = false
+    page.Parent = ContentFrame
+
+    return {
+        Button = tab,
+        Label = tabLabel,
+        Page = page
+    }
+end
+
+local SettingsTab = CreateTab("Settings", "⚙")
+local DevTab = CreateTab("Dev", "💻")
+
+local SelectedTab = SettingsTab
+local function SwitchTab(tab)
+    if SelectedTab then
+        local oldTween = TweenService:Create(SelectedTab.Button, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0.9
+        })
+        oldTween:Play()
+        SelectedTab.Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+        SelectedTab.Page.Visible = false
+    end
+
+    SelectedTab = tab
+
+    local newTween = TweenService:Create(tab.Button, TweenInfo.new(0.2), {
+        BackgroundTransparency = 0.7
+    })
+    newTween:Play()
+    tab.Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tab.Page.Visible = true
+end
+
+SettingsTab.Button.MouseButton1Click:Connect(function() SwitchTab(SettingsTab) end)
+DevTab.Button.MouseButton1Click:Connect(function() SwitchTab(DevTab) end)
+
+-- ===== СТРАНИЦА НАСТРОЕК =====
+local SettingsScroll = Instance.new("ScrollingFrame")
+SettingsScroll.Size = UDim2.new(1, -10, 1, -5)
+SettingsScroll.Position = UDim2.new(0, 5, 0, 5)
+SettingsScroll.BackgroundTransparency = 1
+SettingsScroll.ScrollBarThickness = 4
+SettingsScroll.ScrollBarImageColor3 = AccentColor
+SettingsScroll.Parent = SettingsTab.Page
+
+local SettingsList = Instance.new("UIListLayout")
+SettingsList.Padding = UDim.new(0, 10)
+SettingsList.Parent = SettingsScroll
+
+-- Функция создания секции
+local function CreateSettingSection(title)
     local section = Instance.new("Frame")
-    section.Size = UDim2.new(1, 0, 0, 28)
-    section.BackgroundColor3 = Colors.Tertiary
-    section.BorderSizePixel = 0
-    section.ZIndex = 61
-    section.Parent = parent
-    Instance.new("UICorner", section).CornerRadius = UDim.new(0, 4)
-    
-    local sectionLabel = Instance.new("TextLabel")
-    sectionLabel.Size = UDim2.new(1, -10, 1, 0)
-    sectionLabel.Position = UDim2.new(0, 10, 0, 0)
-    sectionLabel.BackgroundTransparency = 1
-    sectionLabel.Text = title
-    sectionLabel.TextColor3 = Colors.AccentLight
-    sectionLabel.Font = Fonts.Header
-    sectionLabel.TextSize = 14
-    sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
-    sectionLabel.ZIndex = 62
-    sectionLabel.Parent = section
-    
-    return section
-end
+    section.Size = UDim2.new(1, 0, 0, 0)
+    section.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    section.BackgroundTransparency = 0.94
+    section.AutomaticSize = Enum.AutomaticSize.Y
+    section.Parent = SettingsScroll
 
---// MM2 Функции определения ролей
-function MM2_DetectRoles()
-    local roles = {}
-    local roleFolder = Workspace:FindFirstChild("Roles") or Workspace:FindFirstChild("PlayerRoles")
-    
-    -- Метод 1: через папку ролей
-    if roleFolder then
-        for _, player in pairs(Players:GetPlayers()) do
-            local playerRole = roleFolder:FindFirstChild(player.Name)
-            if playerRole then
-                local roleName = playerRole.Value or playerRole.Name
-                roles[player.UserId] = roleName
-            end
-        end
-    end
-    
-    -- Метод 2: через цвета/атрибуты персонажа
-    for _, player in pairs(Players:GetPlayers()) do
-        if not roles[player.UserId] and player.Character then
-            local char = player.Character
-            -- Проверка наличия ножа (Murderer)
-            local hasKnife = false
-            local hasGun = false
-            for _, child in pairs(char:GetDescendants()) do
-                if child:IsA("Tool") then
-                    if child.Name:lower():find("knife") or child.Name:lower():find("blade") or child.Name:lower():find("dagger") then
-                        hasKnife = true
-                    end
-                    if child.Name:lower():find("gun") or child.Name:lower():find("pistol") or child.Name:lower():find("revolver") or child.Name:lower():find("sheriff") then
-                        hasGun = true
-                    end
-                end
-            end
-            
-            if hasKnife then
-                roles[player.UserId] = "Murderer"
-            elseif hasGun then
-                roles[player.UserId] = "Sheriff"
-            else
-                roles[player.UserId] = "Innocent"
-            end
-        end
-    end
-    
-    -- Метод 3: через белые/красные части тела
-    for _, player in pairs(Players:GetPlayers()) do
-        if not roles[player.UserId] and player.Character then
-            local head = player.Character:FindFirstChild("Head")
-            if head then
-                -- Проверяем цвет для определения роли
-                -- В некоторых версиях MM2 используются цветовые индикаторы
-            end
-        end
-    end
-    
-    MM2.PlayerRoles = roles
-    return roles
-end
+    local sectionCorner = Instance.new("UICorner")
+    sectionCorner.CornerRadius = UDim.new(0, 10)
+    sectionCorner.Parent = section
 
-function MM2_GetPlayerRole(player)
-    if MM2.PlayerRoles[player.UserId] then
-        return MM2.PlayerRoles[player.UserId]
-    end
-    return "Unknown"
-end
+    local sectionStroke = Instance.new("UIStroke")
+    sectionStroke.Color = AccentColor
+    sectionStroke.Thickness = 1
+    sectionStroke.Transparency = 0.65
+    sectionStroke.Parent = section
 
---// MM2 ESP системы
-function MM2_CreatePlayerESP(player, role, color)
-    local userId = player.UserId
-    if MM2.ESPCache[userId] then
-        -- Обновляем существующий ESP
-        local cache = MM2.ESPCache[userId]
-        if cache.billboard then
-            cache.billboard.StudsOffset = Vector3.new(0, 3.5, 0)
-        end
-        return
-    end
-    
-    local char = player.Character
-    if not char then return end
-    
-    local head = char:FindFirstChild("Head")
-    if not head then return end
-    
-    -- Создаём BillboardGui для имени и роли
-    local billboard = Instance.new("BillboardGui")
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 3.5, 0)
-    billboard.AlwaysOnTop = true
-    billboard.MaxDistance = 1000
-    billboard.Parent = head
-    
-    -- Фон
-    local bgFrame = Instance.new("Frame")
-    bgFrame.Size = UDim2.new(1, 0, 0, 30)
-    bgFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    bgFrame.BackgroundTransparency = 0.5
-    bgFrame.BorderSizePixel = 0
-    bgFrame.Parent = billboard
-    Instance.new("UICorner", bgFrame).CornerRadius = UDim.new(0, 4)
-    
-    -- Роль
-    local roleLabel = Instance.new("TextLabel")
-    roleLabel.Size = UDim2.new(1, 0, 0, 14)
-    roleLabel.BackgroundTransparency = 1
-    roleLabel.Text = "[" .. role .. "]"
-    roleLabel.TextColor3 = color
-    roleLabel.Font = Enum.Font.GothamBold
-    roleLabel.TextSize = 12
-    roleLabel.Parent = bgFrame
-    
-    -- Имя
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, 0, 0, 14)
-    nameLabel.Position = UDim2.new(0, 0, 0, 14)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = player.Name
-    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.Font = Enum.Font.Gotham
-    nameLabel.TextSize = 11
-    nameLabel.Parent = bgFrame
-    
-    -- Highlight персонажа
-    local highlight = Instance.new("Highlight")
-    highlight.FillColor = color
-    highlight.FillTransparency = 0.7
-    highlight.OutlineColor = color
-    highlight.OutlineTransparency = 0.3
-    highlight.Adornee = char
-    highlight.Parent = char
-    
-    -- Чамс (Chams)
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            local boxHandle = Instance.new("BoxHandleAdornment")
-            boxHandle.Size = part.Size
-            boxHandle.Adornee = part
-            boxHandle.AlwaysOnTop = true
-            boxHandle.ZIndex = 5
-            boxHandle.Color3 = color
-            boxHandle.Transparency = 0.5
-            boxHandle.Parent = part
-        end
-    end
-    
-    MM2.ESPCache[userId] = {
-        billboard = billboard,
-        highlight = highlight,
-        player = player,
-        role = role,
-    }
-end
+    local sectionTitle = Instance.new("TextLabel")
+    sectionTitle.Size = UDim2.new(1, -20, 0, 32)
+    sectionTitle.Position = UDim2.new(0, 10, 0, 5)
+    sectionTitle.BackgroundTransparency = 1
+    sectionTitle.Text = title
+    sectionTitle.Font = HANDWRITING_BOLD
+    sectionTitle.TextSize = 15
+    sectionTitle.TextColor3 = AccentColor
+    sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
+    sectionTitle.Parent = section
 
-function MM2_ClearESP(userId)
-    local cache = MM2.ESPCache[userId]
-    if cache then
-        if cache.billboard then cache.billboard:Destroy() end
-        if cache.highlight then cache.highlight:Destroy() end
-        MM2.ESPCache[userId] = nil
-    end
-end
-
-function MM2_ClearAllESP()
-    for userId, _ in pairs(MM2.ESPCache) do
-        MM2_ClearESP(userId)
-    end
-end
-
---// MM2 Системные функции
-function MM2_FlingPlayer(player, power, rotation)
-    power = power or 1000
-    rotation = rotation or Vector3.new(math.random(-100, 100), math.random(-100, 100), math.random(-100, 100))
-    
-    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = player.Character.HumanoidRootPart
-        hrp.Velocity = Vector3.new(math.random(-power, power), power, math.random(-power, power))
-        hrp.RotVelocity = rotation
-        if player.Character:FindFirstChild("Humanoid") then
-            player.Character.Humanoid.PlatformStand = true
-        end
-    end
-end
-
-function MM2_KillPlayer(player)
-    if player.Character and player.Character:FindFirstChild("Humanoid") then
-        player.Character.Humanoid.Health = 0
-    end
-end
-
-function MM2_TeleportPlayerToMe(player)
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            player.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(math.random(-3, 3), 0, math.random(-3, 3))
-        end
-    end
-end
-
-function MM2_FreezePlayer(player)
-    if player.Character then
-        for _, part in pairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Anchored = true
-            end
-        end
-    end
-end
-
-function MM2_UnfreezePlayer(player)
-    if player.Character then
-        for _, part in pairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Anchored = false
-            end
-        end
-    end
-end
-
-function MM2_InvisiblePlayer(player)
-    if player.Character then
-        for _, part in pairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") or part:IsA("Decal") then
-                part.Transparency = 1
-            end
-        end
-    end
-end
-
-function MM2_VisiblePlayer(player)
-    if player.Character then
-        for _, part in pairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") or part:IsA("Decal") then
-                part.Transparency = 0
-            end
-        end
-    end
-end
-
-function MM2_GetMurderer()
-    for _, player in pairs(Players:GetPlayers()) do
-        if MM2_GetPlayerRole(player) == "Murderer" then
-            return player
-        end
-    end
-    return nil
-end
-
-function MM2_GetSheriff()
-    for _, player in pairs(Players:GetPlayers()) do
-        if MM2_GetPlayerRole(player) == "Sheriff" then
-            return player
-        end
-    end
-    return nil
-end
-
-function MM2_GetAllInnocents()
-    local innocents = {}
-    for _, player in pairs(Players:GetPlayers()) do
-        if MM2_GetPlayerRole(player) == "Innocent" then
-            table.insert(innocents, player)
-        end
-    end
-    return innocents
-end
-
-function MM2_GiveKnife(player)
-    -- Попытка дать нож через репликацию
-    local knifeModel = ReplicatedStorage:FindFirstChild("Knife") or ReplicatedStorage:FindFirstChild("Weapon")
-    if knifeModel and player.Character then
-        local clone = knifeModel:Clone()
-        clone.Parent = player.Character
-    end
-end
-
-function MM2_StealWeapon(target, weaponType)
-    weaponType = weaponType or "Knife"
-    if target.Character then
-        for _, tool in pairs(target.Character:GetChildren()) do
-            if tool:IsA("Tool") and tool.Name:lower():find(weaponType:lower()) then
-                tool.Parent = LocalPlayer.Character
-                return true
-            end
-        end
-    end
-    return false
-end
-
---// Создание вкладки MM2
-function CreateMM2Tab(parent)
-    local mm2Content = Instance.new("ScrollingFrame")
-    mm2Content.Size = UDim2.new(1, 0, 1, 0)
-    mm2Content.BackgroundTransparency = 1
-    mm2Content.BorderSizePixel = 0
-    mm2Content.ScrollBarThickness = 3
-    mm2Content.ScrollBarImageColor3 = Colors.Accent
-    mm2Content.CanvasSize = UDim2.new(0, 0, 0, 3200) -- Огромный канвас для всех функций
-    mm2Content.Visible = false
-    mm2Content.ZIndex = 57
-    mm2Content.Parent = parent
-    
-    local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 6)
-    contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    contentLayout.Parent = mm2Content
-    
-    local contentPadding = Instance.new("UIPadding")
-    contentPadding.PaddingTop = UDim.new(0, 8)
-    contentPadding.PaddingLeft = UDim.new(0, 4)
-    contentPadding.PaddingRight = UDim.new(0, 4)
-    contentPadding.Parent = mm2Content
-    
-    -- ============ MM2 ROLE DETECTION ============
-    CreateSection(mm2Content, "🔍 ROLE DETECTION")
-    
-    CreateButton(mm2Content, "Detect All Roles", function()
-        MM2_DetectRoles()
-        local count = 0
-        for _ in pairs(MM2.PlayerRoles) do
-            count = count + 1
-        end
-        SendNotification("🔍", "MM2", "Detected " .. count .. " player roles!", 3)
-    end)
-    
-    CreateToggle(mm2Content, "Auto Role Detection", true, function(v)
-        ToggleStates.MM2AutoDetect = v
-        if v then MM2_DetectRoles() end
-    end)
-    
-    CreateDropdown(mm2Content, "Detection Method", {"Auto", "By Tools", "By Colors", "By Values", "All"}, "Auto", function(v)
-        MM2.RoleDetectionMethod = v
-        MM2_DetectRoles()
-    end)
-    
-    -- ============ MM2 ESP ============
-    CreateSection(mm2Content, "👁️ ROLE ESP (ПОДСВЕТКА ПО РОЛЯМ)")
-    
-    CreateToggle(mm2Content, "ESP Master Switch", false, function(v)
-        ToggleStates.MM2ESPMaster = v
-        if not v then
-            MM2_ClearAllESP()
-        else
-            MM2_DetectRoles()
-        end
-    end)
-    
-    -- Sheriff ESP
-    CreateToggle(mm2Content, "Sheriff ESP", true, function(v)
-        ToggleStates.MM2SheriffESP = v
-        if not v then
-            for userId, cache in pairs(MM2.ESPCache) do
-                if cache.role == "Sheriff" then MM2_ClearESP(userId) end
-            end
-        end
-    end)
-    
-    CreateDropdown(mm2Content, "Sheriff Color", {"Blue", "Cyan", "Light Blue", "Dark Blue", "Custom"}, "Blue", function(v)
-        local colors = {
-            Blue = Color3.fromRGB(0, 150, 255),
-            Cyan = Color3.fromRGB(0, 255, 255),
-            ["Light Blue"] = Color3.fromRGB(100, 180, 255),
-            ["Dark Blue"] = Color3.fromRGB(0, 50, 180),
-            Custom = Color3.fromRGB(0, 150, 255),
-        }
-        MM2.SheriffColor = colors[v] or Color3.fromRGB(0, 150, 255)
-    end)
-    
-    CreateToggle(mm2Content, "Sheriff Name Tags", true, function(v) ToggleStates.MM2SheriffNames = v end)
-    CreateToggle(mm2Content, "Sheriff Distance", true, function(v) ToggleStates.MM2SheriffDist = v end)
-    CreateToggle(mm2Content, "Sheriff Boxes", true, function(v) ToggleStates.MM2SheriffBoxes = v end)
-    CreateToggle(mm2Content, "Sheriff Health Bar", false, function(v) ToggleStates.MM2SheriffHealth = v end)
-    CreateToggle(mm2Content, "Sheriff Tracers", false, function(v) ToggleStates.MM2SheriffTracers = v end)
-    
-    -- Murderer ESP
-    CreateToggle(mm2Content, "Murderer ESP", true, function(v)
-        ToggleStates.MM2MurdererESP = v
-        if not v then
-            for userId, cache in pairs(MM2.ESPCache) do
-                if cache.role == "Murderer" then MM2_ClearESP(userId) end
-            end
-        end
-    end)
-    
-    CreateDropdown(mm2Content, "Murderer Color", {"Red", "Dark Red", "Orange Red", "Pink", "Custom"}, "Red", function(v)
-        local colors = {
-            Red = Color3.fromRGB(255, 0, 0),
-            ["Dark Red"] = Color3.fromRGB(180, 0, 0),
-            ["Orange Red"] = Color3.fromRGB(255, 50, 0),
-            Pink = Color3.fromRGB(255, 0, 150),
-            Custom = Color3.fromRGB(255, 0, 0),
-        }
-        MM2.MurdererColor = colors[v] or Color3.fromRGB(255, 0, 0)
-    end)
-    
-    CreateToggle(mm2Content, "Murderer Name Tags", true, function(v) ToggleStates.MM2MurdererNames = v end)
-    CreateToggle(mm2Content, "Murderer Distance", true, function(v) ToggleStates.MM2MurdererDist = v end)
-    CreateToggle(mm2Content, "Murderer Boxes", true, function(v) ToggleStates.MM2MurdererBoxes = v end)
-    CreateToggle(mm2Content, "Murderer Health Bar", false, function(v) ToggleStates.MM2MurdererHealth = v end)
-    CreateToggle(mm2Content, "Murderer Tracers", false, function(v) ToggleStates.MM2MurdererTracers = v end)
-    CreateToggle(mm2Content, "Murderer Warning", true, function(v) ToggleStates.MM2MurdererWarning = v end)
-    CreateSlider(mm2Content, "Murderer Alert Distance", 5, 100, 20, 1, function(v) SliderValues.MM2MurdererAlertDist = v end)
-    
-    -- Innocent ESP
-    CreateToggle(mm2Content, "Innocent ESP", false, function(v)
-        ToggleStates.MM2InnocentESP = v
-        if not v then
-            for userId, cache in pairs(MM2.ESPCache) do
-                if cache.role == "Innocent" then MM2_ClearESP(userId) end
-            end
-        end
-    end)
-    
-    CreateDropdown(mm2Content, "Innocent Color", {"Green", "Lime", "Yellow Green", "White", "Custom"}, "Green", function(v)
-        local colors = {
-            Green = Color3.fromRGB(0, 255, 0),
-            Lime = Color3.fromRGB(150, 255, 0),
-            ["Yellow Green"] = Color3.fromRGB(200, 255, 0),
-            White = Color3.fromRGB(255, 255, 255),
-            Custom = Color3.fromRGB(0, 255, 0),
-        }
-        MM2.InnocentColor = colors[v] or Color3.fromRGB(0, 255, 0)
-    end)
-    
-    CreateToggle(mm2Content, "Innocent Name Tags", false, function(v) ToggleStates.MM2InnocentNames = v end)
-    CreateToggle(mm2Content, "Innocent Distance", false, function(v) ToggleStates.MM2InnocentDist = v end)
-    
-    -- Hero ESP
-    CreateToggle(mm2Content, "Hero ESP", true, function(v) ToggleStates.MM2HeroESP = v end)
-    
-    CreateDropdown(mm2Content, "Hero Color", {"Gold", "Yellow", "Orange", "Custom"}, "Gold", function(v)
-        local colors = {
-            Gold = Color3.fromRGB(255, 215, 0),
-            Yellow = Color3.fromRGB(255, 255, 0),
-            Orange = Color3.fromRGB(255, 165, 0),
-            Custom = Color3.fromRGB(255, 215, 0),
-        }
-        MM2.HeroColor = colors[v] or Color3.fromRGB(255, 215, 0)
-    end)
-    
-    -- ============ MM2 ITEM ESP ============
-    CreateSection(mm2Content, "🔪 ITEM ESP")
-    
-    CreateToggle(mm2Content, "Knife ESP", false, function(v) ToggleStates.MM2KnifeESP = v end)
-    CreateToggle(mm2Content, "Gun ESP", false, function(v) ToggleStates.MM2GunESP = v end)
-    CreateToggle(mm2Content, "Coin ESP", false, function(v) ToggleStates.MM2CoinESP = v end)
-    CreateToggle(mm2Content, "Collectible ESP", false, function(v) ToggleStates.MM2CollectibleESP = v end)
-    CreateToggle(mm2Content, "Drop ESP", false, function(v) ToggleStates.MM2DropESP = v end)
-    CreateSlider(mm2Content, "Item ESP Distance", 50, 1000, 300, 10, function(v) SliderValues.MM2ItemESPDist = v end)
-    
-    -- ============ MM2 COMBAT ============
-    CreateSection(mm2Content, "⚔️ COMBAT FUNCTIONS")
-    
-    CreateToggle(mm2Content, "Kill All (Insta Win)", false, function(v)
-        ToggleStates.MM2KillAll = v
-        if v then
-            local murderer = MM2_GetMurderer()
-            if murderer then
-                MM2_KillPlayer(murderer)
-                SendNotification("⚔️", "MM2", "Murderer eliminated!", 3)
-            end
-        end
-    end)
-    
-    CreateButton(mm2Content, "Kill Murderer", function()
-        local murderer = MM2_GetMurderer()
-        if murderer then
-            MM2_KillPlayer(murderer)
-            SendNotification("⚔️", "MM2", "Killed " .. murderer.Name .. " (Murderer)!", 3)
-        else
-            SendNotification("⚠️", "MM2", "Murderer not found!", 2)
-        end
-    end)
-    
-    CreateButton(mm2Content, "Kill Sheriff", function()
-        local sheriff = MM2_GetSheriff()
-        if sheriff then
-            MM2_KillPlayer(sheriff)
-            SendNotification("⚔️", "MM2", "Killed " .. sheriff.Name .. " (Sheriff)!", 3)
-        end
-    end)
-    
-    CreateButton(mm2Content, "Kill All Innocents", function()
-        local innocents = MM2_GetAllInnocents()
-        for _, innocent in ipairs(innocents) do
-            MM2_KillPlayer(innocent)
-        end
-        SendNotification("⚔️", "MM2", "Killed " .. #innocents .. " innocents!", 3)
-    end)
-    
-    CreateToggle(mm2Content, "Auto Kill Murderer", false, function(v) ToggleStates.MM2AutoKillMurderer = v end)
-    CreateToggle(mm2Content, "Auto Stun Murderer", false, function(v) ToggleStates.MM2AutoStunMurderer = v end)
-    CreateToggle(mm2Content, "God Mode (MM2)", false, function(v)
-        ToggleStates.MM2GodMode = v
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.MaxHealth = v and math.huge or 100
-            char.Humanoid.Health = v and math.huge or 100
-        end
-    end)
-    
-    -- ============ MM2 WEAPONS ============
-    CreateSection(mm2Content, "🔫 WEAPON FUNCTIONS")
-    
-    CreateButton(mm2Content, "Get Knife (Become Murderer)", function()
-        MM2_GiveKnife(LocalPlayer)
-        SendNotification("🔫", "MM2", "Knife given! You are now the murderer!", 3)
-    end)
-    
-    CreateButton(mm2Content, "Steal Knife from Murderer", function()
-        local murderer = MM2_GetMurderer()
-        if murderer then
-            local success = MM2_StealWeapon(murderer, "Knife")
-            if success then
-                SendNotification("🔫", "MM2", "Stole knife from " .. murderer.Name .. "!", 3)
-            else
-                SendNotification("⚠️", "MM2", "Could not steal knife!", 2)
-            end
-        end
-    end)
-    
-    CreateButton(mm2Content, "Steal Gun from Sheriff", function()
-        local sheriff = MM2_GetSheriff()
-        if sheriff then
-            local success = MM2_StealWeapon(sheriff, "Gun")
-            if success then
-                SendNotification("🔫", "MM2", "Stole gun from " .. sheriff.Name .. "!", 3)
-            end
-        end
-    end)
-    
-    CreateButton(mm2Content, "Remove All Weapons", function()
-        local char = LocalPlayer.Character
-        if char then
-            for _, tool in pairs(char:GetChildren()) do
-                if tool:IsA("Tool") then
-                    tool:Destroy()
-                end
-            end
-            SendNotification("🔫", "MM2", "All weapons removed!", 2)
-        end
-    end)
-    
-    CreateToggle(mm2Content, "Infinite Ammo", false, function(v) ToggleStates.MM2InfAmmo = v end)
-    CreateToggle(mm2Content, "Rapid Fire", false, function(v) ToggleStates.MM2RapidFire = v end)
-    CreateToggle(mm2Content, "No Reload", false, function(v) ToggleStates.MM2NoReload = v end)
-    CreateToggle(mm2Content, "Auto Shoot Murderer", false, function(v) ToggleStates.MM2AutoShootMurderer = v end)
-    
-    -- ============ MM2 PLAYER MODS ============
-    CreateSection(mm2Content, "👤 PLAYER MANIPULATION")
-    
-    CreateToggle(mm2Content, "Invisible (You)", false, function(v)
-        ToggleStates.MM2SelfInvis = v
-        MM2_InvisiblePlayer(LocalPlayer)
-        if not v then MM2_VisiblePlayer(LocalPlayer) end
-    end)
-    
-    CreateToggle(mm2Content, "Make Murderer Invisible", false, function(v)
-        ToggleStates.MM2MurdererInvis = v
-        local murderer = MM2_GetMurderer()
-        if murderer then
-            if v then MM2_InvisiblePlayer(murderer) else MM2_VisiblePlayer(murderer) end
-        end
-    end)
-    
-    CreateToggle(mm2Content, "Make Sheriff Invisible", false, function(v)
-        ToggleStates.MM2SheriffInvis = v
-        local sheriff = MM2_GetSheriff()
-        if sheriff then
-            if v then MM2_InvisiblePlayer(sheriff) else MM2_VisiblePlayer(sheriff) end
-        end
-    end)
-    
-    CreateButton(mm2Content, "Make All Invisible", function()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                MM2_InvisiblePlayer(player)
-            end
-        end
-        SendNotification("👤", "MM2", "All players invisible!", 2)
-    end)
-    
-    CreateButton(mm2Content, "Make All Visible", function()
-        for _, player in pairs(Players:GetPlayers()) do
-            MM2_VisiblePlayer(player)
-        end
-        SendNotification("👤", "MM2", "All players visible!", 2)
-    end)
-    
-    -- ============ MM2 FLING ============
-    CreateSection(mm2Content, "🌀 FLING CONTROLS")
-    
-    CreateToggle(mm2Content, "Fling All Players", false, function(v)
-        ToggleStates.MM2FlingAll = v
-    end)
-    
-    CreateSlider(mm2Content, "Fling Power", 100, 10000, 2000, 100, function(v) SliderValues.MM2FlingPower = v end)
-    CreateSlider(mm2Content, "Fling Rotation Speed", 0, 500, 100, 10, function(v) SliderValues.MM2FlingRotation = v end)
-    
-    CreateButton(mm2Content, "Fling Murderer", function()
-        local murderer = MM2_GetMurderer()
-        if murderer then
-            local power = SliderValues.MM2FlingPower or 2000
-            MM2_FlingPlayer(murderer, power)
-            SendNotification("🌀", "MM2", "Flung " .. murderer.Name .. "!", 2)
-        end
-    end)
-    
-    CreateButton(mm2Content, "Fling Sheriff", function()
-        local sheriff = MM2_GetSheriff()
-        if sheriff then
-            MM2_FlingPlayer(sheriff, SliderValues.MM2FlingPower or 2000)
-            SendNotification("🌀", "MM2", "Flung " .. sheriff.Name .. "!", 2)
-        end
-    end)
-    
-    CreateButton(mm2Content, "Fling All Innocents", function()
-        local innocents = MM2_GetAllInnocents()
-        local power = SliderValues.MM2FlingPower or 2000
-        for _, innocent in ipairs(innocents) do
-            MM2_FlingPlayer(innocent, power)
-        end
-        SendNotification("🌀", "MM2", "Flung " .. #innocents .. " innocents!", 2)
-    end)
-    
-    CreateButton(mm2Content, "Super Fling All (Crash Attempt)", function()
-        local power = 50000
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                MM2_FlingPlayer(player, power)
-            end
-        end
-        SendNotification("🌀", "MM2", "SUPER FLING deployed! Server may crash...", 3)
-    end)
-    
-    CreateButton(mm2Content, "Spin All Players", function()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                player.Character.HumanoidRootPart.RotVelocity = Vector3.new(0, 500, 0)
-            end
-        end
-        SendNotification("🌀", "MM2", "All players spinning!", 2)
-    end)
-    
-    CreateButton(mm2Content, "Stop All Fling", function()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                player.Character.HumanoidRootPart.Velocity = Vector3.zero
-                player.Character.HumanoidRootPart.RotVelocity = Vector3.zero
-                if player.Character:FindFirstChild("Humanoid") then
-                    player.Character.Humanoid.PlatformStand = false
-                end
-            end
-        end
-        SendNotification("🌀", "MM2", "All fling stopped!", 2)
-    end)
-    
-    -- ============ MM2 FREEZE ============
-    CreateSection(mm2Content, "❄️ FREEZE CONTROLS")
-    
-    CreateButton(mm2Content, "Freeze Murderer", function()
-        local murderer = MM2_GetMurderer()
-        if murderer then
-            MM2_FreezePlayer(murderer)
-            SendNotification("❄️", "MM2", "Frozen " .. murderer.Name .. "!", 2)
-        end
-    end)
-    
-    CreateButton(mm2Content, "Freeze Sheriff", function()
-        local sheriff = MM2_GetSheriff()
-        if sheriff then
-            MM2_FreezePlayer(sheriff)
-            SendNotification("❄️", "MM2", "Frozen " .. sheriff.Name .. "!", 2)
-        end
-    end)
-    
-    CreateButton(mm2Content, "Freeze All Players", function()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                MM2_FreezePlayer(player)
-            end
-        end
-        SendNotification("❄️", "MM2", "All players frozen!", 2)
-    end)
-    
-    CreateButton(mm2Content, "Unfreeze All Players", function()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                MM2_UnfreezePlayer(player)
-            end
-        end
-        SendNotification("❄️", "MM2", "All players unfrozen!", 2)
-    end)
-    
-    -- ============ MM2 TELEPORT ============
-    CreateSection(mm2Content, "📍 TELEPORT CONTROLS")
-    
-    CreateButton(mm2Content, "Teleport to Murderer", function()
-        local murderer = MM2_GetMurderer()
-        if murderer and murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart") then
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                char.HumanoidRootPart.CFrame = murderer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
-                SendNotification("📍", "MM2", "Teleported to murderer!", 2)
-            end
-        end
-    end)
-    
-    CreateButton(mm2Content, "Teleport to Sheriff", function()
-        local sheriff = MM2_GetSheriff()
-        if sheriff and sheriff.Character and sheriff.Character:FindFirstChild("HumanoidRootPart") then
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                char.HumanoidRootPart.CFrame = sheriff.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
-                SendNotification("📍", "MM2", "Teleported to sheriff!", 2)
-            end
-        end
-    end)
-    
-    CreateButton(mm2Content, "Teleport All to You", function()
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            local pos = char.HumanoidRootPart.Position
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                    player.Character.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5)))
-                end
-            end
-            SendNotification("📍", "MM2", "All players teleported to you!", 2)
-        end
-    end)
-    
-    CreateButton(mm2Content, "Teleport to Map Center", function()
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = CFrame.new(0, 50, 0)
-            SendNotification("📍", "MM2", "Teleported to map center!", 2)
-        end
-    end)
-    
-    CreateButton(mm2Content, "Teleport to Safe Zone", function()
-        SendNotification("📍", "MM2", "Searching for safe zone...", 2)
-        -- Placeholder - зависит от карты
-    end)
-    
-    -- ============ MM2 ANTI-FUNCTIONS ============
-    CreateSection(mm2Content, "🛡️ ANTI FUNCTIONS")
-    
-    CreateToggle(mm2Content, "Anti Murderer", false, function(v)
-        ToggleStates.MM2AntiMurderer = v
-        SendNotification("🛡️", "MM2", "Anti-Murderer " .. (v and "ON" or "OFF"), 2)
-    end)
-    
-    CreateToggle(mm2Content, "Anti Knife", false, function(v) ToggleStates.MM2AntiKnife = v end)
-    CreateToggle(mm2Content, "Anti Gun", false, function(v) ToggleStates.MM2AntiGun = v end)
-    CreateToggle(mm2Content, "Anti Death", false, function(v) ToggleStates.MM2AntiDeath = v end)
-    CreateToggle(mm2Content, "Anti Stun", false, function(v) ToggleStates.MM2AntiStun = v end)
-    CreateToggle(mm2Content, "Anti Blind", false, function(v) ToggleStates.MM2AntiBlind = v end)
-    CreateToggle(mm2Content, "Slow Aura (Nearby Enemies)", false, function(v) ToggleStates.MM2SlowAura = v end)
-    CreateSlider(mm2Content, "Slow Aura Range", 5, 50, 15, 1, function(v) SliderValues.MM2SlowAuraRange = v end)
-    
-    -- ============ MM2 MISC ============
-    CreateSection(mm2Content, "🎮 MISC FUNCTIONS")
-    
-    CreateToggle(mm2Content, "Auto Collect Coins", false, function(v) ToggleStates.MM2AutoCoins = v end)
-    CreateToggle(mm2Content, "Auto Collect Gems", false, function(v) ToggleStates.MM2AutoGems = v end)
-    CreateToggle(mm2Content, "Auto Pickup Weapon", false, function(v) ToggleStates.MM2AutoPickup = v end)
-    CreateToggle(mm2Content, "Speed Boost", false, function(v)
-        ToggleStates.MM2SpeedBoost = v
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.WalkSpeed = v and 50 or 16
-        end
-    end)
-    CreateSlider(mm2Content, "Speed Multiplier", 1, 10, 3, 1, function(v)
-        SliderValues.MM2SpeedMult = v
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") and ToggleStates.MM2SpeedBoost then
-            char.Humanoid.WalkSpeed = 16 * v
-        end
-    end)
-    
-    CreateToggle(mm2Content, "Jump Boost", false, function(v)
-        ToggleStates.MM2JumpBoost = v
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.JumpPower = v and 150 or 50
-        end
-    end)
-    
-    CreateToggle(mm2Content, "No Clip (MM2)", false, function(v)
-        ToggleStates.MM2NoClip = v
-        local char = LocalPlayer.Character
-        if char then
-            for _, part in pairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = not v
-                end
-            end
-        end
-    end)
-    
-    CreateToggle(mm2Content, "Fly (MM2)", false, function(v) ToggleStates.MM2Fly = v end)
-    CreateSlider(mm2Content, "Fly Speed (MM2)", 10, 300, 80, 5, function(v) SliderValues.MM2FlySpeed = v end)
-    
-    CreateToggle(mm2Content, "Third Person (MM2)", false, function(v)
-        LocalPlayer.CameraMode = v and Enum.CameraMode.Classic or Enum.CameraMode.LockFirstPerson
-    end)
-    
-    CreateToggle(mm2Content, "Zoom Hack", false, function(v)
-        ToggleStates.MM2ZoomHack = v
-        if not v then
-            Camera.FieldOfView = 70
-        end
-    end)
-    CreateSlider(mm2Content, "Zoom Level", 10, 120, 70, 1, function(v)
-        if ToggleStates.MM2ZoomHack then
-            Camera.FieldOfView = v
-        end
-    end)
-    
-    -- ============ MM2 LOBBY/SERVER ============
-    CreateSection(mm2Content, "🔥 LOBBY CONTROL")
-    
-    CreateButton(mm2Content, "Force Start Game", function()
-        SendNotification("🔥", "MM2", "Attempting to force start...", 2)
-        -- Ищем кнопку/ремоут для старта
-        local startButton = Workspace:FindFirstChild("StartGame") or Workspace:FindFirstChild("Voting")
-        if startButton then
-            pcall(function()
-                fireclickdetector(startButton:FindFirstChildWhichIsA("ClickDetector"))
-            end)
-        end
-    end)
-    
-    CreateButton(mm2Content, "End Game", function()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
-                player.Character.Humanoid.Health = 0
-            end
-        end
-        SendNotification("🔥", "MM2", "Game ended!", 2)
-    end)
-    
-    CreateButton(mm2Content, "Kill All & Win", function()
-        local innocents = MM2_GetAllInnocents()
-        local murderer = MM2_GetMurderer()
-        if murderer then
-            -- Убиваем всех кроме себя
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer then
-                    MM2_KillPlayer(player)
-                end
-            end
-            SendNotification("🔥", "MM2", "YOU WIN! All eliminated!", 3)
-        else
-            SendNotification("⚠️", "MM2", "Murderer not detected!", 2)
-        end
-    end)
-    
-    CreateButton(mm2Content, "Become Murderer Next Round", function()
-        SendNotification("🔥", "MM2", "Attempting to force murderer role...", 2)
-    end)
-    
-    CreateButton(mm2Content, "Become Sheriff Next Round", function()
-        SendNotification("🔥", "MM2", "Attempting to force sheriff role...", 2)
-    end)
-    
-    -- ============ MM2 SERVER ATTACKS ============
-    CreateSection(mm2Content, "💥 SERVER ATTACKS")
-    
-    CreateButton(mm2Content, "Crash MM2 Server", function()
-        spawn(function()
-            for i = 1, 500 do
-                local part = Instance.new("Part")
-                part.Size = Vector3.new(20, 20, 20)
-                part.Position = Vector3.new(math.random(-100, 100), math.random(0, 100), math.random(-100, 100))
-                part.Anchored = false
-                part.Velocity = Vector3.new(math.random(-500, 500), math.random(200, 1000), math.random(-500, 500))
-                part.Parent = Workspace
-            end
-            for i = 1, 200 do
-                local explosion = Instance.new("Explosion")
-                explosion.Position = Vector3.new(math.random(-50, 50), math.random(5, 30), math.random(-50, 50))
-                explosion.BlastRadius = 500
-                explosion.BlastPressure = 500000
-                explosion.Parent = Workspace
-            end
-        end)
-        SendNotification("💥", "MM2", "Server crash deployed!", 3)
-    end)
-    
-    CreateButton(mm2Content, "Lag MM2 Server", function()
-        spawn(function()
-            for i = 1, 300 do
-                local sound = Instance.new("Sound")
-                sound.SoundId = "rbxassetid://0"
-                sound.Volume = 10
-                sound.Parent = Workspace
-                sound:Play()
-            end
-        end)
-        SendNotification("💥", "MM2", "Server lag deployed!", 3)
-    end)
-    
-    CreateButton(mm2Content, "Clear All Map Objects", function()
-        local count = 0
-        for _, obj in pairs(Workspace:GetChildren()) do
-            if not obj:IsA("Camera") and obj ~= LocalPlayer.Character and not obj:IsA("Terrain") then
-                local players = Players:GetPlayers()
-                local isPlayer = false
-                for _, p in ipairs(players) do
-                    if p.Character == obj then isPlayer = true break end
-                end
-                if not isPlayer then
-                    pcall(function() obj:Destroy() end)
-                    count = count + 1
-                end
-            end
-        end
-        SendNotification("💥", "MM2", "Destroyed " .. count .. " objects!", 2)
-    end)
-    
-    -- ============ MM2 INFO ============
-    CreateSection(mm2Content, "ℹ️ GAME INFO")
-    
-    CreateButton(mm2Content, "Show Round Info", function()
-        MM2_DetectRoles()
-        local murderer = MM2_GetMurderer()
-        local sheriff = MM2_GetSheriff()
-        local innocents = MM2_GetAllInnocents()
-        
-        local info = "=== ROUND INFO ===\n"
-        info = info .. "Murderer: " .. (murderer and murderer.Name or "Unknown") .. "\n"
-        info = info .. "Sheriff: " .. (sheriff and sheriff.Name or "Unknown") .. "\n"
-        info = info .. "Innocents: " .. #innocents .. "\n"
-        info = info .. "Players: " .. #Players:GetPlayers() .. "\n"
-        info = info .. "Map: " .. (Workspace:FindFirstChild("Map") and Workspace.Map.Value or "Unknown") .. "\n"
-        
-        SendNotification("ℹ️", "MM2", info, 8)
-    end)
-    
-    CreateButton(mm2Content, "Copy Round Info", function()
-        MM2_DetectRoles()
-        local murderer = MM2_GetMurderer()
-        local info = "MM2 Round | Murderer: " .. (murderer and murderer.Name or "?")
-        setclipboard(info)
-        SendNotification("ℹ️", "MM2", "Info copied to clipboard!", 2)
-    end)
-    
-    CreateToggle(mm2Content, "Round Notifications", true, function(v) ToggleStates.MM2RoundNotifs = v end)
-    CreateToggle(mm2Content, "Murderer Alert Sound", false, function(v) ToggleStates.MM2MurdererAlert = v end)
-    
-    return mm2Content
-end
-
---// Главное меню
-function CreateMainMenu()
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 750, 0, 560)
-    mainFrame.Position = UDim2.new(-1, 0, 0.5, -280)
-    mainFrame.BackgroundColor3 = Colors.Background
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Visible = true
-    mainFrame.ZIndex = 55
-    mainFrame.Parent = ScreenGui
-    Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
-    
-    -- Title bar
-    local titleBar = Instance.new("Frame")
-    titleBar.Size = UDim2.new(1, 0, 0, 45)
-    titleBar.BackgroundColor3 = Colors.Main
-    titleBar.BorderSizePixel = 0
-    titleBar.ZIndex = 56
-    titleBar.Parent = mainFrame
-    Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 10)
-    
-    local titleCornerFix = Instance.new("Frame")
-    titleCornerFix.Size = UDim2.new(1, 0, 0, 10)
-    titleCornerFix.Position = UDim2.new(0, 0, 1, -10)
-    titleCornerFix.BackgroundColor3 = Colors.Main
-    titleCornerFix.BorderSizePixel = 0
-    titleCornerFix.ZIndex = 56
-    titleCornerFix.Parent = titleBar
-    
-    local titleHex = Instance.new("TextLabel")
-    titleHex.Size = UDim2.new(0, 30, 1, 0)
-    titleHex.Position = UDim2.new(0, 15, 0, 0)
-    titleHex.BackgroundTransparency = 1
-    titleHex.Text = "⬡"
-    titleHex.TextColor3 = Colors.Accent
-    titleHex.TextSize = 22
-    titleHex.ZIndex = 57
-    titleHex.Parent = titleBar
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(0, 250, 1, 0)
-    titleLabel.Position = UDim2.new(0, 45, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "SERAPHICA + MM2"
-    titleLabel.TextColor3 = Colors.White
-    titleLabel.Font = Fonts.Title
-    titleLabel.TextSize = 20
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.ZIndex = 57
-    titleLabel.Parent = titleBar
-    
-    local creatorLabel = Instance.new("TextLabel")
-    creatorLabel.Size = UDim2.new(0, 200, 1, 0)
-    creatorLabel.Position = UDim2.new(1, -210, 0, 0)
-    creatorLabel.BackgroundTransparency = 1
-    creatorLabel.Text = "@Mpmtww ⭐ v2.1"
-    creatorLabel.TextColor3 = Colors.TextDim
-    creatorLabel.Font = Fonts.Small
-    creatorLabel.TextSize = 11
-    creatorLabel.TextXAlignment = Enum.TextXAlignment.Right
-    creatorLabel.ZIndex = 57
-    creatorLabel.Parent = titleBar
-    
-    -- Tab panel
-    local tabPanel = Instance.new("ScrollingFrame")
-    tabPanel.Size = UDim2.new(0, 160, 1, -45)
-    tabPanel.Position = UDim2.new(0, 0, 0, 45)
-    tabPanel.BackgroundColor3 = Colors.Main
-    tabPanel.BorderSizePixel = 0
-    tabPanel.ScrollBarThickness = 2
-    tabPanel.ScrollBarImageColor3 = Colors.Accent
-    tabPanel.CanvasSize = UDim2.new(0, 0, 0, 900)
-    tabPanel.ZIndex = 56
-    tabPanel.Parent = mainFrame
-    
-    local tabLayout = Instance.new("UIListLayout")
-    tabLayout.Padding = UDim.new(0, 3)
-    tabLayout.Parent = tabPanel
-    
-    local tabPadding = Instance.new("UIPadding")
-    tabPadding.PaddingLeft = UDim.new(0, 5)
-    tabPadding.PaddingRight = UDim.new(0, 5)
-    tabPadding.PaddingTop = UDim.new(0, 8)
-    tabPadding.Parent = tabPanel
-    
-    -- Content frame
     local contentFrame = Instance.new("Frame")
-    contentFrame.Size = UDim2.new(1, -160, 1, -45)
-    contentFrame.Position = UDim2.new(0, 160, 0, 45)
-    contentFrame.BackgroundColor3 = Colors.Background
-    contentFrame.BorderSizePixel = 0
-    contentFrame.ZIndex = 56
-    contentFrame.Parent = mainFrame
-    
-    -- Tabs definition (включая MM2)
-    local tabs = {
-        "👤 Player",
-        "🏃 Movement",
-        "👁️ Visuals",
-        "🌍 World",
-        "🔪 MM2",
-        "🔥 Server",
-        "💎 GamePass",
-        "📍 Teleports",
-        "📜 Scripts",
-        "🌾 Farming",
-        "🛡️ Bypass",
-        "🔧 Utils",
-        "⚙️ Settings",
-    }
-    
-    local tabButtons = {}
-    local tabContents = {}
-    local activeTab = nil
-    
-    -- Create tabs
-    for i, tabName in ipairs(tabs) do
-        local tabBtn = Instance.new("TextButton")
-        tabBtn.Size = UDim2.new(1, 0, 0, 32)
-        tabBtn.BackgroundColor3 = i == 1 and Colors.TabActive or Colors.TabInactive
-        tabBtn.BorderSizePixel = 0
-        tabBtn.Text = tabName
-        tabBtn.TextColor3 = Colors.Text
-        tabBtn.Font = Fonts.Normal
-        tabBtn.TextSize = 12
-        tabBtn.TextXAlignment = Enum.TextXAlignment.Left
-        tabBtn.AutoButtonColor = false
-        tabBtn.ZIndex = 57
-        tabBtn.Parent = tabPanel
-        Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 5)
-        
-        local tabContent
-        if tabName == "🔪 MM2" then
-            tabContent = CreateMM2Tab(contentFrame)
-        else
-            tabContent = Instance.new("ScrollingFrame")
-            tabContent.Size = UDim2.new(1, 0, 1, 0)
-            tabContent.BackgroundTransparency = 1
-            tabContent.BorderSizePixel = 0
-            tabContent.ScrollBarThickness = 3
-            tabContent.ScrollBarImageColor3 = Colors.Accent
-            tabContent.CanvasSize = UDim2.new(0, 0, 0, 800)
-            tabContent.Visible = false
-            tabContent.ZIndex = 57
-            tabContent.Parent = contentFrame
-            
-            local contentLayout = Instance.new("UIListLayout")
-            contentLayout.Padding = UDim.new(0, 6)
-            contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-            contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            contentLayout.Parent = tabContent
-            
-            local contentPadding = Instance.new("UIPadding")
-            contentPadding.PaddingTop = UDim.new(0, 8)
-            contentPadding.PaddingLeft = UDim.new(0, 4)
-            contentPadding.PaddingRight = UDim.new(0, 4)
-            contentPadding.Parent = tabContent
-            
-            -- Заполняем базовые вкладки базовыми функциями
-            if tabName == "👤 Player" then
-                CreateSection(tabContent, "💪 STATS")
-                CreateSlider(tabContent, "Walk Speed", 16, 500, 16, 1, function(v)
-                    SliderValues.WalkSpeed = v
-                    local char = LocalPlayer.Character
-                    if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = v end
-                end)
-                CreateSlider(tabContent, "Jump Power", 50, 1000, 50, 1, function(v)
-                    SliderValues.JumpPower = v
-                    local char = LocalPlayer.Character
-                    if char and char:FindFirstChild("Humanoid") then char.Humanoid.JumpPower = v end
-                end)
-                CreateToggle(tabContent, "God Mode", false, function(v) ToggleStates.GodMode = v end)
-                CreateToggle(tabContent, "Infinite Jump", false, function(v) ToggleStates.InfiniteJump = v end)
-                CreateToggle(tabContent, "No Clip", false, function(v) ToggleStates.NoClip = v end)
-            elseif tabName == "🏃 Movement" then
-                CreateSection(tabContent, "🚀 FLIGHT")
-                CreateToggle(tabContent, "Fly", false, function(v) ToggleStates.Fly = v end)
-                CreateSlider(tabContent, "Fly Speed", 10, 500, 100, 5, function(v) SliderValues.FlySpeed = v end)
-                CreateToggle(tabContent, "Speed Hack", false, function(v) ToggleStates.SpeedHack = v end)
-                CreateToggle(tabContent, "SpinBot", false, function(v) ToggleStates.SpinBot = v end)
-            elseif tabName == "👁️ Visuals" then
-                CreateSection(tabContent, "👁️ ESP")
-                CreateToggle(tabContent, "Player ESP", false, function(v) ToggleStates.PlayerESP = v end)
-                CreateToggle(tabContent, "Fullbright", false, function(v) ToggleStates.Fullbright = v end)
-                CreateToggle(tabContent, "X-Ray", false, function(v) ToggleStates.XRay = v end)
-            elseif tabName == "🌍 World" then
-                CreateSection(tabContent, "🌍 WORLD")
-                CreateSlider(tabContent, "Time", 0, 24, 12, 1, function(v)
-                    SliderValues.Time = v
-                    Lighting.ClockTime = v
-                end)
-                CreateToggle(tabContent, "Always Day", false, function(v) ToggleStates.AlwaysDay = v end)
-            elseif tabName == "🔥 Server" then
-                CreateSection(tabContent, "💥 ATTACKS")
-                CreateButton(tabContent, "Crash Server", function()
-                    SendNotification("🔥", "Server", "Deploying crash...", 3)
-                end)
-                CreateButton(tabContent, "Kick All", function()
-                    SendNotification("🔥", "Server", "Kicking all...", 3)
-                end)
-            elseif tabName == "💎 GamePass" then
-                CreateSection(tabContent, "💎 BYPASS")
-                CreateButton(tabContent, "Bypass All GamePass", function()
-                    SendNotification("💎", "GamePass", "Bypassed!", 3)
-                end)
-            elseif tabName == "📍 Teleports" then
-                CreateSection(tabContent, "📍 TELEPORT")
-                CreateButton(tabContent, "Teleport to Sky", function()
-                    local char = LocalPlayer.Character
-                    if char and char:FindFirstChild("HumanoidRootPart") then
-                        char.HumanoidRootPart.CFrame = CFrame.new(char.HumanoidRootPart.Position.X, 10000, char.HumanoidRootPart.Position.Z)
-                    end
-                end)
-            elseif tabName == "📜 Scripts" then
-                CreateSection(tabContent, "📜 SCRIPTS")
-                CreateButton(tabContent, "Infinite Yield", function()
-                    loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
-                end)
-            elseif tabName == "🌾 Farming" then
-                CreateSection(tabContent, "🌾 FARM")
-                CreateToggle(tabContent, "Auto Farm", false, function(v) ToggleStates.AutoFarm = v end)
-            elseif tabName == "🛡️ Bypass" then
-                CreateSection(tabContent, "🛡️ BYPASS")
-                CreateToggle(tabContent, "Anti-Kick", false, function(v) ToggleStates.AntiKick = v end)
-            elseif tabName == "🔧 Utils" then
-                CreateSection(tabContent, "🔧 UTILS")
-                CreateButton(tabContent, "Unlock FPS", function()
-                    setfpscap(999)
-                end)
-                CreateButton(tabContent, "Rejoin Server", function()
-                    TeleportService:Teleport(game.PlaceId, LocalPlayer)
-                end)
-            elseif tabName == "⚙️ Settings" then
-                CreateSection(tabContent, "⚙️ SETTINGS")
-                CreateToggle(tabContent, "Watermark", true, function(v)
-                    local wm = ScreenGui:FindFirstChild("Watermark")
-                    if wm then wm.Visible = v end
-                end)
-            end
-        end
-        
-        table.insert(tabButtons, tabBtn)
-        table.insert(tabContents, tabContent)
-        
-        if i == 1 then
-            activeTab = tabContent
-            tabContent.Visible = true
-        end
-        
-        tabBtn.MouseButton1Click:Connect(function()
-            if activeTab then activeTab.Visible = false end
-            activeTab = tabContent
-            activeTab.Visible = true
-            
-            for j, btn in ipairs(tabButtons) do
-                Tween(btn, {BackgroundColor3 = j == i and Colors.TabActive or Colors.TabInactive}, 0.2)
-            end
-            
-            -- Автоопределение ролей при открытии вкладки MM2
-            if tabName == "🔪 MM2" and ToggleStates.MM2AutoDetect then
-                MM2_DetectRoles()
-            end
+    contentFrame.Size = UDim2.new(1, 0, 0, 0)
+    contentFrame.Position = UDim2.new(0, 0, 0, 42)
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.AutomaticSize = Enum.AutomaticSize.Y
+    contentFrame.Parent = section
+
+    return contentFrame
+end
+
+-- ===== НАСТРОЙКА: ЦВЕТ МЕНЮ =====
+local ColorSettings = CreateSettingSection("🎨 Color Palette")
+
+local MenuColorLabel = Instance.new("TextLabel")
+MenuColorLabel.Size = UDim2.new(0, 160, 0, 22)
+MenuColorLabel.Position = UDim2.new(0, 10, 0, 0)
+MenuColorLabel.BackgroundTransparency = 1
+MenuColorLabel.Text = "Menu Color"
+MenuColorLabel.Font = HANDWRITING_FONT
+MenuColorLabel.TextSize = 13
+MenuColorLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+MenuColorLabel.TextXAlignment = Enum.TextXAlignment.Left
+MenuColorLabel.Parent = ColorSettings
+
+local MenuColorPickerFrame = Instance.new("Frame")
+MenuColorPickerFrame.Size = UDim2.new(1, -20, 0, 190)
+MenuColorPickerFrame.Position = UDim2.new(0, 10, 0, 26)
+MenuColorPickerFrame.BackgroundTransparency = 1
+MenuColorPickerFrame.Parent = ColorSettings
+
+local MenuColorPicker = ColorPicker.new(MenuColorPickerFrame, MenuColor, function(color)
+    MenuColor = color
+    Menu.BackgroundColor3 = color
+end)
+
+local WatermarkColorLabel = Instance.new("TextLabel")
+WatermarkColorLabel.Size = UDim2.new(0, 160, 0, 22)
+WatermarkColorLabel.Position = UDim2.new(0, 10, 0, 222)
+WatermarkColorLabel.BackgroundTransparency = 1
+WatermarkColorLabel.Text = "Watermark Color"
+WatermarkColorLabel.Font = HANDWRITING_FONT
+WatermarkColorLabel.TextSize = 13
+WatermarkColorLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+WatermarkColorLabel.TextXAlignment = Enum.TextXAlignment.Left
+WatermarkColorLabel.Parent = ColorSettings
+
+local WatermarkColorPickerFrame = Instance.new("Frame")
+WatermarkColorPickerFrame.Size = UDim2.new(1, -20, 0, 190)
+WatermarkColorPickerFrame.Position = UDim2.new(0, 10, 0, 248)
+WatermarkColorPickerFrame.BackgroundTransparency = 1
+WatermarkColorPickerFrame.Parent = ColorSettings
+
+local WatermarkColorPicker = ColorPicker.new(WatermarkColorPickerFrame, WatermarkColor, function(color)
+    WatermarkColor = color
+    Watermark.BackgroundColor3 = color
+end)
+
+-- ===== НАСТРОЙКА: ВАТЕРМАРК =====
+local WatermarkSettings = CreateSettingSection("📌 Watermark")
+
+local LockWatermarkToggle = Instance.new("ImageButton")
+LockWatermarkToggle.Size = UDim2.new(0, 44, 0, 22)
+LockWatermarkToggle.Position = UDim2.new(0, 10, 0, 8)
+LockWatermarkToggle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+LockWatermarkToggle.BackgroundTransparency = 0.8
+LockWatermarkToggle.AutoButtonColor = false
+LockWatermarkToggle.Parent = WatermarkSettings
+
+local LockToggleCorner = Instance.new("UICorner")
+LockToggleCorner.CornerRadius = UDim.new(0, 11)
+LockToggleCorner.Parent = LockWatermarkToggle
+
+local LockToggleKnob = Instance.new("Frame")
+LockToggleKnob.Size = UDim2.new(0, 18, 0, 18)
+LockToggleKnob.Position = UDim2.new(0, 2, 0.5, -9)
+LockToggleKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+LockToggleKnob.Parent = LockWatermarkToggle
+
+local LockKnobCorner = Instance.new("UICorner")
+LockKnobCorner.CornerRadius = UDim.new(0, 9)
+LockKnobCorner.Parent = LockToggleKnob
+
+local LockLabel = Instance.new("TextLabel")
+LockLabel.Size = UDim2.new(0, 220, 0, 22)
+LockLabel.Position = UDim2.new(0, 62, 0, 8)
+LockLabel.BackgroundTransparency = 1
+LockLabel.Text = "Lock Watermark Position"
+LockLabel.Font = HANDWRITING_FONT
+LockLabel.TextSize = 13
+LockLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+LockLabel.TextXAlignment = Enum.TextXAlignment.Left
+LockLabel.Parent = WatermarkSettings
+
+LockWatermarkToggle.MouseButton1Click:Connect(function()
+    WatermarkLocked = not WatermarkLocked
+    if WatermarkLocked then
+        LockToggleKnob:TweenPosition(UDim2.new(1, -20, 0.5, -9), "In", "Quad", 0.2)
+        LockWatermarkToggle.BackgroundColor3 = AccentColor
+        LockWatermarkToggle.BackgroundTransparency = 0.3
+    else
+        LockToggleKnob:TweenPosition(UDim2.new(0, 2, 0.5, -9), "In", "Quad", 0.2)
+        LockWatermarkToggle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        LockWatermarkToggle.BackgroundTransparency = 0.8
+    end
+end)
+
+local ResetWatermarkButton = Instance.new("ImageButton")
+ResetWatermarkButton.Size = UDim2.new(0, 170, 0, 30)
+ResetWatermarkButton.Position = UDim2.new(0, 10, 0, 40)
+ResetWatermarkButton.BackgroundColor3 = AccentColor
+ResetWatermarkButton.BackgroundTransparency = 0.8
+ResetWatermarkButton.AutoButtonColor = false
+ResetWatermarkButton.Parent = WatermarkSettings
+
+local ResetBtnCorner = Instance.new("UICorner")
+ResetBtnCorner.CornerRadius = UDim.new(0, 8)
+ResetBtnCorner.Parent = ResetWatermarkButton
+
+local ResetBtnLabel = Instance.new("TextLabel")
+ResetBtnLabel.Size = UDim2.new(1, 0, 1, 0)
+ResetBtnLabel.BackgroundTransparency = 1
+ResetBtnLabel.Text = "Reset Position"
+ResetBtnLabel.Font = HANDWRITING_FONT
+ResetBtnLabel.TextSize = 13
+ResetBtnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResetBtnLabel.Parent = ResetWatermarkButton
+
+ResetWatermarkButton.MouseButton1Click:Connect(function()
+    Watermark.Position = UDim2.new(0, 15, 0, 15)
+end)
+
+-- ===== НАСТРОЙКА: ИНФО =====
+local InfoSettings = CreateSettingSection("ℹ Script Info")
+
+local InfoText = Instance.new("TextLabel")
+InfoText.Size = UDim2.new(1, -20, 0, 0)
+InfoText.Position = UDim2.new(0, 10, 0, 8)
+InfoText.BackgroundTransparency = 1
+InfoText.Text = "SeraphiCA v1.0\nBuilt for Delta Executor\nAndroid • Roblox"
+InfoText.Font = HANDWRITING_FONT
+InfoText.TextSize = 13
+InfoText.TextColor3 = Color3.fromRGB(180, 180, 180)
+InfoText.TextXAlignment = Enum.TextXAlignment.Left
+InfoText.TextWrapped = true
+InfoText.AutomaticSize = Enum.AutomaticSize.Y
+InfoText.Parent = InfoSettings
+
+-- ===== СТРАНИЦА DEV =====
+local DevInfo = Instance.new("Frame")
+DevInfo.Size = UDim2.new(1, -20, 0, 220)
+DevInfo.Position = UDim2.new(0, 10, 0, 10)
+DevInfo.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+DevInfo.BackgroundTransparency = 0.94
+DevInfo.Parent = DevTab.Page
+
+local DevInfoCorner = Instance.new("UICorner")
+DevInfoCorner.CornerRadius = UDim.new(0, 10)
+DevInfoCorner.Parent = DevInfo
+
+local DevInfoStroke = Instance.new("UIStroke")
+DevInfoStroke.Color = AccentColor
+DevInfoStroke.Thickness = 1
+DevInfoStroke.Transparency = 0.65
+DevInfoStroke.Parent = DevInfo
+
+local DevAvatar = Instance.new("ImageLabel")
+DevAvatar.Size = UDim2.new(0, 64, 0, 64)
+DevAvatar.Position = UDim2.new(0, 20, 0, 20)
+DevAvatar.BackgroundColor3 = AccentColor
+DevAvatar.BackgroundTransparency = 0.5
+DevAvatar.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+DevAvatar.Parent = DevInfo
+
+local DevAvatarCorner = Instance.new("UICorner")
+DevAvatarCorner.CornerRadius = UDim.new(0, 32)
+DevAvatarCorner.Parent = DevAvatar
+
+local DevNick = Instance.new("TextLabel")
+DevNick.Size = UDim2.new(0, 250, 0, 28)
+DevNick.Position = UDim2.new(0, 95, 0, 22)
+DevNick.BackgroundTransparency = 1
+DevNick.Text = "seraphim"
+DevNick.Font = HANDWRITING_BOLD
+DevNick.TextSize = 22
+DevNick.TextColor3 = Color3.fromRGB(255, 255, 255)
+DevNick.TextXAlignment = Enum.TextXAlignment.Left
+DevNick.Parent = DevInfo
+
+local DevRole = Instance.new("TextLabel")
+DevRole.Size = UDim2.new(0, 250, 0, 22)
+DevRole.Position = UDim2.new(0, 95, 0, 50)
+DevRole.BackgroundTransparency = 1
+DevRole.Text = "Developer"
+DevRole.Font = HANDWRITING_FONT
+DevRole.TextSize = 14
+DevRole.TextColor3 = AccentColor
+DevRole.TextXAlignment = Enum.TextXAlignment.Left
+DevRole.Parent = DevInfo
+
+local DevTelegramLabel = Instance.new("TextLabel")
+DevTelegramLabel.Size = UDim2.new(0, 100, 0, 22)
+DevTelegramLabel.Position = UDim2.new(0, 20, 0, 105)
+DevTelegramLabel.BackgroundTransparency = 1
+DevTelegramLabel.Text = "Telegram:"
+DevTelegramLabel.Font = HANDWRITING_FONT
+DevTelegramLabel.TextSize = 13
+DevTelegramLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+DevTelegramLabel.TextXAlignment = Enum.TextXAlignment.Left
+DevTelegramLabel.Parent = DevInfo
+
+-- КЛИКАБЕЛЬНЫЙ Telegram (открывает браузер)
+local DevTelegram = Instance.new("TextButton")
+DevTelegram.Size = UDim2.new(0, 140, 0, 24)
+DevTelegram.Position = UDim2.new(0, 110, 0, 104)
+DevTelegram.BackgroundColor3 = Color3.fromRGB(100, 140, 255)
+DevTelegram.BackgroundTransparency = 0.85
+DevTelegram.Text = "@Mpmtww"
+DevTelegram.Font = HANDWRITING_BOLD
+DevTelegram.TextSize = 14
+DevTelegram.TextColor3 = Color3.fromRGB(150, 180, 255)
+DevTelegram.TextXAlignment = Enum.TextXAlignment.Left
+DevTelegram.AutoButtonColor = false
+DevTelegram.Parent = DevInfo
+
+local DevTelegramCorner = Instance.new("UICorner")
+DevTelegramCorner.CornerRadius = UDim.new(0, 6)
+DevTelegramCorner.Parent = DevTelegram
+
+local DevTelegramUnderline = Instance.new("Frame")
+DevTelegramUnderline.Size = UDim2.new(1, 0, 0, 1)
+DevTelegramUnderline.Position = UDim2.new(0, 0, 1, 0)
+DevTelegramUnderline.BackgroundColor3 = Color3.fromRGB(150, 180, 255)
+DevTelegramUnderline.BackgroundTransparency = 0.3
+DevTelegramUnderline.Parent = DevTelegram
+
+-- Функция открытия Telegram профиля через системный браузер
+DevTelegram.MouseButton1Click:Connect(function()
+    local telegramUrl = "https://t.me/Mpmtww"
+
+    -- Способ 1: через GuiService (работает на Android/Delta)
+    pcall(function()
+        GuiService:OpenBrowserWindow(telegramUrl)
+    end)
+
+    -- Способ 2: запасной через os.execute с intent (Android)
+    if not pcall(function() return GuiService:OpenBrowserWindow(telegramUrl) end) then
+        pcall(function()
+            syn.request and syn.request({
+                Url = telegramUrl,
+                Method = "GET"
+            })
         end)
     end
-    
-    return mainFrame
-end
-
---// Водяной знак
-function CreateWatermark()
-    local watermark = Instance.new("TextButton")
-    watermark.Size = UDim2.new(0, 250, 0, 28)
-    watermark.Position = UDim2.new(0, 12, 0, 12)
-    watermark.BackgroundColor3 = Colors.WatermarkBg
-    watermark.BackgroundTransparency = 0.25
-    watermark.BorderSizePixel = 0
-    watermark.Text = ""
-    watermark.AutoButtonColor = false
-    watermark.ZIndex = 50
-    watermark.Parent = ScreenGui
-    Instance.new("UICorner", watermark).CornerRadius = UDim.new(0, 6)
-    
-    local accentLine = Instance.new("Frame")
-    accentLine.Size = UDim2.new(0, 3, 1, 0)
-    accentLine.BackgroundColor3 = Colors.WatermarkAccent
-    accentLine.BorderSizePixel = 0
-    accentLine.ZIndex = 51
-    accentLine.Parent = watermark
-    
-    local iconLabel = Instance.new("TextLabel")
-    iconLabel.Size = UDim2.new(0, 20, 0, 20)
-    iconLabel.Position = UDim2.new(0, 10, 0.5, -10)
-    iconLabel.BackgroundTransparency = 1
-    iconLabel.Text = "⬡"
-    iconLabel.TextColor3 = Colors.Accent
-    iconLabel.TextSize = 16
-    iconLabel.ZIndex = 52
-    iconLabel.Parent = watermark
-    
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(0, 130, 1, 0)
-    nameLabel.Position = UDim2.new(0, 35, 0, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = "SERAPHICA+MM2"
-    nameLabel.TextColor3 = Colors.White
-    nameLabel.Font = Fonts.Header
-    nameLabel.TextSize = 14
-    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.ZIndex = 52
-    nameLabel.Parent = watermark
-    
-    local fpsLabel = Instance.new("TextLabel")
-    fpsLabel.Size = UDim2.new(0, 55, 1, 0)
-    fpsLabel.Position = UDim2.new(1, -60, 0, 0)
-    fpsLabel.BackgroundTransparency = 1
-    fpsLabel.Text = "FPS: 0"
-    fpsLabel.TextColor3 = Colors.TextDim
-    fpsLabel.Font = Fonts.Mono
-    fpsLabel.TextSize = 11
-    fpsLabel.TextXAlignment = Enum.TextXAlignment.Right
-    fpsLabel.ZIndex = 52
-    fpsLabel.Name = "FPSLabel"
-    fpsLabel.Parent = watermark
-    
-    spawn(function()
-        local lastUpdate = tick()
-        local frameCount = 0
-        while true do
-            frameCount = frameCount + 1
-            if tick() - lastUpdate >= 0.5 then
-                local fps = math.floor(frameCount / (tick() - lastUpdate))
-                fpsLabel.Text = "FPS: " .. fps
-                frameCount = 0
-                lastUpdate = tick()
-            end
-            wait()
-        end
-    end)
-    
-    watermark.MouseButton1Click:Connect(function()
-        MenuOpen = not MenuOpen
-        local mainFrame = ScreenGui:FindFirstChild("MainFrame")
-        if mainFrame then
-            if MenuOpen then
-                Tween(mainFrame, {
-                    Position = UDim2.new(0, 60, 0.5, -280),
-                    BackgroundTransparency = 0,
-                }, 0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-                mainFrame.Visible = true
-            else
-                Tween(mainFrame, {
-                    Position = UDim2.new(-1, 0, 0.5, -280),
-                    BackgroundTransparency = 0.5,
-                }, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-                wait(0.3)
-                mainFrame.Visible = false
-            end
-        end
-    end)
-    
-    return watermark
-end
-
---// Главный игровой цикл
-function StartMainLoop()
-    local rainbowAngle = 0
-    local lastRoleCheck = 0
-    local lastESPUpdate = 0
-    local lastFlingTick = 0
-    local lastMM2Check = 0
-    
-    spawn(function()
-        while true do
-            local dt = RunService.RenderStepped:Wait()
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChild("Humanoid")
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            
-            -- ============ БАЗОВЫЕ ФУНКЦИИ ============
-            if ToggleStates.GodMode and hum then
-                hum.Health = hum.MaxHealth
-            end
-            
-            if ToggleStates.Fly and hrp and hum then
-                local flySpeed = SliderValues.FlySpeed or 100
-                local moveDir = Vector3.zero
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.E) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Q) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-                if moveDir.Magnitude > 0 then hrp.Velocity = moveDir.Unit * flySpeed else hrp.Velocity = Vector3.new(0, 0, 0) end
-                hum.PlatformStand = true
-            elseif not ToggleStates.Fly and hum then
-                hum.PlatformStand = false
-            end
-            
-            if ToggleStates.NoClip and char then
-                for _, part in pairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
-                end
-            end
-            
-            if ToggleStates.SpinBot and hrp then
-                local speed = SliderValues.SpinSpeed or 200
-                hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(speed * dt), 0)
-            end
-            
-            if ToggleStates.Fullbright then
-                Lighting.Brightness = 5
-                Lighting.ClockTime = 12
-            end
-            
-            if ToggleStates.AlwaysDay then
-                Lighting.ClockTime = 12
-            end
-            
-            -- ============ MM2 ФУНКЦИИ ============
-            
-            -- Автоопределение ролей
-            if ToggleStates.MM2AutoDetect and tick() - lastRoleCheck > 2 then
-                lastRoleCheck = tick()
-                MM2_DetectRoles()
-            end
-            
-            -- MM2 ESP обновление
-            if ToggleStates.MM2ESPMaster and tick() - lastESPUpdate > 0.3 then
-                lastESPUpdate = tick()
-                local roles = MM2.PlayerRoles
-                
-                for _, player in pairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer then
-                        local role = MM2_GetPlayerRole(player)
-                        local shouldShow = false
-                        local color = nil
-                        
-                        if role == "Sheriff" and ToggleStates.MM2SheriffESP then
-                            shouldShow = true
-                            color = MM2.SheriffColor
-                        elseif role == "Murderer" and ToggleStates.MM2MurdererESP then
-                            shouldShow = true
-                            color = MM2.MurdererColor
-                        elseif role == "Innocent" and ToggleStates.MM2InnocentESP then
-                            shouldShow = true
-                            color = MM2.InnocentColor
-                        elseif role == "Hero" and ToggleStates.MM2HeroESP then
-                            shouldShow = true
-                            color = MM2.HeroColor
-                        end
-                        
-                        if shouldShow and player.Character then
-                            MM2_CreatePlayerESP(player, role, color)
-                        else
-                            MM2_ClearESP(player.UserId)
-                        end
-                    end
-                end
-            elseif not ToggleStates.MM2ESPMaster then
-                MM2_ClearAllESP()
-            end
-            
-            -- MM2 God Mode
-            if ToggleStates.MM2GodMode and hum then
-                hum.Health = hum.MaxHealth
-            end
-            
-            -- MM2 Fly
-            if ToggleStates.MM2Fly and hrp and hum then
-                local flySpeed = SliderValues.MM2FlySpeed or 80
-                local moveDir = Vector3.zero
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.E) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Q) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-                if moveDir.Magnitude > 0 then hrp.Velocity = moveDir.Unit * flySpeed else hrp.Velocity = Vector3.new(0, 0, 0) end
-                hum.PlatformStand = true
-            elseif not ToggleStates.MM2Fly and hum and not ToggleStates.Fly then
-                hum.PlatformStand = false
-            end
-            
-            -- MM2 No Clip
-            if ToggleStates.MM2NoClip and char then
-                for _, part in pairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
-                end
-            end
-            
-            -- MM2 Fling All (постоянный)
-            if ToggleStates.MM2FlingAll and tick() - lastFlingTick > 0.5 then
-                lastFlingTick = tick()
-                local power = SliderValues.MM2FlingPower or 2000
-                for _, player in pairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer then
-                        MM2_FlingPlayer(player, power)
-                    end
-                end
-            end
-            
-            -- MM2 Auto Kill Murderer
-            if ToggleStates.MM2AutoKillMurderer and tick() - lastMM2Check > 1 then
-                lastMM2Check = tick()
-                local murderer = MM2_GetMurderer()
-                if murderer and murderer.Character and murderer.Character:FindFirstChild("Humanoid") and murderer.Character.Humanoid.Health > 0 then
-                    MM2_KillPlayer(murderer)
-                end
-            end
-            
-            -- MM2 Anti Murderer (держит на расстоянии)
-            if ToggleStates.MM2AntiMurderer and hrp then
-                local murderer = MM2_GetMurderer()
-                if murderer and murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart") then
-                    local dist = (hrp.Position - murderer.Character.HumanoidRootPart.Position).Magnitude
-                    if dist < 15 then
-                        MM2_FlingPlayer(murderer, 500)
-                    end
-                end
-            end
-            
-            -- MM2 Slow Aura
-            if ToggleStates.MM2SlowAura and hrp then
-                local auraRange = SliderValues.MM2SlowAuraRange or 15
-                for _, player in pairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        local dist = (hrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
-                        if dist < auraRange and player.Character:FindFirstChild("Humanoid") then
-                            player.Character.Humanoid.WalkSpeed = 8
-                        end
-                    end
-                end
-            end
-            
-            -- MM2 Murderer Warning (звуковое оповещение)
-            if ToggleStates.MM2MurdererWarning and hrp then
-                local murderer = MM2_GetMurderer()
-                local alertDist = SliderValues.MM2MurdererAlertDist or 20
-                if murderer and murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart") then
-                    local dist = (hrp.Position - murderer.Character.HumanoidRootPart.Position).Magnitude
-                    if dist < alertDist then
-                        -- Визуальное предупреждение (можно добавить звук)
-                        if not MM2._lastAlert or tick() - MM2._lastAlert > 3 then
-                            MM2._lastAlert = tick()
-                            SendNotification("⚠️", "MM2 ALERT", "MURDERER NEARBY! Distance: " .. math.floor(dist), 2)
-                        end
-                    end
-                end
-            end
-            
-            -- MM2 Anti Death
-            if ToggleStates.MM2AntiDeath and hum and hum.Health <= 10 then
-                hum.Health = hum.MaxHealth
-            end
-            
-            wait()
-        end
-    end)
-end
-
---// Инициализация
-function Init()
-    if CoreGui:FindFirstChild("SeraphicaHub") then
-        CoreGui.SeraphicaHub:Destroy()
-    end
-    
-    ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "SeraphicaHub"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.Parent = CoreGui
-    
-    NotificationGui = Instance.new("ScreenGui")
-    NotificationGui.Name = "SeraphicaNotifications"
-    NotificationGui.ResetOnSpawn = false
-    NotificationGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    NotificationGui.ZIndex = 100
-    NotificationGui.Parent = CoreGui
-    
-    CreateLoadingScreen()
-    
-    wait(2.5)
-    
-    CreateWatermark()
-    CreateMainMenu()
-    StartMainLoop()
-    
-    -- Anti-detection
-    local mt = getrawmetatable(game)
-    if mt then
-        setreadonly(mt, false)
-        local oldNamecall = mt.__namecall
-        mt.__namecall = function(self, ...)
-            local method = getnamecallmethod()
-            if ToggleStates.AntiKick and (method == "Kick" or method == "kick") then
-                return nil
-            end
-            return oldNamecall(self, ...)
-        end
-        setreadonly(mt, true)
-    end
-    
-    if syn and syn.protect_gui then
-        syn.protect_gui(ScreenGui)
-        syn.protect_gui(NotificationGui)
-    end
-    
-    SendNotification("✅", "SERAPHICA", "v2.1 + MM2 Pack loaded!", 6)
-    SendNotification("🔪", "MM2", "Open MM2 tab for exclusive features!", 5)
-    SendNotification("⬡", "CREDITS", "Made by @Mpmtww | t.me/Mpmtww", 5)
-end
-
---// Запуск
-pcall(function()
-    Init()
 end)
+
+-- Анимация подсветки при нажатии
+DevTelegram.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        DevTelegram.BackgroundTransparency = 0.7
+        DevTelegram.TextColor3 = Color3.fromRGB(200, 220, 255)
+    end
+end)
+
+DevTelegram.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        DevTelegram.BackgroundTransparency = 0.85
+        DevTelegram.TextColor3 = Color3.fromRGB(150, 180, 255)
+    end
+end)
+
+local DevNote = Instance.new("TextLabel")
+DevNote.Size = UDim2.new(1, -40, 0, 50)
+DevNote.Position = UDim2.new(0, 20, 0, 150)
+DevNote.BackgroundTransparency = 1
+DevNote.Text = "Thanks for using SeraphiCA.\nMore features coming soon."
+DevNote.Font = HANDWRITING_FONT
+DevNote.TextSize = 12
+DevNote.TextColor3 = Color3.fromRGB(140, 140, 140)
+DevNote.TextXAlignment = Enum.TextXAlignment.Left
+DevNote.TextWrapped = true
+DevNote.Parent = DevInfo
+
+-- ===== ДРАГ ХЕНДЛЕРЫ =====
+local MenuDrag = DragHandler.new(Header, true)
+local WatermarkDrag = DragHandler.new(Watermark, false)
+
+-- Клик по ватермарку — открыть/закрыть меню
+Watermark.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        task.wait(0.05)
+        if not MenuDrag.Dragging and not WatermarkDrag.Dragging then
+            MenuOpen = not MenuOpen
+            Menu.Visible = MenuOpen
+            if MenuOpen then
+                SwitchTab(SettingsTab)
+            end
+        end
+    end
+end)
+
+-- Обновление драга
+RunService.RenderStepped:Connect(function()
+    if not WatermarkLocked then
+        WatermarkDrag:Update()
+    end
+    MenuDrag:Update()
+end)
+
+-- ===== ИНИЦИАЛИЗАЦИЯ =====
+Menu.Visible = false
+MenuOpen = false
+SwitchTab(SettingsTab)
+UpdateTime()
+
+-- Адаптивное масштабирование под экран телефона
+local function AdjustForMobile()
+    local screenSize = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1080, 1920)
+
+    -- Если экран меньше 800px по ширине — уменьшаем меню
+    if screenSize.X < 800 then
+        Menu.Size = UDim2.new(0, screenSize.X - 20, 0, screenSize.Y - 100)
+        Menu.Position = UDim2.new(0, 10, 0, 50)
+        Watermark.Size = UDim2.new(0, 190, 0, 32)
+        WMTitle.TextSize = 12
+        WMTime.TextSize = 10
+    end
+end
+
+AdjustForMobile()
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(AdjustForMobile)

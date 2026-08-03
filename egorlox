@@ -1,6 +1,30 @@
 -- SeraphiCA.lua
 -- Эксклюзивно для Delta Executor (Android)
--- Рукописный шрифт + кликабельный Telegram @Mpmtww
+-- С очисткой старых GUI + рукописный шрифт + кликабельный Telegram @Mpmtww
+
+-- ===== ОЧИСТКА СТАРЫХ GUI =====
+local function CleanupOldGUI()
+    -- Удаляем предыдущие версии SeraphiCA из CoreGui
+    if game:GetService("CoreGui"):FindFirstChild("SeraphiCA") then
+        game:GetService("CoreGui").SeraphiCA:Destroy()
+    end
+    -- Удаляем из PlayerGui на всякий случай
+    if game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui") then
+        local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+        if playerGui:FindFirstChild("SeraphiCA") then
+            playerGui.SeraphiCA:Destroy()
+        end
+    end
+    -- Чистим мусорные GUI которые могли остаться
+    for _, obj in ipairs(game:GetService("CoreGui"):GetChildren()) do
+        if obj.Name == "SeraphiCA" or obj.Name == "SeraphiCA_Old" then
+            obj:Destroy()
+        end
+    end
+    task.wait(0.1) -- даём время на удаление
+end
+
+CleanupOldGUI()
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -17,9 +41,49 @@ if not identifyexecutor or identifyexecutor():lower() ~= "delta" then
 end
 
 -- Константы шрифта
-local HANDWRITING_FONT = Enum.Font.FredokaOne -- стилизованный "рукописный" аналог в Roblox
-local FALLBACK_FONT = Enum.Font.Arcade -- запасной вариант
+local HANDWRITING_FONT = Enum.Font.FredokaOne
 local HANDWRITING_BOLD = Enum.Font.FredokaOne
+
+-- Уведомление о запуске
+local function Notify(text)
+    pcall(function()
+        local notif = Instance.new("Frame")
+        notif.Size = UDim2.new(0, 250, 0, 40)
+        notif.Position = UDim2.new(0.5, -125, 0, -50)
+        notif.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+        notif.BorderSizePixel = 0
+        notif.Parent = CoreGui
+        notif.Name = "SeraphiCA_Notify"
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = notif
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(255, 255, 255)
+        stroke.Thickness = 1
+        stroke.Transparency = 0.5
+        stroke.Parent = notif
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.Font = Enum.Font.FredokaOne
+        label.TextSize = 13
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        label.Parent = notif
+
+        -- Анимация появления
+        notif:TweenPosition(UDim2.new(0.5, -125, 0, 20), "Out", "Quad", 0.4)
+        task.wait(2)
+        notif:TweenPosition(UDim2.new(0.5, -125, 0, -50), "In", "Quad", 0.4)
+        task.wait(0.5)
+        notif:Destroy()
+    end)
+end
+
+Notify("SeraphiCA • Loaded")
 
 -- GUI
 local SeraphiCA = Instance.new("ScreenGui")
@@ -47,6 +111,8 @@ function DragHandler.new(frame, leaveTrail)
     self.LeaveTrail = leaveTrail or false
     self.TrailObjects = {}
     self.LastPosition = nil
+    self.TouchStartTime = 0
+    self.TouchStartPos = nil
     self:Initialize()
     return self
 end
@@ -54,6 +120,8 @@ end
 function DragHandler:Initialize()
     self.Frame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch then
+            self.TouchStartTime = tick()
+            self.TouchStartPos = Vector2.new(input.Position.X, input.Position.Y)
             self.Dragging = true
             self.MouseOffset = Vector2.new(input.Position.X, input.Position.Y) - self.Frame.AbsolutePosition
             self.LastPosition = self.Frame.AbsolutePosition
@@ -62,9 +130,13 @@ function DragHandler:Initialize()
 
     self.Frame.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch then
+            local wasDragging = self.Dragging
             self.Dragging = false
-            if self.LeaveTrail and self.LastPosition then
-                self:CreateTrail()
+            if self.LeaveTrail and wasDragging and self.LastPosition then
+                local dist = (Vector2.new(input.Position.X, input.Position.Y) - (self.TouchStartPos or Vector2.new(0,0))).Magnitude
+                if dist > 5 then -- след только если реально двигали
+                    self:CreateTrail()
+                end
             end
         end
     end)
@@ -73,8 +145,10 @@ end
 function DragHandler:Update()
     if self.Dragging then
         local touchPos = UserInputService:GetMouseLocation()
-        self.Frame.Position = UDim2.new(0, touchPos.X - self.MouseOffset.X, 0, touchPos.Y - self.MouseOffset.Y)
-        self.LastPosition = self.Frame.AbsolutePosition
+        if touchPos.X > 0 and touchPos.Y > 0 then
+            self.Frame.Position = UDim2.new(0, touchPos.X - self.MouseOffset.X, 0, touchPos.Y - self.MouseOffset.Y)
+            self.LastPosition = self.Frame.AbsolutePosition
+        end
     end
 end
 
@@ -89,6 +163,7 @@ function DragHandler:CreateTrail()
     trail.BorderSizePixel = 0
     trail.Parent = self.Frame.Parent
     trail.ZIndex = self.Frame.ZIndex - 1
+    trail.Name = "Trail"
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 8)
@@ -101,12 +176,13 @@ function DragHandler:CreateTrail()
     fadeTween:Play()
 
     fadeTween.Completed:Connect(function()
-        trail:Destroy()
-        table.remove(self.TrailObjects, table.find(self.TrailObjects, trail))
+        pcall(function() trail:Destroy() end)
+        local idx = table.find(self.TrailObjects, trail)
+        if idx then table.remove(self.TrailObjects, idx) end
     end)
 end
 
--- Цветовая палитра (оптимизирована под тач)
+-- Цветовая палитра
 local ColorPicker = {}
 ColorPicker.__index = ColorPicker
 
@@ -170,7 +246,7 @@ function ColorPicker.new(parent, defaultColor, onColorChange)
     knobCorner.CornerRadius = UDim.new(0, 4)
     knobCorner.Parent = hueKnob
 
-    -- Быстрые цвета (кружки для тача — крупнее)
+    -- Быстрые цвета
     local presetColors = {
         Color3.fromRGB(12, 12, 12),
         Color3.fromRGB(25, 25, 35),
@@ -209,7 +285,6 @@ function ColorPicker.new(parent, defaultColor, onColorChange)
         end)
     end
 
-    -- Логика выбора цвета
     local hueValue = 0
     local saturationValue = 1
     local brightnessValue = 1
@@ -254,13 +329,6 @@ function ColorPicker.new(parent, defaultColor, onColorChange)
         end
     end)
 
-    self.Container = container
-    self.Canvas = canvas
-    self.HueKnob = hueKnob
-    self.HueValue = hueValue
-    self.SaturationValue = saturationValue
-    self.BrightnessValue = brightnessValue
-
     return self
 end
 
@@ -302,7 +370,6 @@ WatermarkStroke.Thickness = 1.5
 WatermarkStroke.Transparency = 0.4
 WatermarkStroke.Parent = Watermark
 
--- Иконка
 local WMIcon = Instance.new("Frame")
 WMIcon.Size = UDim2.new(0, 28, 0, 28)
 WMIcon.Position = UDim2.new(0, 8, 0.5, -14)
@@ -324,7 +391,6 @@ local WMIconInnerCorner = Instance.new("UICorner")
 WMIconInnerCorner.CornerRadius = UDim.new(0, 5)
 WMIconInnerCorner.Parent = WMIconInner
 
--- Текст ватермарка (рукописный шрифт)
 local WMTitle = Instance.new("TextLabel")
 WMTitle.Size = UDim2.new(1, -48, 0, 18)
 WMTitle.Position = UDim2.new(0, 42, 0, 2)
@@ -347,7 +413,6 @@ WMTime.TextColor3 = Color3.fromRGB(180, 180, 180)
 WMTime.TextXAlignment = Enum.TextXAlignment.Left
 WMTime.Parent = Watermark
 
--- Обновление времени
 local function UpdateTime()
     local time = os.date("*t")
     WMTime.Text = string.format("%02d:%02d:%02d", time.hour, time.min, time.sec)
@@ -380,7 +445,7 @@ MenuStroke.Thickness = 1.5
 MenuStroke.Transparency = 0.5
 MenuStroke.Parent = Menu
 
--- Заголовок меню
+-- Заголовок
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 48)
 Header.Position = UDim2.new(0, 0, 0, 0)
@@ -417,17 +482,14 @@ TabContainerCorner.Parent = TabContainer
 
 local TabList = Instance.new("UIListLayout")
 TabList.Padding = UDim.new(0, 3)
-TabList.VerticalAlignment = Enum.VerticalAlignment.Top
 TabList.Parent = TabContainer
 
--- Контент вкладок
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Size = UDim2.new(1, -158, 1, -58)
 ContentFrame.Position = UDim2.new(0, 153, 0, 53)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = Menu
 
--- Функция создания вкладки
 local function CreateTab(name, icon)
     local tab = Instance.new("ImageButton")
     tab.Size = UDim2.new(1, -12, 0, 42)
@@ -458,11 +520,7 @@ local function CreateTab(name, icon)
     page.Visible = false
     page.Parent = ContentFrame
 
-    return {
-        Button = tab,
-        Label = tabLabel,
-        Page = page
-    }
+    return { Button = tab, Label = tabLabel, Page = page }
 end
 
 local SettingsTab = CreateTab("Settings", "⚙")
@@ -471,20 +529,12 @@ local DevTab = CreateTab("Dev", "💻")
 local SelectedTab = SettingsTab
 local function SwitchTab(tab)
     if SelectedTab then
-        local oldTween = TweenService:Create(SelectedTab.Button, TweenInfo.new(0.2), {
-            BackgroundTransparency = 0.9
-        })
-        oldTween:Play()
+        TweenService:Create(SelectedTab.Button, TweenInfo.new(0.2), {BackgroundTransparency = 0.9}):Play()
         SelectedTab.Label.TextColor3 = Color3.fromRGB(200, 200, 200)
         SelectedTab.Page.Visible = false
     end
-
     SelectedTab = tab
-
-    local newTween = TweenService:Create(tab.Button, TweenInfo.new(0.2), {
-        BackgroundTransparency = 0.7
-    })
-    newTween:Play()
+    TweenService:Create(tab.Button, TweenInfo.new(0.2), {BackgroundTransparency = 0.7}):Play()
     tab.Label.TextColor3 = Color3.fromRGB(255, 255, 255)
     tab.Page.Visible = true
 end
@@ -505,7 +555,6 @@ local SettingsList = Instance.new("UIListLayout")
 SettingsList.Padding = UDim.new(0, 10)
 SettingsList.Parent = SettingsScroll
 
--- Функция создания секции
 local function CreateSettingSection(title)
     local section = Instance.new("Frame")
     section.Size = UDim2.new(1, 0, 0, 0)
@@ -545,7 +594,7 @@ local function CreateSettingSection(title)
     return contentFrame
 end
 
--- ===== НАСТРОЙКА: ЦВЕТ МЕНЮ =====
+-- Настройка: Цвет меню
 local ColorSettings = CreateSettingSection("🎨 Color Palette")
 
 local MenuColorLabel = Instance.new("TextLabel")
@@ -565,7 +614,7 @@ MenuColorPickerFrame.Position = UDim2.new(0, 10, 0, 26)
 MenuColorPickerFrame.BackgroundTransparency = 1
 MenuColorPickerFrame.Parent = ColorSettings
 
-local MenuColorPicker = ColorPicker.new(MenuColorPickerFrame, MenuColor, function(color)
+ColorPicker.new(MenuColorPickerFrame, MenuColor, function(color)
     MenuColor = color
     Menu.BackgroundColor3 = color
 end)
@@ -587,12 +636,12 @@ WatermarkColorPickerFrame.Position = UDim2.new(0, 10, 0, 248)
 WatermarkColorPickerFrame.BackgroundTransparency = 1
 WatermarkColorPickerFrame.Parent = ColorSettings
 
-local WatermarkColorPicker = ColorPicker.new(WatermarkColorPickerFrame, WatermarkColor, function(color)
+ColorPicker.new(WatermarkColorPickerFrame, WatermarkColor, function(color)
     WatermarkColor = color
     Watermark.BackgroundColor3 = color
 end)
 
--- ===== НАСТРОЙКА: ВАТЕРМАРК =====
+-- Настройка: Ватермарк
 local WatermarkSettings = CreateSettingSection("📌 Watermark")
 
 local LockWatermarkToggle = Instance.new("ImageButton")
@@ -666,9 +715,8 @@ ResetWatermarkButton.MouseButton1Click:Connect(function()
     Watermark.Position = UDim2.new(0, 15, 0, 15)
 end)
 
--- ===== НАСТРОЙКА: ИНФО =====
+-- Инфо
 local InfoSettings = CreateSettingSection("ℹ Script Info")
-
 local InfoText = Instance.new("TextLabel")
 InfoText.Size = UDim2.new(1, -20, 0, 0)
 InfoText.Position = UDim2.new(0, 10, 0, 8)
@@ -745,7 +793,7 @@ DevTelegramLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 DevTelegramLabel.TextXAlignment = Enum.TextXAlignment.Left
 DevTelegramLabel.Parent = DevInfo
 
--- КЛИКАБЕЛЬНЫЙ Telegram (открывает браузер)
+-- КЛИКАБЕЛЬНЫЙ Telegram
 local DevTelegram = Instance.new("TextButton")
 DevTelegram.Size = UDim2.new(0, 140, 0, 24)
 DevTelegram.Position = UDim2.new(0, 110, 0, 104)
@@ -770,27 +818,13 @@ DevTelegramUnderline.BackgroundColor3 = Color3.fromRGB(150, 180, 255)
 DevTelegramUnderline.BackgroundTransparency = 0.3
 DevTelegramUnderline.Parent = DevTelegram
 
--- Функция открытия Telegram профиля через системный браузер
 DevTelegram.MouseButton1Click:Connect(function()
     local telegramUrl = "https://t.me/Mpmtww"
-
-    -- Способ 1: через GuiService (работает на Android/Delta)
     pcall(function()
         GuiService:OpenBrowserWindow(telegramUrl)
     end)
-
-    -- Способ 2: запасной через os.execute с intent (Android)
-    if not pcall(function() return GuiService:OpenBrowserWindow(telegramUrl) end) then
-        pcall(function()
-            syn.request and syn.request({
-                Url = telegramUrl,
-                Method = "GET"
-            })
-        end)
-    end
 end)
 
--- Анимация подсветки при нажатии
 DevTelegram.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch then
         DevTelegram.BackgroundTransparency = 0.7
@@ -821,11 +855,20 @@ DevNote.Parent = DevInfo
 local MenuDrag = DragHandler.new(Header, true)
 local WatermarkDrag = DragHandler.new(Watermark, false)
 
--- Клик по ватермарку — открыть/закрыть меню
+-- Клик по ватермарку с защитой от ложного срабатывания при драге
 Watermark.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch then
-        task.wait(0.05)
-        if not MenuDrag.Dragging and not WatermarkDrag.Dragging then
+        WatermarkDrag.TouchStartTime = tick()
+        WatermarkDrag.TouchStartPos = Vector2.new(input.Position.X, input.Position.Y)
+    end
+end)
+
+Watermark.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        local duration = tick() - (WatermarkDrag.TouchStartTime or 0)
+        local dist = (Vector2.new(input.Position.X, input.Position.Y) - (WatermarkDrag.TouchStartPos or Vector2.new(0,0))).Magnitude
+        -- Считаем кликом если тап был < 0.3с и палец не двигался > 8px
+        if duration < 0.3 and dist < 8 then
             MenuOpen = not MenuOpen
             Menu.Visible = MenuOpen
             if MenuOpen then
@@ -849,13 +892,14 @@ MenuOpen = false
 SwitchTab(SettingsTab)
 UpdateTime()
 
--- Адаптивное масштабирование под экран телефона
+-- Адаптация под экран
 local function AdjustForMobile()
-    local screenSize = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1080, 1920)
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local screenSize = camera.ViewportSize
 
-    -- Если экран меньше 800px по ширине — уменьшаем меню
     if screenSize.X < 800 then
-        Menu.Size = UDim2.new(0, screenSize.X - 20, 0, screenSize.Y - 100)
+        Menu.Size = UDim2.new(0, math.max(screenSize.X - 20, 320), 0, math.max(screenSize.Y - 100, 400))
         Menu.Position = UDim2.new(0, 10, 0, 50)
         Watermark.Size = UDim2.new(0, 190, 0, 32)
         WMTitle.TextSize = 12
@@ -864,4 +908,6 @@ local function AdjustForMobile()
 end
 
 AdjustForMobile()
-workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(AdjustForMobile)
+if workspace.CurrentCamera then
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(AdjustForMobile)
+end

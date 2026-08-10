@@ -1,947 +1,768 @@
--- SeraphiCA.lua
--- Delta Executor (Android) • Полный фикс драга под тач
--- Очистка старых GUI + рукописный шрифт + кликабельный Telegram @Mpmtww
+--[[
+    ╔══════════════════════════════════════════════╗
+    ║           SeraphiCA Menu v2.0                ║
+    ║   Ватермарк · Анимация капли · Вкладки AA/SS ║
+    ║   Delta Android Executor Compatible          ║
+    ╚══════════════════════════════════════════════╝
 
--- ===== ОЧИСТКА =====
-local function CleanupOldGUI()
-    local coreGui = game:GetService("CoreGui")
-    for _, obj in ipairs(coreGui:GetChildren()) do
-        if obj.Name == "SeraphiCA" or obj.Name == "SeraphiCA_Notify" then
-            pcall(function() obj:Destroy() end)
-        end
-    end
-    local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
-    if playerGui then
-        for _, obj in ipairs(playerGui:GetChildren()) do
-            if obj.Name == "SeraphiCA" then
-                pcall(function() obj:Destroy() end)
-            end
-        end
-    end
-    task.wait(0.15)
-end
+    КАК ИНЖЕКТИРОВАТЬ ЧЕРЕЗ DELTA (Android):
+    1. Открой Delta → Scripts → New Script
+    2. Вставь весь этот код
+    3. Нажми Execute
+    4. Ватермарк появится вверху экрана — тапни чтобы открыть меню
 
-CleanupOldGUI()
+    Совместимость: Delta X / Delta Executor · Android 10-13
+--]]
 
--- Сервисы
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local Players          = game:GetService("Players")
+local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
-local GuiService = game:GetService("GuiService")
+local RunService       = game:GetService("RunService")
+
 local LocalPlayer = Players.LocalPlayer
 
--- Шрифты
-local FONT = Enum.Font.FredokaOne
-local FONT_BOLD = Enum.Font.FredokaOne
+-- ══════════════════════════════════════════════
+-- Delta/Executor совместимость:
+-- Используем CoreGui если PlayerGui недоступен
+-- ══════════════════════════════════════════════
+local PlayerGui
+local success = pcall(function()
+    PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+end)
+if not PlayerGui then
+    -- Запасной вариант — CoreGui (работает в большинстве экзекуторов)
+    PlayerGui = game:GetService("CoreGui")
+end
 
--- Цвета по умолчанию
-local MenuColor = Color3.fromRGB(12, 12, 12)
-local WatermarkColor = Color3.fromRGB(12, 12, 12)
-local AccentColor = Color3.fromRGB(255, 255, 255)
+-- ══════════════════════════════════════════════
+--                 КОНФИГ
+-- ══════════════════════════════════════════════
+local CFG = {
+    MenuW     = 750,
+    MenuH     = 480,
+    TabH      = 44,
+    Spd       = 0.28,
 
--- Состояния
-local MenuOpen = false
-local WatermarkLocked = false
+    BG        = Color3.fromHex("#0D0F1A"),
+    Panel     = Color3.fromHex("#131629"),
+    Card      = Color3.fromHex("#1B1F36"),
+    Accent    = Color3.fromHex("#5B6EF5"),
+    AccentLt  = Color3.fromHex("#7B8FFF"),
+    TabOn     = Color3.fromHex("#5B6EF5"),
+    TabOff    = Color3.fromHex("#1B1F36"),
+    TxtPri    = Color3.fromHex("#EAEEFF"),
+    TxtSec    = Color3.fromHex("#7A82B0"),
+    TxtMut    = Color3.fromHex("#454A6E"),
+    Good      = Color3.fromHex("#4ECCA3"),
+    Warn      = Color3.fromHex("#FFB347"),
+    Bad       = Color3.fromHex("#FF5F7E"),
+    Sep       = Color3.fromHex("#232742"),
 
--- Уведомление
-local function Notify(text)
-    pcall(function()
-        local notif = Instance.new("Frame")
-        notif.Size = UDim2.new(0, 240, 0, 36)
-        notif.Position = UDim2.new(0.5, -120, 0, -50)
-        notif.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-        notif.BorderSizePixel = 0
-        notif.Parent = CoreGui
-        notif.Name = "SeraphiCA_Notify"
-        notif.ZIndex = 999
+    -- Цвет ватермарка (меняется из SS)
+    WMColor   = Color3.fromHex("#5B6EF5"),
+}
 
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 8)
-        corner.Parent = notif
+-- Живые ссылки на элементы для перекраски
+local LIVE = {
+    WatermarkBg    = nil,
+    WatermarkStroke= nil,
+    WatermarkText  = nil,
+    MenuStroke     = nil,
+    AccentDots     = {},   -- все акцентные точки/полоски
+}
 
-        local stroke = Instance.new("UIStroke")
-        stroke.Color = AccentColor
-        stroke.Thickness = 1
-        stroke.Transparency = 0.5
-        stroke.Parent = notif
+-- ══════════════════════════════════════════════
+--                 УТИЛИТЫ
+-- ══════════════════════════════════════════════
+local function Tw(obj, props, dur, sty, dir)
+    return TweenService:Create(obj,
+        TweenInfo.new(dur or CFG.Spd, sty or Enum.EasingStyle.Quart, dir or Enum.EasingDirection.Out),
+        props)
+end
+local function Corner(p, r)
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r or 10); c.Parent = p; return c
+end
+local function Stroke(p, col, th)
+    local s = Instance.new("UIStroke"); s.Color = col or CFG.Sep
+    s.Thickness = th or 1; s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; s.Parent = p; return s
+end
+local function Pad(p, t, b, l, r)
+    local u = Instance.new("UIPadding")
+    u.PaddingTop=UDim.new(0,t or 10); u.PaddingBottom=UDim.new(0,b or 10)
+    u.PaddingLeft=UDim.new(0,l or 10); u.PaddingRight=UDim.new(0,r or 10)
+    u.Parent=p; return u
+end
+local function Lbl(parent, text, sz, col, font, xal)
+    local l = Instance.new("TextLabel")
+    l.BackgroundTransparency=1; l.Size=sz or UDim2.new(1,0,0,20)
+    l.Text=text or ""; l.TextColor3=col or CFG.TxtPri
+    l.TextSize=14; l.Font=font or Enum.Font.GothamMedium
+    l.TextXAlignment=xal or Enum.TextXAlignment.Left
+    l.RichText=true; l.Parent=parent; return l
+end
+local function GetTime()
+    local h = tonumber(os.date("%H")); local m = os.date("%M")
+    return string.format("%02d:%s", h, m)
+end
 
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.Text = text
-        label.Font = FONT
-        label.TextSize = 13
-        label.TextColor3 = Color3.fromRGB(255, 255, 255)
-        label.Parent = notif
+-- ══════════════════════════════════════════════
+--              SCREEN GUI
+-- ══════════════════════════════════════════════
 
-        notif:TweenPosition(UDim2.new(0.5, -120, 0, 16), "Out", "Quad", 0.35)
-        task.wait(2)
-        notif:TweenPosition(UDim2.new(0.5, -120, 0, -50), "In", "Quad", 0.35)
-        task.wait(0.5)
-        pcall(function() notif:Destroy() end)
+-- Удаляем старый экземпляр если скрипт запущен повторно
+local oldGui = PlayerGui:FindFirstChild("SeraphiCA")
+if oldGui then oldGui:Destroy() end
+
+local SG = Instance.new("ScreenGui")
+SG.Name="SeraphiCA"
+SG.ResetOnSpawn=false
+SG.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+SG.IgnoreGuiInset=true
+SG.DisplayOrder=999  -- поверх всего
+
+-- Delta/экзекутор: защищаем GUI от удаления игрой
+local ok = pcall(function()
+    if syn and syn.protect_gui then
+        syn.protect_gui(SG)
+        SG.Parent = game:GetService("CoreGui")
+        return
+    end
+end)
+if not ok or SG.Parent == nil then
+    -- gethui() — стандарт для большинства Android экзекуторов (Delta, Fluxus и др.)
+    local huiOk = pcall(function()
+        SG.Parent = gethui()
+    end)
+    if not huiOk then
+        SG.Parent = PlayerGui
+    end
+end
+
+-- ══════════════════════════════════════════════
+--            ВАТЕРМАРК
+-- ══════════════════════════════════════════════
+local WM = Instance.new("TextButton")
+WM.Name="Watermark"
+WM.AnchorPoint=Vector2.new(0.5, 0)
+WM.Position=UDim2.new(0.5, 0, 0, 8)   -- самый верх, центр, отступ 8px
+WM.Size=UDim2.new(0, 220, 0, 32)
+WM.BackgroundColor3=CFG.BG
+WM.AutoButtonColor=false
+WM.Text=""
+WM.ZIndex=50
+WM.Parent=SG
+Corner(WM, 16)
+local WMStroke = Stroke(WM, CFG.WMColor, 1.5)
+LIVE.WatermarkBg = WM
+LIVE.WatermarkStroke = WMStroke
+
+-- Внутренний лейаут
+local WMLay = Instance.new("UIListLayout")
+WMLay.FillDirection=Enum.FillDirection.Horizontal
+WMLay.VerticalAlignment=Enum.VerticalAlignment.Center
+WMLay.HorizontalAlignment=Enum.HorizontalAlignment.Center
+WMLay.Padding=UDim.new(0,6); WMLay.Parent=WM
+
+-- Маленькая точка-акцент
+local WMDot = Instance.new("Frame")
+WMDot.Size=UDim2.new(0,6,0,6); WMDot.BackgroundColor3=CFG.WMColor
+WMDot.ZIndex=51; WMDot.Parent=WM; Corner(WMDot,3)
+table.insert(LIVE.AccentDots, WMDot)
+
+local WMText = Instance.new("TextLabel")
+WMText.BackgroundTransparency=1
+WMText.Size=UDim2.new(0,0,1,0)
+WMText.AutomaticSize=Enum.AutomaticSize.X
+WMText.Text="SeraphiCA | "..GetTime()
+WMText.TextColor3=CFG.TxtPri
+WMText.TextSize=13; WMText.Font=Enum.Font.GothamSemibold
+WMText.ZIndex=51; WMText.Parent=WM
+LIVE.WatermarkText = WMText
+
+-- Обновлять время каждую секунду
+task.spawn(function()
+    while SG.Parent do
+        WMText.Text = "SeraphiCA | "..GetTime()
+        task.wait(1)
+    end
+end)
+
+-- Ховер ватермарка
+WM.MouseEnter:Connect(function()
+    Tw(WM, {BackgroundColor3=Color3.fromHex("#1A1D35")}):Play()
+end)
+WM.MouseLeave:Connect(function()
+    Tw(WM, {BackgroundColor3=CFG.BG}):Play()
+end)
+
+-- ══════════════════════════════════════════════
+--            ОВЕРЛЕЙ
+-- ══════════════════════════════════════════════
+local Overlay = Instance.new("Frame")
+Overlay.Size=UDim2.new(1,0,1,0); Overlay.Position=UDim2.new(0,0,0,0)
+Overlay.BackgroundColor3=Color3.fromHex("#000000")
+Overlay.BackgroundTransparency=1; Overlay.ZIndex=20; Overlay.Visible=false
+Overlay.Parent=SG
+
+-- ══════════════════════════════════════════════
+--            ГЛАВНОЕ МЕНЮ
+-- ══════════════════════════════════════════════
+local MF = Instance.new("Frame")
+MF.Name="MainFrame"; MF.AnchorPoint=Vector2.new(0.5, 0.5)
+MF.Position=UDim2.new(0.5, 0, 0.5, 0)
+MF.Size=UDim2.new(0, CFG.MenuW, 0, 0)   -- старт — закрытое (капля)
+MF.BackgroundColor3=CFG.BG
+MF.BackgroundTransparency=0
+MF.ClipsDescendants=true
+MF.ZIndex=21; MF.Visible=false; MF.Parent=SG
+Corner(MF, 18)
+local MFStroke = Stroke(MF, CFG.Accent, 1.5)
+LIVE.MenuStroke = MFStroke
+
+local MFGrad = Instance.new("UIGradient")
+MFGrad.Color=ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromHex("#0D0F1A")),
+    ColorSequenceKeypoint.new(0.5,Color3.fromHex("#10142B")),
+    ColorSequenceKeypoint.new(1, Color3.fromHex("#0D0F1A")),
+}); MFGrad.Rotation=135; MFGrad.Parent=MF
+
+-- ══════════════════════════════════════════════
+--  СОСТОЯНИЕ МЕНЮ + АНИМАЦИЯ КАПЛИ
+-- ══════════════════════════════════════════════
+local menuOpen = false
+
+local function OpenMenu()
+    if menuOpen then return end
+    menuOpen = true
+    Overlay.Visible = true
+    MF.Visible = true
+    -- Начинаем как маленькая капля из позиции ватермарка
+    local wmAbs = WM.AbsolutePosition
+    local wmSz  = WM.AbsoluteSize
+    local startX = wmAbs.X + wmSz.X/2
+    local startY = wmAbs.Y + wmSz.Y/2
+    MF.AnchorPoint = Vector2.new(0.5,0.5)
+    MF.Position    = UDim2.new(0, startX, 0, startY)
+    MF.Size        = UDim2.new(0, 40, 0, 40)
+    MF.BackgroundTransparency = 0.6
+
+    Tw(Overlay, {BackgroundTransparency=0.5}, 0.35):Play()
+    -- Фаза 1: расширяем как каплю (высота растёт быстрее ширины)
+    local t1 = Tw(MF, {
+        Size = UDim2.new(0, CFG.MenuW, 0, 60),
+        Position = UDim2.new(0.5,0, 0.5,0),
+        BackgroundTransparency = 0,
+    }, 0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    t1:Play()
+    t1.Completed:Connect(function()
+        -- Фаза 2: открываем полную высоту (Back для упругости)
+        Tw(MF, {
+            Size = UDim2.new(0, CFG.MenuW, 0, CFG.MenuH),
+        }, 0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out):Play()
     end)
 end
 
-Notify("SeraphiCA • Loaded")
+local function CloseMenu()
+    if not menuOpen then return end
+    menuOpen = false
+    -- Фаза 1: сжимаем высоту обратно (Back inward)
+    local wmAbs = WM.AbsolutePosition
+    local wmSz  = WM.AbsoluteSize
+    local tgtX  = wmAbs.X + wmSz.X/2
+    local tgtY  = wmAbs.Y + wmSz.Y/2
 
--- ===== ОСНОВНОЙ GUI =====
-local SeraphiCA = Instance.new("ScreenGui")
-SeraphiCA.Name = "SeraphiCA"
-SeraphiCA.Parent = CoreGui
-SeraphiCA.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-SeraphiCA.ResetOnSpawn = false
-
--- ===== СИСТЕМА ДРАГА ПОД ТАЧ =====
-local DragSystem = {}
-
-function DragSystem.MakeDraggable(frame, onDragStart, onDragEnd, onTap)
-    local dragState = {
-        active = false,
-        startPos = nil,
-        offset = nil,
-        touchStart = 0,
-        touchStartPos = nil,
-        moved = false
-    }
-
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            dragState.active = true
-            dragState.touchStart = tick()
-            dragState.touchStartPos = Vector2.new(input.Position.X, input.Position.Y)
-            dragState.offset = Vector2.new(input.Position.X, input.Position.Y) - frame.AbsolutePosition
-            dragState.moved = false
-            if onDragStart then onDragStart() end
-        end
-    end)
-
-    frame.InputChanged:Connect(function(input)
-        if dragState.active and input.UserInputType == Enum.UserInputType.Touch then
-            local newPos = Vector2.new(input.Position.X, input.Position.Y)
-            local delta = (newPos - dragState.touchStartPos).Magnitude
-            if delta > 6 then
-                dragState.moved = true
-            end
-            if dragState.moved then
-                frame.Position = UDim2.new(0, newPos.X - dragState.offset.X, 0, newPos.Y - dragState.offset.Y)
-            end
-        end
-    end)
-
-    frame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch and dragState.active then
-            dragState.active = false
-            local duration = tick() - dragState.touchStart
-            local endPos = Vector2.new(input.Position.X, input.Position.Y)
-            local delta = (endPos - dragState.touchStartPos).Magnitude
-
-            if not dragState.moved and duration < 0.35 and delta < 8 then
-                -- Это был тап
-                if onTap then onTap() end
-            elseif dragState.moved then
-                -- Это был драг
-                if onDragEnd then onDragEnd(frame.AbsolutePosition) end
-            end
-        end
-    end)
-
-    return dragState
-end
-
--- ===== СЛЕД ПОСЛЕ ДРАГА МЕНЮ =====
-local function CreateTrail(parentFrame, position, size, color)
-    local trail = Instance.new("Frame")
-    trail.Size = size
-    trail.Position = UDim2.new(0, position.X, 0, position.Y)
-    trail.BackgroundColor3 = color
-    trail.BackgroundTransparency = 0.55
-    trail.BorderSizePixel = 0
-    trail.Parent = parentFrame
-    trail.ZIndex = 1
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 14)
-    corner.Parent = trail
-
-    local tweenInfo = TweenInfo.new(1.0, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    local fadeTween = TweenService:Create(trail, tweenInfo, {BackgroundTransparency = 1})
-    fadeTween:Play()
-
-    fadeTween.Completed:Connect(function()
-        pcall(function() trail:Destroy() end)
+    local t1 = Tw(MF, {
+        Size = UDim2.new(0, CFG.MenuW, 0, 50),
+    }, 0.28, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+    t1:Play()
+    t1.Completed:Connect(function()
+        -- Фаза 2: схлопываемся в точку ватермарка
+        local t2 = Tw(MF, {
+            Size     = UDim2.new(0, 20, 0, 20),
+            Position = UDim2.new(0, tgtX, 0, tgtY),
+            BackgroundTransparency = 0.7,
+        }, 0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+        t2:Play()
+        Tw(Overlay,{BackgroundTransparency=1},0.22):Play()
+        t2.Completed:Connect(function()
+            MF.Visible = false
+            Overlay.Visible = false
+            -- Сброс позиции на центр для следующего открытия
+            MF.Position = UDim2.new(0.5,0,0.5,0)
+        end)
     end)
 end
 
--- ===== ВАТЕРМАРК =====
-local Watermark = Instance.new("Frame")
-Watermark.Size = UDim2.new(0, 230, 0, 38)
-Watermark.Position = UDim2.new(0, 15, 0, 15)
-Watermark.BackgroundColor3 = WatermarkColor
-Watermark.BorderSizePixel = 0
-Watermark.Active = true
-Watermark.Parent = SeraphiCA
-Watermark.ZIndex = 10
+WM.MouseButton1Click:Connect(function()
+    if menuOpen then CloseMenu() else OpenMenu() end
+end)
 
-local WMCorner = Instance.new("UICorner")
-WMCorner.CornerRadius = UDim.new(0, 10)
-WMCorner.Parent = Watermark
-
-local WMStroke = Instance.new("UIStroke")
-WMStroke.Color = AccentColor
-WMStroke.Thickness = 1.5
-WMStroke.Transparency = 0.4
-WMStroke.Parent = Watermark
-
--- Иконка
-local WMIcon = Instance.new("Frame")
-WMIcon.Size = UDim2.new(0, 28, 0, 28)
-WMIcon.Position = UDim2.new(0, 8, 0.5, -14)
-WMIcon.BackgroundColor3 = AccentColor
-WMIcon.BackgroundTransparency = 0.75
-WMIcon.Parent = Watermark
-
-local WMIconCorner = Instance.new("UICorner")
-WMIconCorner.CornerRadius = UDim.new(0, 14)
-WMIconCorner.Parent = WMIcon
-
-local WMIconDot = Instance.new("Frame")
-WMIconDot.Size = UDim2.new(0, 10, 0, 10)
-WMIconDot.Position = UDim2.new(0.5, -5, 0.5, -5)
-WMIconDot.BackgroundColor3 = AccentColor
-WMIconDot.Parent = WMIcon
-
-local WMIconDotCorner = Instance.new("UICorner")
-WMIconDotCorner.CornerRadius = UDim.new(0, 5)
-WMIconDotCorner.Parent = WMIconDot
-
--- Текст
-local WMTitle = Instance.new("TextLabel")
-WMTitle.Size = UDim2.new(1, -48, 0, 18)
-WMTitle.Position = UDim2.new(0, 42, 0, 2)
-WMTitle.BackgroundTransparency = 1
-WMTitle.Text = "SeraphiCA"
-WMTitle.Font = FONT_BOLD
-WMTitle.TextSize = 14
-WMTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-WMTitle.TextXAlignment = Enum.TextXAlignment.Left
-WMTitle.Parent = Watermark
-
-local WMTime = Instance.new("TextLabel")
-WMTime.Size = UDim2.new(1, -48, 0, 16)
-WMTime.Position = UDim2.new(0, 42, 0, 20)
-WMTime.BackgroundTransparency = 1
-WMTime.Text = "00:00:00"
-WMTime.Font = FONT
-WMTime.TextSize = 12
-WMTime.TextColor3 = Color3.fromRGB(180, 180, 180)
-WMTime.TextXAlignment = Enum.TextXAlignment.Left
-WMTime.Parent = Watermark
-
--- Обновление времени
-local function UpdateTime()
-    local t = os.date("*t")
-    WMTime.Text = string.format("%02d:%02d:%02d", t.hour, t.min, t.sec)
-end
-UpdateTime()
-coroutine.wrap(function() while true do UpdateTime() task.wait(1) end end)()
-
--- ===== МЕНЮ =====
-local Menu = Instance.new("Frame")
-Menu.Size = UDim2.new(0, 700, 0, 480)
-Menu.Position = UDim2.new(0.5, -350, 0.5, -240)
-Menu.BackgroundColor3 = MenuColor
-Menu.BorderSizePixel = 0
-Menu.Visible = false
-Menu.Active = true
-Menu.Parent = SeraphiCA
-Menu.ZIndex = 20
-
-local MenuCorner = Instance.new("UICorner")
-MenuCorner.CornerRadius = UDim.new(0, 14)
-MenuCorner.Parent = Menu
-
-local MenuStroke = Instance.new("UIStroke")
-MenuStroke.Color = AccentColor
-MenuStroke.Thickness = 1.5
-MenuStroke.Transparency = 0.5
-MenuStroke.Parent = Menu
-
--- Заголовок меню (зона драга)
+-- ══════════════════════════════════════════════
+--            HEADER
+-- ══════════════════════════════════════════════
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 48)
-Header.Position = UDim2.new(0, 0, 0, 0)
-Header.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Header.BackgroundTransparency = 0.4
-Header.Active = true
-Header.Parent = Menu
+Header.Name="Header"; Header.Size=UDim2.new(1,0,0,58)
+Header.BackgroundColor3=CFG.Panel; Header.ZIndex=22; Header.Parent=MF
+Corner(Header,18)
 
-local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0, 14)
-HeaderCorner.Parent = Header
+-- Акцентная линия вверху
+local HAL = Instance.new("Frame")
+HAL.Size=UDim2.new(0.38,0,0,2); HAL.AnchorPoint=Vector2.new(0.5,0)
+HAL.Position=UDim2.new(0.5,0,0,0); HAL.ZIndex=25; HAL.Parent=Header
+HAL.BackgroundColor3=CFG.AccentLt
+local HALGrad=Instance.new("UIGradient")
+HALGrad.Color=ColorSequence.new({
+    ColorSequenceKeypoint.new(0,Color3.new(0,0,0)),
+    ColorSequenceKeypoint.new(0.5,CFG.AccentLt),
+    ColorSequenceKeypoint.new(1,Color3.new(0,0,0)),
+}); HALGrad.Parent=HAL
 
-local HeaderTitle = Instance.new("TextLabel")
-HeaderTitle.Size = UDim2.new(1, -20, 1, 0)
-HeaderTitle.Position = UDim2.new(0, 20, 0, 0)
-HeaderTitle.BackgroundTransparency = 1
-HeaderTitle.Text = "SeraphiCA"
-HeaderTitle.Font = FONT_BOLD
-HeaderTitle.TextSize = 20
-HeaderTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-HeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
-HeaderTitle.Parent = Header
+-- Лого
+local Logo = Instance.new("Frame")
+Logo.Size=UDim2.new(0,36,0,36); Logo.Position=UDim2.new(0,18,0.5,-18)
+Logo.BackgroundColor3=CFG.Accent; Logo.ZIndex=23; Logo.Parent=Header
+Corner(Logo,10)
+local LGrad=Instance.new("UIGradient")
+LGrad.Color=ColorSequence.new({
+    ColorSequenceKeypoint.new(0,CFG.AccentLt),
+    ColorSequenceKeypoint.new(1,Color3.fromHex("#4A55CC")),
+}); LGrad.Rotation=135; LGrad.Parent=Logo
+local LogoLbl=Instance.new("TextLabel")
+LogoLbl.Size=UDim2.new(1,0,1,0); LogoLbl.BackgroundTransparency=1
+LogoLbl.Text="✦"; LogoLbl.TextColor3=Color3.new(1,1,1)
+LogoLbl.TextSize=18; LogoLbl.Font=Enum.Font.GothamBold
+LogoLbl.TextXAlignment=Enum.TextXAlignment.Center
+LogoLbl.ZIndex=24; LogoLbl.Parent=Logo
 
--- Вкладки
-local TabContainer = Instance.new("Frame")
-TabContainer.Size = UDim2.new(0, 150, 1, -48)
-TabContainer.Position = UDim2.new(0, 0, 0, 48)
-TabContainer.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-TabContainer.BackgroundTransparency = 0.55
-TabContainer.Parent = Menu
+-- Заголовок
+local TL = Lbl(Header,"<b>SeraphiCA</b>",UDim2.new(0,200,1,0),CFG.TxtPri,Enum.Font.GothamBold)
+TL.Position=UDim2.new(0,62,0,0); TL.TextSize=16; TL.ZIndex=23
+local SL = Lbl(Header,"v2.0  ·  Anti-Aim Suite",UDim2.new(0,220,0,16),CFG.TxtMut,Enum.Font.Gotham)
+SL.Position=UDim2.new(0,62,0.5,2); SL.TextSize=11; SL.ZIndex=23
 
-local TabContainerCorner = Instance.new("UICorner")
-TabContainerCorner.CornerRadius = UDim.new(0, 14)
-TabContainerCorner.Parent = TabContainer
+-- Кнопка закрыть
+local CloseBtn=Instance.new("TextButton")
+CloseBtn.Size=UDim2.new(0,30,0,30); CloseBtn.Position=UDim2.new(1,-44,0.5,-15)
+CloseBtn.BackgroundColor3=Color3.fromHex("#2A2F52"); CloseBtn.Text="✕"
+CloseBtn.TextColor3=CFG.TxtSec; CloseBtn.TextSize=13; CloseBtn.Font=Enum.Font.GothamBold
+CloseBtn.ZIndex=24; CloseBtn.AutoButtonColor=false; CloseBtn.Parent=Header
+Corner(CloseBtn,8)
+CloseBtn.MouseEnter:Connect(function() Tw(CloseBtn,{BackgroundColor3=CFG.Bad,TextColor3=Color3.new(1,1,1)}):Play() end)
+CloseBtn.MouseLeave:Connect(function() Tw(CloseBtn,{BackgroundColor3=Color3.fromHex("#2A2F52"),TextColor3=CFG.TxtSec}):Play() end)
+CloseBtn.MouseButton1Click:Connect(CloseMenu)
 
-local TabListLayout = Instance.new("UIListLayout")
-TabListLayout.Padding = UDim.new(0, 3)
-TabListLayout.Parent = TabContainer
+-- ══════════════════════════════════════════════
+--           TAB BAR
+-- ══════════════════════════════════════════════
+local TabBar=Instance.new("Frame")
+TabBar.Name="TabBar"; TabBar.Size=UDim2.new(1,0,0,CFG.TabH)
+TabBar.Position=UDim2.new(0,0,0,58)
+TabBar.BackgroundColor3=CFG.Panel; TabBar.ZIndex=22; TabBar.Parent=MF
+local TabSep=Instance.new("Frame")
+TabSep.Size=UDim2.new(1,0,0,1); TabSep.Position=UDim2.new(0,0,1,-1)
+TabSep.BackgroundColor3=CFG.Sep; TabSep.ZIndex=23; TabSep.Parent=TabBar
+local TabLay=Instance.new("UIListLayout")
+TabLay.FillDirection=Enum.FillDirection.Horizontal
+TabLay.SortOrder=Enum.SortOrder.LayoutOrder
+TabLay.Padding=UDim.new(0,4); TabLay.VerticalAlignment=Enum.VerticalAlignment.Center
+TabLay.Parent=TabBar; Pad(TabBar,6,6,10,10)
 
--- Контент
-local ContentFrame = Instance.new("Frame")
-ContentFrame.Size = UDim2.new(1, -158, 1, -58)
-ContentFrame.Position = UDim2.new(0, 153, 0, 53)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.Parent = Menu
+-- ══════════════════════════════════════════════
+--           КОНТЕНТ
+-- ══════════════════════════════════════════════
+local ContentArea=Instance.new("ScrollingFrame")
+ContentArea.Name="ContentArea"
+ContentArea.Size=UDim2.new(1,0,1,-(58+CFG.TabH+28))
+ContentArea.Position=UDim2.new(0,0,0,58+CFG.TabH)
+ContentArea.BackgroundTransparency=1
+ContentArea.ScrollBarThickness=4
+ContentArea.ScrollBarImageColor3=CFG.Accent
+ContentArea.ZIndex=22; ContentArea.CanvasSize=UDim2.new(0,0,0,0)
+ContentArea.AutomaticCanvasSize=Enum.AutomaticSize.Y
+ContentArea.ClipsDescendants=true; ContentArea.Parent=MF
 
--- Создание вкладки
-local function CreateTab(name, icon)
-    local tab = Instance.new("ImageButton")
-    tab.Size = UDim2.new(1, -12, 0, 42)
-    tab.Position = UDim2.new(0, 6, 0, 5)
-    tab.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    tab.BackgroundTransparency = 0.9
-    tab.AutoButtonColor = false
-    tab.Active = true
-    tab.Parent = TabContainer
+-- ══════════════════════════════════════════════
+--          СТРАНИЦА AA
+-- ══════════════════════════════════════════════
+local function BuildAA(parent)
+    local page=Instance.new("Frame"); page.Name="AA"
+    page.Size=UDim2.new(1,0,1,0); page.BackgroundTransparency=1
+    page.Visible=false; page.ZIndex=23; page.Parent=parent
+    local lay=Instance.new("UIListLayout"); lay.FillDirection=Enum.FillDirection.Vertical
+    lay.Padding=UDim.new(0,10); lay.Parent=page; Pad(page,16,16,18,18)
 
-    local tabCorner = Instance.new("UICorner")
-    tabCorner.CornerRadius = UDim.new(0, 10)
-    tabCorner.Parent = tab
+    -- Секция-заголовок
+    local sh=Instance.new("Frame"); sh.Size=UDim2.new(1,0,0,44)
+    sh.BackgroundColor3=CFG.Card; sh.LayoutOrder=0; sh.ZIndex=24; sh.Parent=page
+    Corner(sh,10); Stroke(sh,CFG.Sep)
+    local shg=Instance.new("UIGradient"); shg.Color=ColorSequence.new({
+        ColorSequenceKeypoint.new(0,Color3.fromHex("#1B1F36")),
+        ColorSequenceKeypoint.new(1,Color3.fromHex("#15192E")),
+    }); shg.Rotation=90; shg.Parent=sh
+    local shdot=Instance.new("Frame"); shdot.Size=UDim2.new(0,6,0,6)
+    shdot.Position=UDim2.new(0,14,0.5,-3); shdot.BackgroundColor3=CFG.Accent
+    shdot.ZIndex=25; shdot.Parent=sh; Corner(shdot,3)
+    local shtl=Lbl(sh,"Анти-AIM Конфигурация",UDim2.new(1,-32,1,0),CFG.TxtPri,Enum.Font.GothamSemibold)
+    shtl.Position=UDim2.new(0,28,0,0); shtl.TextSize=13; shtl.ZIndex=25
 
-    local tabLabel = Instance.new("TextLabel")
-    tabLabel.Size = UDim2.new(1, -12, 1, 0)
-    tabLabel.Position = UDim2.new(0, 12, 0, 0)
-    tabLabel.BackgroundTransparency = 1
-    tabLabel.Text = icon .. "  " .. name
-    tabLabel.Font = FONT
-    tabLabel.TextSize = 14
-    tabLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    tabLabel.TextXAlignment = Enum.TextXAlignment.Left
-    tabLabel.Parent = tab
-
-    local page = Instance.new("Frame")
-    page.Size = UDim2.new(1, 0, 1, 0)
-    page.BackgroundTransparency = 1
-    page.Visible = false
-    page.Parent = ContentFrame
-
-    return { Button = tab, Label = tabLabel, Page = page }
-end
-
-local SettingsTab = CreateTab("Settings", "⚙")
-local DevTab = CreateTab("Dev", "💻")
-local SelectedTab = nil
-
-local function SwitchTab(tab)
-    if SelectedTab then
-        TweenService:Create(SelectedTab.Button, TweenInfo.new(0.2), {BackgroundTransparency = 0.9}):Play()
-        SelectedTab.Label.TextColor3 = Color3.fromRGB(200, 200, 200)
-        SelectedTab.Page.Visible = false
-    end
-    SelectedTab = tab
-    TweenService:Create(tab.Button, TweenInfo.new(0.2), {BackgroundTransparency = 0.7}):Play()
-    tab.Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    tab.Page.Visible = true
-end
-
-SettingsTab.Button.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        SwitchTab(SettingsTab)
-    end
-end)
-
-DevTab.Button.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        SwitchTab(DevTab)
-    end
-end)
-
--- ===== СТРАНИЦА НАСТРОЕК =====
-local SettingsScroll = Instance.new("ScrollingFrame")
-SettingsScroll.Size = UDim2.new(1, -10, 1, -5)
-SettingsScroll.Position = UDim2.new(0, 5, 0, 5)
-SettingsScroll.BackgroundTransparency = 1
-SettingsScroll.ScrollBarThickness = 4
-SettingsScroll.ScrollBarImageColor3 = AccentColor
-SettingsScroll.CanvasSize = UDim2.new(0, 0, 0, 900)
-SettingsScroll.ScrollingDirection = Enum.ScrollingDirection.Y
-SettingsScroll.Parent = SettingsTab.Page
-
-local SettingsList = Instance.new("UIListLayout")
-SettingsList.Padding = UDim.new(0, 10)
-SettingsList.Parent = SettingsScroll
-
--- Секция настроек
-local function CreateSection(title)
-    local section = Instance.new("Frame")
-    section.Size = UDim2.new(1, 0, 0, 0)
-    section.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    section.BackgroundTransparency = 0.94
-    section.AutomaticSize = Enum.AutomaticSize.Y
-    section.Parent = SettingsScroll
-
-    local sectionCorner = Instance.new("UICorner")
-    sectionCorner.CornerRadius = UDim.new(0, 10)
-    sectionCorner.Parent = section
-
-    local sectionStroke = Instance.new("UIStroke")
-    sectionStroke.Color = AccentColor
-    sectionStroke.Thickness = 1
-    sectionStroke.Transparency = 0.65
-    sectionStroke.Parent = section
-
-    local sectionTitle = Instance.new("TextLabel")
-    sectionTitle.Size = UDim2.new(1, -20, 0, 32)
-    sectionTitle.Position = UDim2.new(0, 10, 0, 5)
-    sectionTitle.BackgroundTransparency = 1
-    sectionTitle.Text = title
-    sectionTitle.Font = FONT_BOLD
-    sectionTitle.TextSize = 15
-    sectionTitle.TextColor3 = AccentColor
-    sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-    sectionTitle.Parent = section
-
-    local contentFrame = Instance.new("Frame")
-    contentFrame.Size = UDim2.new(1, 0, 0, 0)
-    contentFrame.Position = UDim2.new(0, 0, 0, 42)
-    contentFrame.BackgroundTransparency = 1
-    contentFrame.AutomaticSize = Enum.AutomaticSize.Y
-    contentFrame.Parent = section
-
-    return contentFrame
-end
-
--- Выбор цвета через палитру
-local function CreateColorPicker(parent, yOffset, labelText, defaultColor, onChange)
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, -20, 0, 180)
-    container.Position = UDim2.new(0, 10, 0, yOffset)
-    container.BackgroundTransparency = 1
-    container.Parent = parent
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 0, 20)
-    lbl.Position = UDim2.new(0, 0, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = labelText
-    lbl.Font = FONT
-    lbl.TextSize = 12
-    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Parent = container
-
-    -- HSV холст
-    local canvas = Instance.new("ImageButton")
-    canvas.Size = UDim2.new(1, 0, 0, 110)
-    canvas.Position = UDim2.new(0, 0, 0, 24)
-    canvas.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    canvas.Image = "rbxassetid://4155801252"
-    canvas.AutoButtonColor = false
-    canvas.Active = true
-    canvas.Parent = container
-
-    local canvasCorner = Instance.new("UICorner")
-    canvasCorner.CornerRadius = UDim.new(0, 6)
-    canvasCorner.Parent = canvas
-
-    -- Hue слайдер
-    local hueFrame = Instance.new("Frame")
-    hueFrame.Size = UDim2.new(1, 0, 0, 16)
-    hueFrame.Position = UDim2.new(0, 0, 0, 138)
-    hueFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    hueFrame.Active = true
-    hueFrame.Parent = container
-
-    local hueCorner = Instance.new("UICorner")
-    hueCorner.CornerRadius = UDim.new(0, 6)
-    hueCorner.Parent = hueFrame
-
-    local hueGradient = Instance.new("UIGradient")
-    hueGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
-        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
-        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
-        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
-    })
-    hueGradient.Parent = hueFrame
-
-    local hueKnob = Instance.new("Frame")
-    hueKnob.Size = UDim2.new(0, 8, 0, 20)
-    hueKnob.AnchorPoint = Vector2.new(0.5, 0.5)
-    hueKnob.Position = UDim2.new(0, 0, 0.5, 0)
-    hueKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    hueKnob.BorderSizePixel = 0
-    hueKnob.Parent = hueFrame
-
-    local knobCorner = Instance.new("UICorner")
-    knobCorner.CornerRadius = UDim.new(0, 4)
-    knobCorner.Parent = hueKnob
-
-    -- Быстрые цвета
-    local presetColors = {
-        Color3.fromRGB(12, 12, 12),
-        Color3.fromRGB(25, 25, 35),
-        Color3.fromRGB(35, 15, 25),
-        Color3.fromRGB(15, 25, 15),
-        Color3.fromRGB(25, 15, 15),
-        Color3.fromRGB(15, 15, 25),
-        Color3.fromRGB(30, 10, 30),
-        Color3.fromRGB(10, 30, 30)
+    local toggles={
+        {l="Resolver",       d="Автоматический решатель углов",  on=true,  c=CFG.Good},
+        {l="Pitch Fakelag",  d="Задержка питча для обхода",      on=false, c=CFG.Accent},
+        {l="Body Jitter",    d="Случайное смещение тела",        on=true,  c=CFG.AccentLt},
+        {l="Roll Desync",    d="Десинхронизация крена",          on=false, c=CFG.Warn},
+        {l="LBY Breaker",    d="Взлом нижней части тела",        on=true,  c=CFG.Good},
     }
 
-    local presetFrame = Instance.new("Frame")
-    presetFrame.Size = UDim2.new(1, 0, 0, 22)
-    presetFrame.Position = UDim2.new(0, 0, 0, 160)
-    presetFrame.BackgroundTransparency = 1
-    presetFrame.Parent = container
+    for i,td in ipairs(toggles) do
+        local card=Instance.new("Frame"); card.Size=UDim2.new(1,0,0,52)
+        card.BackgroundColor3=CFG.Card; card.LayoutOrder=i; card.ZIndex=24; card.Parent=page
+        Corner(card,10); Stroke(card,CFG.Sep)
+        local stripe=Instance.new("Frame"); stripe.Size=UDim2.new(0,3,0.6,0)
+        stripe.Position=UDim2.new(0,0,0.2,0); stripe.BackgroundColor3=td.c
+        stripe.ZIndex=25; stripe.Parent=card; Corner(stripe,2)
+        local ico=Instance.new("Frame"); ico.Size=UDim2.new(0,30,0,30)
+        ico.Position=UDim2.new(0,12,0.5,-15); ico.BackgroundColor3=td.c
+        ico.BackgroundTransparency=0.78; ico.ZIndex=25; ico.Parent=card; Corner(ico,8)
+        local icoL=Instance.new("TextLabel"); icoL.Size=UDim2.new(1,0,1,0)
+        icoL.BackgroundTransparency=1; icoL.Text=tostring(i); icoL.TextColor3=td.c
+        icoL.TextSize=11; icoL.Font=Enum.Font.GothamBold
+        icoL.TextXAlignment=Enum.TextXAlignment.Center; icoL.ZIndex=26; icoL.Parent=ico
+        local tl=Lbl(card,td.l,UDim2.new(0.55,0,0,17),CFG.TxtPri,Enum.Font.GothamSemibold)
+        tl.Position=UDim2.new(0,50,0,8); tl.TextSize=13; tl.ZIndex=25
+        local dl=Lbl(card,td.d,UDim2.new(0.55,0,0,14),CFG.TxtSec,Enum.Font.Gotham)
+        dl.Position=UDim2.new(0,50,0,25); dl.TextSize=11; dl.ZIndex=25
+        -- toggle
+        local tbg=Instance.new("TextButton"); tbg.Size=UDim2.new(0,44,0,22)
+        tbg.Position=UDim2.new(1,-58,0.5,-11)
+        tbg.BackgroundColor3=td.on and CFG.Accent or Color3.fromHex("#2A2F52")
+        tbg.Text=""; tbg.AutoButtonColor=false; tbg.ZIndex=25; tbg.Parent=card; Corner(tbg,11)
+        local tk=Instance.new("Frame"); tk.Size=UDim2.new(0,16,0,16)
+        tk.Position=td.on and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8)
+        tk.BackgroundColor3=Color3.new(1,1,1); tk.ZIndex=26; tk.Parent=tbg; Corner(tk,8)
+        local on=td.on
+        local function doToggle()
+            on=not on
+            Tw(tbg,{BackgroundColor3=on and CFG.Accent or Color3.fromHex("#2A2F52")}):Play()
+            Tw(tk,{Position=on and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8)}):Play()
+        end
+        tbg.MouseButton1Click:Connect(doToggle)
+        local cb=Instance.new("TextButton"); cb.Size=UDim2.new(1,0,1,0)
+        cb.BackgroundTransparency=1; cb.Text=""; cb.ZIndex=27; cb.Parent=card
+        cb.MouseEnter:Connect(function() Tw(card,{BackgroundColor3=Color3.fromHex("#1F2442")}):Play() end)
+        cb.MouseLeave:Connect(function() Tw(card,{BackgroundColor3=CFG.Card}):Play() end)
+        cb.MouseButton1Click:Connect(doToggle)
+    end
 
-    local presetLayout = Instance.new("UIListLayout")
-    presetLayout.FillDirection = Enum.FillDirection.Horizontal
-    presetLayout.Padding = UDim.new(0, 5)
-    presetLayout.Parent = presetFrame
+    -- Слайдер
+    local sc=Instance.new("Frame"); sc.Size=UDim2.new(1,0,0,68)
+    sc.BackgroundColor3=CFG.Card; sc.LayoutOrder=10; sc.ZIndex=24; sc.Parent=page
+    Corner(sc,10); Stroke(sc,CFG.Sep)
+    local sclbl=Lbl(sc,"Интенсивность джиттера",UDim2.new(0.7,0,0,16),CFG.TxtPri,Enum.Font.GothamSemibold)
+    sclbl.Position=UDim2.new(0,14,0,8); sclbl.TextSize=12; sclbl.ZIndex=25
+    local scval=Lbl(sc,"64",UDim2.new(0,30,0,16),CFG.AccentLt,Enum.Font.GothamBold,Enum.TextXAlignment.Right)
+    scval.Position=UDim2.new(1,-44,0,8); scval.TextSize=13; scval.ZIndex=25
+    local track=Instance.new("Frame"); track.Size=UDim2.new(1,-28,0,6)
+    track.Position=UDim2.new(0,14,0,38); track.BackgroundColor3=Color3.fromHex("#2A2F52")
+    track.ZIndex=25; track.Parent=sc; Corner(track,3)
+    local fill=Instance.new("Frame"); fill.Size=UDim2.new(0.64,0,1,0)
+    fill.BackgroundColor3=CFG.Accent; fill.ZIndex=26; fill.Parent=track; Corner(fill,3)
+    local fg=Instance.new("UIGradient"); fg.Color=ColorSequence.new({
+        ColorSequenceKeypoint.new(0,Color3.fromHex("#4A55CC")),
+        ColorSequenceKeypoint.new(1,CFG.AccentLt),
+    }); fg.Parent=fill
+    local knob=Instance.new("Frame"); knob.Size=UDim2.new(0,16,0,16)
+    knob.Position=UDim2.new(1,-8,0.5,-8); knob.BackgroundColor3=Color3.new(1,1,1)
+    knob.ZIndex=27; knob.Parent=fill; Corner(knob,8); Stroke(knob,CFG.Accent,2)
+    local drag2=false
+    local sb=Instance.new("TextButton"); sb.Size=UDim2.new(1,0,0,28)
+    sb.Position=UDim2.new(0,0,0,-11); sb.BackgroundTransparency=1; sb.Text=""
+    sb.ZIndex=28; sb.Parent=track
+    sb.MouseButton1Down:Connect(function() drag2=true end)
+    UserInputService.InputChanged:Connect(function(inp)
+        if drag2 and inp.UserInputType==Enum.UserInputType.MouseMovement then
+            local rel=math.clamp((inp.Position.X-track.AbsolutePosition.X)/track.AbsoluteSize.X,0,1)
+            fill.Size=UDim2.new(rel,0,1,0); scval.Text=tostring(math.floor(rel*100))
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1 then drag2=false end
+    end)
 
-    for _, color in ipairs(presetColors) do
-        local preset = Instance.new("ImageButton")
-        preset.Size = UDim2.new(0, 22, 0, 22)
-        preset.BackgroundColor3 = color
-        preset.AutoButtonColor = false
-        preset.Active = true
-        preset.Parent = presetFrame
+    return page
+end
 
-        local presetCorner = Instance.new("UICorner")
-        presetCorner.CornerRadius = UDim.new(0, 11)
-        presetCorner.Parent = preset
+-- ══════════════════════════════════════════════
+--   СТРАНИЦА SS — НАСТРОЙКИ СТИЛЯ
+-- ══════════════════════════════════════════════
+local function BuildSS(parent)
+    local page=Instance.new("Frame"); page.Name="SS"
+    page.Size=UDim2.new(1,0,1,0); page.BackgroundTransparency=1
+    page.Visible=false; page.ZIndex=23; page.Parent=parent
+    local lay=Instance.new("UIListLayout"); lay.FillDirection=Enum.FillDirection.Vertical
+    lay.Padding=UDim.new(0,12); lay.Parent=page; Pad(page,16,16,18,18)
 
-        preset.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then
-                onChange(color)
+    -- Заголовок
+    local sh=Instance.new("Frame"); sh.Size=UDim2.new(1,0,0,44)
+    sh.BackgroundColor3=CFG.Card; sh.LayoutOrder=0; sh.ZIndex=24; sh.Parent=page
+    Corner(sh,10); Stroke(sh,CFG.Sep)
+    local shdot2=Instance.new("Frame"); shdot2.Size=UDim2.new(0,6,0,6)
+    shdot2.Position=UDim2.new(0,14,0.5,-3); shdot2.BackgroundColor3=CFG.Accent
+    shdot2.ZIndex=25; shdot2.Parent=sh; Corner(shdot2,3)
+    local shtl2=Lbl(sh,"Style Settings — Цвет темы",UDim2.new(1,-32,1,0),CFG.TxtPri,Enum.Font.GothamSemibold)
+    shtl2.Position=UDim2.new(0,28,0,0); shtl2.TextSize=13; shtl2.ZIndex=25
+
+    -- Описание
+    local desc=Instance.new("Frame"); desc.Size=UDim2.new(1,0,0,46)
+    desc.BackgroundColor3=CFG.Card; desc.LayoutOrder=1; desc.ZIndex=24; desc.Parent=page
+    Corner(desc,10); Stroke(desc,CFG.Sep)
+    local dl=Lbl(desc,"Выбери цвет — он применится к ватермарку и рамке меню.",UDim2.new(1,-20,1,0),CFG.TxtSec,Enum.Font.Gotham)
+    dl.Position=UDim2.new(0,14,0,0); dl.TextSize=12; dl.TextWrapped=true; dl.ZIndex=25
+
+    -- Палитра цветов
+    local colors={
+        {name="Indigo",    hex="#5B6EF5"}, {name="Violet",    hex="#9B59B6"},
+        {name="Rose",      hex="#FF5F7E"}, {name="Amber",     hex="#FFB347"},
+        {name="Emerald",   hex="#4ECCA3"}, {name="Sky",       hex="#38BDF8"},
+        {name="Crimson",   hex="#E84545"}, {name="White",     hex="#EAEEFF"},
+        {name="Coral",     hex="#FF6B6B"}, {name="Mint",      hex="#3DFFC0"},
+        {name="Gold",      hex="#FFD700"}, {name="Cyan",      hex="#00FFFF"},
+    }
+
+    -- Сетка цветов
+    local grid=Instance.new("Frame"); grid.Size=UDim2.new(1,0,0,0)
+    grid.AutomaticSize=Enum.AutomaticSize.Y
+    grid.BackgroundColor3=CFG.Card; grid.LayoutOrder=2; grid.ZIndex=24; grid.Parent=page
+    Corner(grid,10); Stroke(grid,CFG.Sep); Pad(grid,12,12,12,12)
+
+    local gridLay=Instance.new("UIGridLayout"); gridLay.CellSize=UDim2.new(0,52,0,52)
+    gridLay.CellPadding=UDim2.new(0,10,0,10); gridLay.Parent=grid
+
+    local selectedDot=nil   -- текущая выбранная точка
+
+    local function ApplyColor(col)
+        CFG.WMColor=col; CFG.Accent=col; CFG.AccentLt=col
+        -- Ватермарк
+        WMStroke.Color=col
+        WMDot.BackgroundColor3=col
+        -- Рамка меню
+        MFStroke.Color=col
+        -- Все зарегистрированные акцент-точки
+        for _,dot in ipairs(LIVE.AccentDots) do
+            dot.BackgroundColor3=col
+        end
+    end
+
+    for _, cdata in ipairs(colors) do
+        local col=Color3.fromHex(cdata.hex)
+        local btn=Instance.new("TextButton"); btn.Size=UDim2.new(0,52,0,52)
+        btn.BackgroundColor3=col; btn.Text=""; btn.AutoButtonColor=false
+        btn.ZIndex=25; btn.Parent=grid; Corner(btn,14)
+
+        -- Название внутри
+        local nl=Instance.new("TextLabel"); nl.Size=UDim2.new(1,0,0,14)
+        nl.Position=UDim2.new(0,0,1,-16); nl.BackgroundTransparency=1
+        nl.Text=cdata.name; nl.TextColor3=Color3.new(1,1,1); nl.TextSize=9
+        nl.Font=Enum.Font.Gotham; nl.TextXAlignment=Enum.TextXAlignment.Center
+        nl.ZIndex=26; nl.Parent=btn
+
+        -- Галочка выбора
+        local check=Instance.new("Frame"); check.Size=UDim2.new(0,14,0,14)
+        check.Position=UDim2.new(1,-16,0,2); check.BackgroundColor3=Color3.new(1,1,1)
+        check.BackgroundTransparency=1; check.ZIndex=27; check.Parent=btn; Corner(check,7)
+        local checkL=Instance.new("TextLabel"); checkL.Size=UDim2.new(1,0,1,0)
+        checkL.BackgroundTransparency=1; checkL.Text="✓"; checkL.TextColor3=Color3.new(0,0,0)
+        checkL.TextSize=10; checkL.Font=Enum.Font.GothamBold
+        checkL.TextXAlignment=Enum.TextXAlignment.Center; checkL.ZIndex=28; checkL.Parent=check
+
+        btn.MouseEnter:Connect(function()
+            Tw(btn,{Size=UDim2.new(0,56,0,56)},0.12):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            Tw(btn,{Size=UDim2.new(0,52,0,52)},0.12):Play()
+        end)
+        btn.MouseButton1Click:Connect(function()
+            -- снять старую галочку
+            if selectedDot then
+                Tw(selectedDot,{BackgroundTransparency=1},0.1):Play()
             end
+            selectedDot=check
+            Tw(check,{BackgroundTransparency=0},0.1):Play()
+            ApplyColor(col)
         end)
     end
 
-    -- Логика пикера
-    local hueVal = 0
-    local satVal = 1
-    local briVal = 1
+    -- Hex ввод (информационный)
+    local hexCard=Instance.new("Frame"); hexCard.Size=UDim2.new(1,0,0,52)
+    hexCard.BackgroundColor3=CFG.Card; hexCard.LayoutOrder=3; hexCard.ZIndex=24; hexCard.Parent=page
+    Corner(hexCard,10); Stroke(hexCard,CFG.Sep)
+    local hexLbl=Lbl(hexCard,"Текущий акцент:",UDim2.new(0,120,1,0),CFG.TxtSec,Enum.Font.Gotham)
+    hexLbl.Position=UDim2.new(0,14,0,0); hexLbl.TextSize=12; hexLbl.ZIndex=25
 
-    local function updateColor()
-        local c = Color3.fromHSV(hueVal, satVal, briVal)
-        onChange(c)
-    end
+    local hexBox=Instance.new("TextBox"); hexBox.Size=UDim2.new(0,160,0,30)
+    hexBox.Position=UDim2.new(0,140,0.5,-15); hexBox.BackgroundColor3=Color3.fromHex("#0D0F1A")
+    hexBox.TextColor3=CFG.AccentLt; hexBox.Text="#5B6EF5"; hexBox.TextSize=13
+    hexBox.Font=Enum.Font.GothamSemibold; hexBox.ZIndex=25
+    hexBox.ClearTextOnFocus=false; hexBox.Parent=hexCard; Corner(hexBox,8); Stroke(hexBox,CFG.Sep)
+    Pad(hexBox,0,0,8,8)
 
-    canvas.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            local pos = Vector2.new(input.Position.X, input.Position.Y)
-            satVal = math.clamp(pos.X / canvas.AbsoluteSize.X, 0, 1)
-            briVal = 1 - math.clamp(pos.Y / canvas.AbsoluteSize.Y, 0, 1)
-            updateColor()
-        end
+    -- Применить по HEX
+    local applyBtn=Instance.new("TextButton"); applyBtn.Size=UDim2.new(0,70,0,30)
+    applyBtn.Position=UDim2.new(1,-84,0.5,-15)
+    applyBtn.BackgroundColor3=CFG.Accent; applyBtn.Text="Готово"
+    applyBtn.TextColor3=Color3.new(1,1,1); applyBtn.TextSize=12; applyBtn.Font=Enum.Font.GothamBold
+    applyBtn.AutoButtonColor=false; applyBtn.ZIndex=25; applyBtn.Parent=hexCard; Corner(applyBtn,8)
+    applyBtn.MouseButton1Click:Connect(function()
+        local ok,col=pcall(function() return Color3.fromHex(hexBox.Text) end)
+        if ok then ApplyColor(col) end
     end)
 
-    canvas.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            local pos = Vector2.new(input.Position.X, input.Position.Y)
-            satVal = math.clamp(pos.X / canvas.AbsoluteSize.X, 0, 1)
-            briVal = 1 - math.clamp(pos.Y / canvas.AbsoluteSize.Y, 0, 1)
-            updateColor()
-        end
-    end)
-
-    hueFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            local pos = Vector2.new(input.Position.X, input.Position.Y)
-            hueVal = math.clamp((pos.X - hueFrame.AbsolutePosition.X) / hueFrame.AbsoluteSize.X, 0, 1)
-            hueKnob.Position = UDim2.new(hueVal, 0, 0.5, 0)
-            updateColor()
-        end
-    end)
-
-    hueFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            local pos = Vector2.new(input.Position.X, input.Position.Y)
-            hueVal = math.clamp((pos.X - hueFrame.AbsolutePosition.X) / hueFrame.AbsoluteSize.X, 0, 1)
-            hueKnob.Position = UDim2.new(hueVal, 0, 0.5, 0)
-            updateColor()
-        end
-    end)
-
-    return container
+    return page
 end
 
--- Секция: Цвета
-local ColorSettings = CreateSection("🎨 Color Palette")
-CreateColorPicker(ColorSettings, 0, "Menu Color", MenuColor, function(c)
-    MenuColor = c
-    Menu.BackgroundColor3 = c
-end)
+-- ══════════════════════════════════════════════
+--   СТРАНИЦА SETTINGS
+-- ══════════════════════════════════════════════
+local function BuildSettings(parent)
+    local page=Instance.new("Frame"); page.Name="Settings"
+    page.Size=UDim2.new(1,0,1,0); page.BackgroundTransparency=1
+    page.Visible=false; page.ZIndex=23; page.Parent=parent
+    Pad(page,16,16,18,18)
+    local card=Instance.new("Frame"); card.Size=UDim2.new(1,0,0,80)
+    card.BackgroundColor3=CFG.Card; card.ZIndex=24; card.Parent=page
+    Corner(card,12); Stroke(card,CFG.Sep)
+    local tl=Lbl(card,"◈  Общие настройки",UDim2.new(1,-20,0,20),CFG.TxtPri,Enum.Font.GothamSemibold)
+    tl.Position=UDim2.new(0,14,0,14); tl.TextSize=13; tl.ZIndex=25
+    local dl=Lbl(card,"Здесь будут находиться дополнительные настройки.",UDim2.new(1,-20,0,36),CFG.TxtSec,Enum.Font.Gotham)
+    dl.Position=UDim2.new(0,14,0,36); dl.TextSize=12; dl.TextWrapped=true; dl.ZIndex=25
+    return page
+end
 
-CreateColorPicker(ColorSettings, 200, "Watermark Color", WatermarkColor, function(c)
-    WatermarkColor = c
-    Watermark.BackgroundColor3 = c
-end)
-
--- Секция: Ватермарк
-local WatermarkSettings = CreateSection("📌 Watermark")
-
-local LockToggle = Instance.new("ImageButton")
-LockToggle.Size = UDim2.new(0, 44, 0, 22)
-LockToggle.Position = UDim2.new(0, 10, 0, 8)
-LockToggle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-LockToggle.BackgroundTransparency = 0.8
-LockToggle.AutoButtonColor = false
-LockToggle.Active = true
-LockToggle.Parent = WatermarkSettings
-
-local LockToggleCorner = Instance.new("UICorner")
-LockToggleCorner.CornerRadius = UDim.new(0, 11)
-LockToggleCorner.Parent = LockToggle
-
-local LockKnob = Instance.new("Frame")
-LockKnob.Size = UDim2.new(0, 18, 0, 18)
-LockKnob.Position = UDim2.new(0, 2, 0.5, -9)
-LockKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-LockKnob.Parent = LockToggle
-
-local LockKnobCorner = Instance.new("UICorner")
-LockKnobCorner.CornerRadius = UDim.new(0, 9)
-LockKnobCorner.Parent = LockKnob
-
-local LockLabel = Instance.new("TextLabel")
-LockLabel.Size = UDim2.new(0, 220, 0, 22)
-LockLabel.Position = UDim2.new(0, 62, 0, 8)
-LockLabel.BackgroundTransparency = 1
-LockLabel.Text = "Lock Watermark Position"
-LockLabel.Font = FONT
-LockLabel.TextSize = 13
-LockLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-LockLabel.TextXAlignment = Enum.TextXAlignment.Left
-LockLabel.Parent = WatermarkSettings
-
-LockToggle.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        WatermarkLocked = not WatermarkLocked
-        if WatermarkLocked then
-            LockKnob:TweenPosition(UDim2.new(1, -20, 0.5, -9), "In", "Quad", 0.2)
-            LockToggle.BackgroundColor3 = AccentColor
-            LockToggle.BackgroundTransparency = 0.3
-        else
-            LockKnob:TweenPosition(UDim2.new(0, 2, 0.5, -9), "In", "Quad", 0.2)
-            LockToggle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            LockToggle.BackgroundTransparency = 0.8
-        end
+-- ══════════════════════════════════════════════
+--   FOOTER
+-- ══════════════════════════════════════════════
+local Footer=Instance.new("Frame"); Footer.Name="Footer"
+Footer.Size=UDim2.new(1,0,0,28); Footer.Position=UDim2.new(0,0,1,-28)
+Footer.BackgroundColor3=CFG.Panel; Footer.ZIndex=22; Footer.Parent=MF; Corner(Footer,18)
+local fDot=Instance.new("Frame"); fDot.Size=UDim2.new(0,7,0,7)
+fDot.Position=UDim2.new(0,14,0.5,-3.5); fDot.BackgroundColor3=CFG.Good
+fDot.ZIndex=23; fDot.Parent=Footer; Corner(fDot,4)
+task.spawn(function()
+    while MF.Parent do
+        Tw(fDot,{BackgroundTransparency=0.7},0.8,Enum.EasingStyle.Sine):Play(); task.wait(0.8)
+        Tw(fDot,{BackgroundTransparency=0},0.8,Enum.EasingStyle.Sine):Play(); task.wait(0.8)
     end
 end)
+local fLbl=Lbl(Footer,"Подключено  ·  SeraphiCA v2.0",UDim2.new(1,-28,1,0),CFG.TxtMut,Enum.Font.Gotham)
+fLbl.Position=UDim2.new(0,26,0,0); fLbl.TextSize=11; fLbl.ZIndex=23
 
-local ResetWMButton = Instance.new("ImageButton")
-ResetWMButton.Size = UDim2.new(0, 170, 0, 30)
-ResetWMButton.Position = UDim2.new(0, 10, 0, 40)
-ResetWMButton.BackgroundColor3 = AccentColor
-ResetWMButton.BackgroundTransparency = 0.8
-ResetWMButton.AutoButtonColor = false
-ResetWMButton.Active = true
-ResetWMButton.Parent = WatermarkSettings
+-- ══════════════════════════════════════════════
+--   СБОРКА ВКЛАДОК
+-- ══════════════════════════════════════════════
+local TABS={
+    {name="AA",       icon="◈", label="AA"},
+    {name="SS",       icon="✦", label="SS"},
+    {name="Settings", icon="⚙", label="Настройки"},
+}
 
-local ResetWMCorner = Instance.new("UICorner")
-ResetWMCorner.CornerRadius = UDim.new(0, 8)
-ResetWMCorner.Parent = ResetWMButton
+local pages={
+    BuildAA(ContentArea),
+    BuildSS(ContentArea),
+    BuildSettings(ContentArea),
+}
 
-local ResetWMLabel = Instance.new("TextLabel")
-ResetWMLabel.Size = UDim2.new(1, 0, 1, 0)
-ResetWMLabel.BackgroundTransparency = 1
-ResetWMLabel.Text = "Reset Position"
-ResetWMLabel.Font = FONT
-ResetWMLabel.TextSize = 13
-ResetWMLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-ResetWMLabel.Parent = ResetWMButton
+local tabBtns={}; local activeTab=nil
 
-ResetWMButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        Watermark.Position = UDim2.new(0, 15, 0, 15)
-    end
-end)
-
--- Секция: Инфо
-local InfoSettings = CreateSection("ℹ Script Info")
-local InfoText = Instance.new("TextLabel")
-InfoText.Size = UDim2.new(1, -20, 0, 0)
-InfoText.Position = UDim2.new(0, 10, 0, 8)
-InfoText.BackgroundTransparency = 1
-InfoText.Text = "SeraphiCA v1.0\nBuilt for Delta Executor\nAndroid • Roblox"
-InfoText.Font = FONT
-InfoText.TextSize = 13
-InfoText.TextColor3 = Color3.fromRGB(180, 180, 180)
-InfoText.TextXAlignment = Enum.TextXAlignment.Left
-InfoText.TextWrapped = true
-InfoText.AutomaticSize = Enum.AutomaticSize.Y
-InfoText.Parent = InfoSettings
-
--- Обновление CanvasSize скролла
-SettingsScroll.CanvasSize = UDim2.new(0, 0, 0, SettingsList.AbsoluteContentSize.Y + 20)
-
--- ===== СТРАНИЦА DEV =====
-local DevInfo = Instance.new("Frame")
-DevInfo.Size = UDim2.new(1, -20, 0, 220)
-DevInfo.Position = UDim2.new(0, 10, 0, 10)
-DevInfo.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-DevInfo.BackgroundTransparency = 0.94
-DevInfo.Parent = DevTab.Page
-
-local DevInfoCorner = Instance.new("UICorner")
-DevInfoCorner.CornerRadius = UDim.new(0, 10)
-DevInfoCorner.Parent = DevInfo
-
-local DevInfoStroke = Instance.new("UIStroke")
-DevInfoStroke.Color = AccentColor
-DevInfoStroke.Thickness = 1
-DevInfoStroke.Transparency = 0.65
-DevInfoStroke.Parent = DevInfo
-
-local DevAvatar = Instance.new("ImageLabel")
-DevAvatar.Size = UDim2.new(0, 64, 0, 64)
-DevAvatar.Position = UDim2.new(0, 20, 0, 20)
-DevAvatar.BackgroundColor3 = AccentColor
-DevAvatar.BackgroundTransparency = 0.5
-DevAvatar.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-DevAvatar.Parent = DevInfo
-
-local DevAvatarCorner = Instance.new("UICorner")
-DevAvatarCorner.CornerRadius = UDim.new(0, 32)
-DevAvatarCorner.Parent = DevAvatar
-
-local DevNick = Instance.new("TextLabel")
-DevNick.Size = UDim2.new(0, 250, 0, 28)
-DevNick.Position = UDim2.new(0, 95, 0, 22)
-DevNick.BackgroundTransparency = 1
-DevNick.Text = "seraphim"
-DevNick.Font = FONT_BOLD
-DevNick.TextSize = 22
-DevNick.TextColor3 = Color3.fromRGB(255, 255, 255)
-DevNick.TextXAlignment = Enum.TextXAlignment.Left
-DevNick.Parent = DevInfo
-
-local DevRole = Instance.new("TextLabel")
-DevRole.Size = UDim2.new(0, 250, 0, 22)
-DevRole.Position = UDim2.new(0, 95, 0, 50)
-DevRole.BackgroundTransparency = 1
-DevRole.Text = "Developer"
-DevRole.Font = FONT
-DevRole.TextSize = 14
-DevRole.TextColor3 = AccentColor
-DevRole.TextXAlignment = Enum.TextXAlignment.Left
-DevRole.Parent = DevInfo
-
-local DevTgLabel = Instance.new("TextLabel")
-DevTgLabel.Size = UDim2.new(0, 100, 0, 22)
-DevTgLabel.Position = UDim2.new(0, 20, 0, 105)
-DevTgLabel.BackgroundTransparency = 1
-DevTgLabel.Text = "Telegram:"
-DevTgLabel.Font = FONT
-DevTgLabel.TextSize = 13
-DevTgLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-DevTgLabel.TextXAlignment = Enum.TextXAlignment.Left
-DevTgLabel.Parent = DevInfo
-
--- Кликабельный @Mpmtww
-local DevTg = Instance.new("TextButton")
-DevTg.Size = UDim2.new(0, 140, 0, 24)
-DevTg.Position = UDim2.new(0, 110, 0, 104)
-DevTg.BackgroundColor3 = Color3.fromRGB(100, 140, 255)
-DevTg.BackgroundTransparency = 0.85
-DevTg.Text = "@Mpmtww"
-DevTg.Font = FONT_BOLD
-DevTg.TextSize = 14
-DevTg.TextColor3 = Color3.fromRGB(150, 180, 255)
-DevTg.TextXAlignment = Enum.TextXAlignment.Left
-DevTg.AutoButtonColor = false
-DevTg.Active = true
-DevTg.Parent = DevInfo
-
-local DevTgCorner = Instance.new("UICorner")
-DevTgCorner.CornerRadius = UDim.new(0, 6)
-DevTgCorner.Parent = DevTg
-
-local DevTgUnderline = Instance.new("Frame")
-DevTgUnderline.Size = UDim2.new(1, 0, 0, 1)
-DevTgUnderline.Position = UDim2.new(0, 0, 1, 0)
-DevTgUnderline.BackgroundColor3 = Color3.fromRGB(150, 180, 255)
-DevTgUnderline.BackgroundTransparency = 0.3
-DevTgUnderline.Parent = DevTg
-
-DevTg.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        DevTg.BackgroundTransparency = 0.7
-        DevTg.TextColor3 = Color3.fromRGB(200, 220, 255)
-        pcall(function()
-            GuiService:OpenBrowserWindow("https://t.me/Mpmtww")
-        end)
-    end
-end)
-
-DevTg.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        DevTg.BackgroundTransparency = 0.85
-        DevTg.TextColor3 = Color3.fromRGB(150, 180, 255)
-    end
-end)
-
-local DevNote = Instance.new("TextLabel")
-DevNote.Size = UDim2.new(1, -40, 0, 50)
-DevNote.Position = UDim2.new(0, 20, 0, 150)
-DevNote.BackgroundTransparency = 1
-DevNote.Text = "Thanks for using SeraphiCA.\nMore features coming soon."
-DevNote.Font = FONT
-DevNote.TextSize = 12
-DevNote.TextColor3 = Color3.fromRGB(140, 140, 140)
-DevNote.TextXAlignment = Enum.TextXAlignment.Left
-DevNote.TextWrapped = true
-DevNote.Parent = DevInfo
-
--- ===== ПРИВЯЗКА ДРАГА =====
--- Драг ватермарка
-DragSystem.MakeDraggable(Watermark,
-    function() end, -- onDragStart
-    function(pos) end, -- onDragEnd
-    function() -- onTap
-        if not WatermarkLocked then return end -- если залочен, драга нет, тап работает всегда
-        MenuOpen = not MenuOpen
-        Menu.Visible = MenuOpen
-        if MenuOpen then
-            SwitchTab(SettingsTab)
-        end
-    end
-)
-
--- Переопределяем: тап по ватермарку всегда открывает меню (независимо от лока)
-Watermark.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        -- Отмечаем начало для DragSystem (она уже слушает)
-    end
-end)
-
--- Упрощённый вариант: отдельный обработчик тапа без конфликта с драгом
-local wmTouchStart = 0
-local wmTouchStartPos = nil
-local wmIsDragging = false
-
-Watermark.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        wmTouchStart = tick()
-        wmTouchStartPos = Vector2.new(input.Position.X, input.Position.Y)
-        wmIsDragging = false
-    end
-end)
-
-Watermark.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch and not WatermarkLocked then
-        local pos = Vector2.new(input.Position.X, input.Position.Y)
-        local delta = (pos - wmTouchStartPos).Magnitude
-        if delta > 6 then
-            wmIsDragging = true
-        end
-        if wmIsDragging then
-            local offset = wmTouchStartPos - Watermark.AbsolutePosition
-            Watermark.Position = UDim2.new(0, pos.X - offset.X, 0, pos.Y - offset.Y)
-        end
-    end
-end)
-
-Watermark.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        local duration = tick() - wmTouchStart
-        local endPos = Vector2.new(input.Position.X, input.Position.Y)
-        local delta = (endPos - wmTouchStartPos).Magnitude
-        if not wmIsDragging and duration < 0.35 and delta < 8 then
-            -- ТАП
-            MenuOpen = not MenuOpen
-            Menu.Visible = MenuOpen
-            if MenuOpen then
-                SwitchTab(SettingsTab)
+local function SwitchTab(idx)
+    if activeTab==idx then return end; activeTab=idx
+    for _,pg in ipairs(pages) do pg.Visible=false end
+    pages[idx].Visible=true
+    for i,btn in ipairs(tabBtns) do
+        local on=(i==idx)
+        Tw(btn,{BackgroundColor3=on and CFG.TabOn or CFG.TabOff, BackgroundTransparency=on and 0 or 1}):Play()
+        for _,ch in ipairs(btn:GetChildren()) do
+            if ch:IsA("TextLabel") then
+                Tw(ch,{TextColor3=on and Color3.new(1,1,1) or CFG.TxtSec}):Play()
             end
         end
-        wmIsDragging = false
-    end
-end)
-
--- Драг меню (через Header)
-local menuTouchStart = 0
-local menuTouchStartPos = nil
-local menuIsDragging = false
-local menuStartPosition = nil
-
-Header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        menuTouchStart = tick()
-        menuTouchStartPos = Vector2.new(input.Position.X, input.Position.Y)
-        menuStartPosition = Menu.AbsolutePosition
-        menuIsDragging = false
-    end
-end)
-
-Header.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        local pos = Vector2.new(input.Position.X, input.Position.Y)
-        local delta = (pos - menuTouchStartPos).Magnitude
-        if delta > 6 then
-            menuIsDragging = true
-        end
-        if menuIsDragging and menuStartPosition then
-            local dx = pos.X - menuTouchStartPos.X
-            local dy = pos.Y - menuTouchStartPos.Y
-            Menu.Position = UDim2.new(0, menuStartPosition.X + dx, 0, menuStartPosition.Y + dy)
-        end
-    end
-end)
-
-Header.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch and menuIsDragging then
-        -- Создаём след
-        CreateTrail(SeraphiCA, Menu.AbsolutePosition, Menu.Size, MenuColor)
-        menuIsDragging = false
-    end
-end)
-
--- ===== ИНИЦИАЛИЗАЦИЯ =====
-Menu.Visible = false
-MenuOpen = false
-SwitchTab(SettingsTab)
-
--- Адаптация под маленький экран
-local function AdjustForMobile()
-    local camera = workspace.CurrentCamera
-    if not camera then return end
-    local ss = camera.ViewportSize
-    if ss.X < 800 then
-        Menu.Size = UDim2.new(0, math.max(ss.X - 20, 320), 0, math.max(ss.Y - 100, 420))
-        Menu.Position = UDim2.new(0, 10, 0, 50)
-        Watermark.Size = UDim2.new(0, 190, 0, 32)
-        WMTitle.TextSize = 12
-        WMTime.TextSize = 10
     end
 end
-AdjustForMobile()
-workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(AdjustForMobile)
+
+for i,td in ipairs(TABS) do
+    local btn=Instance.new("TextButton"); btn.Size=UDim2.new(0,0,1,-12)
+    btn.AutomaticSize=Enum.AutomaticSize.X
+    btn.BackgroundColor3=CFG.TabOff; btn.BackgroundTransparency=1
+    btn.Text=""; btn.AutoButtonColor=false; btn.LayoutOrder=i; btn.ZIndex=23; btn.Parent=TabBar
+    Corner(btn,8)
+    local bp=Instance.new("UIPadding"); bp.PaddingLeft=UDim.new(0,14); bp.PaddingRight=UDim.new(0,14); bp.Parent=btn
+    local bl=Instance.new("UIListLayout"); bl.FillDirection=Enum.FillDirection.Horizontal
+    bl.VerticalAlignment=Enum.VerticalAlignment.Center; bl.Padding=UDim.new(0,6); bl.Parent=btn
+    local icoL=Instance.new("TextLabel"); icoL.BackgroundTransparency=1; icoL.Size=UDim2.new(0,14,1,0)
+    icoL.Text=td.icon; icoL.TextColor3=CFG.TxtSec; icoL.TextSize=12; icoL.Font=Enum.Font.GothamBold
+    icoL.ZIndex=24; icoL.Parent=btn
+    local txtL=Instance.new("TextLabel"); txtL.BackgroundTransparency=1; txtL.Size=UDim2.new(0,0,1,0)
+    txtL.AutomaticSize=Enum.AutomaticSize.X; txtL.Text=td.label; txtL.TextColor3=CFG.TxtSec
+    txtL.TextSize=13; txtL.Font=Enum.Font.GothamSemibold; txtL.ZIndex=24; txtL.Parent=btn
+    btn.MouseEnter:Connect(function()
+        if activeTab~=i then Tw(btn,{BackgroundColor3=Color3.fromHex("#1F2442"),BackgroundTransparency=0}):Play() end
+    end)
+    btn.MouseLeave:Connect(function()
+        if activeTab~=i then Tw(btn,{BackgroundTransparency=1}):Play() end
+    end)
+    btn.MouseButton1Click:Connect(function() SwitchTab(i) end)
+    tabBtns[i]=btn
+end
+
+-- ══════════════════════════════════════════════
+--   ДРАГ МЕНЮ (Mouse + Touch для Android)
+-- ══════════════════════════════════════════════
+local dragging=false; local dStart,dPos
+
+local function IsDragInput(inp)
+    return inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch
+end
+local function IsMoveInput(inp)
+    return inp.UserInputType == Enum.UserInputType.MouseMovement
+        or inp.UserInputType == Enum.UserInputType.Touch
+end
+
+Header.InputBegan:Connect(function(inp)
+    if IsDragInput(inp) then
+        dragging=true; dStart=inp.Position; dPos=MF.Position
+    end
+end)
+Header.InputEnded:Connect(function(inp)
+    if IsDragInput(inp) then dragging=false end
+end)
+UserInputService.InputChanged:Connect(function(inp)
+    if dragging and IsMoveInput(inp) then
+        local d=inp.Position-dStart
+        MF.Position=UDim2.new(dPos.X.Scale,dPos.X.Offset+d.X, dPos.Y.Scale,dPos.Y.Offset+d.Y)
+    end
+end)
+
+-- ══════════════════════════════════════════════
+--   ПЕРВЫЙ ЗАПУСК — показываем только ватермарк
+-- ══════════════════════════════════════════════
+task.spawn(function()
+    task.wait(0.1)
+    -- Ватермарк появляется плавно
+    WM.BackgroundTransparency=1
+    for _,c in ipairs(WM:GetChildren()) do
+        if c:IsA("TextLabel") or c:IsA("Frame") then
+            if c:IsA("TextLabel") then c.TextTransparency=1 end
+            if c:IsA("Frame") then c.BackgroundTransparency=1 end
+        end
+    end
+    WMText.TextTransparency=1; WMDot.BackgroundTransparency=1
+    Tw(WM,{BackgroundTransparency=0},0.5):Play()
+    Tw(WMText,{TextTransparency=0},0.5):Play()
+    Tw(WMDot,{BackgroundTransparency=0},0.5):Play()
+    -- По умолчанию открываем меню сразу
+    task.wait(0.6)
+    OpenMenu()
+    task.wait(0.65)
+    SwitchTab(1)
+end)
+
+print("[SeraphiCA] ✦ Загружено через Delta! Ватермарк вверху экрана — тапни чтобы открыть меню.")

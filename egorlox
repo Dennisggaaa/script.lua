@@ -4,8 +4,7 @@
 ║   AA: Aim-Bot (рабочий)                      ║
 ║   EE: ESP (Box + настройки цвета)            ║
 ║   SS: цвет меню + цвет ватермарка            ║
-║   Executor Delta · Android 10-13             ║
-║   Полный Aim-Bot + ESP Box                   ║
+║   Исправлено позиционирование боксов         ║
 ╚══════════════════════════════════════════════╝--]]
 
 local Players          = game:GetService("Players")
@@ -88,7 +87,7 @@ local aimState = {
 local espState = {
     on = false,
     box = false,
-    color = Color3.fromHex("#00FF00") -- Зеленый по умолчанию
+    color = Color3.fromHex("#00FF00")
 }
 
 -- ══════════════ FOV CIRCLE (UI) ══════════════
@@ -147,7 +146,6 @@ RunService.RenderStepped:Connect(function()
     if FovContainer.Visible then
         local cam = workspace.CurrentCamera
         if cam then
-            local vp = cam.ViewportSize
             local size = math.max(10, aimState.fov) * 2
             FovContainer.Position = UDim2.new(0.5, -size/2, 0.5, -size/2)
         end
@@ -228,8 +226,8 @@ local function StartAimLoop()
 end
 StartAimLoop()
 
--- ══════════════ ESP ЛОГИКА ══════════════
-local espBoxes = {} -- Храним все боксы
+-- ══════════════ ESP ЛОГИКА (ИСПРАВЛЕННАЯ) ══════════════
+local espBoxes = {}
 
 local function CreateEspBox(player)
     if espBoxes[player] then return end
@@ -243,7 +241,6 @@ local function CreateEspBox(player)
     container.Visible = false
     container.Parent = GUI
     
-    -- Основной бокс (незалитый)
     local box = Instance.new("Frame")
     box.Name = "Box"
     box.Size = UDim2.new(1, 0, 1, 0)
@@ -253,7 +250,6 @@ local function CreateEspBox(player)
     box.BorderColor3 = espState.color
     box.Parent = container
     
-    -- Обводка для лучшей видимости
     local outline = Instance.new("UIStroke")
     outline.Color = espState.color
     outline.Thickness = 2
@@ -271,55 +267,76 @@ local function UpdateEspBoxes()
     local camera = workspace.CurrentCamera
     if not camera then return end
     
-    -- Обновляем существующие и создаем новые
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character.PrimaryPart then
-            if not espBoxes[player] then
-                CreateEspBox(player)
-            end
+        if player ~= LocalPlayer and player.Character then
+            local char = player.Character
+            local rootPart = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
             
-            local espData = espBoxes[player]
-            if espData then
-                local char = player.Character
-                local rootPart = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
-                if rootPart then
-                    local pos = rootPart.Position
-                    local screenPos, onScreen = camera:WorldToScreenPoint(pos)
+            if rootPart and humanoid then
+                -- Получаем реальные размеры персонажа
+                local rootPos = rootPart.Position
+                
+                -- Вычисляем голову (приблизительно)
+                local headPos = rootPos + Vector3.new(0, humanoid.HipHeight or 2, 0)
+                
+                -- Вычисляем ноги (приблизительно)
+                local feetPos = rootPos - Vector3.new(0, humanoid.HipHeight or 2, 0)
+                
+                -- Проверяем видимость на экране
+                local headScreen, headOnScreen = camera:WorldToScreenPoint(headPos)
+                local feetScreen, feetOnScreen = camera:WorldToScreenPoint(feetPos)
+                local rootScreen, rootOnScreen = camera:WorldToScreenPoint(rootPos)
+                
+                if headOnScreen and feetOnScreen and rootOnScreen then
+                    -- Вычисляем реальную высоту персонажа в пикселях
+                    local height = math.abs(feetScreen.Y - headScreen.Y)
                     
-                    if onScreen then
-                        -- Получаем размеры персонажа (приблизительно)
-                        local size = 4 -- Высота персонажа в студиях
-                        local headPos = pos + Vector3.new(0, size/2, 0)
-                        local feetPos = pos - Vector3.new(0, size/2, 0)
-                        
-                        local headScreen, _ = camera:WorldToScreenPoint(headPos)
-                        local feetScreen, _ = camera:WorldToScreenPoint(feetPos)
-                        
-                        if headScreen and feetScreen then
-                            local height = math.abs(feetScreen.Y - headScreen.Y)
-                            local width = height * 0.35 -- Ширина бокса пропорционально высоте
-                            
-                            local centerX = screenPos.X
-                            local topY = math.min(headScreen.Y, feetScreen.Y)
-                            
-                            -- Обновляем позицию и размер
-                            espData.container.Position = UDim2.new(0, centerX - width/2, 0, topY)
-                            espData.container.Size = UDim2.new(0, width, 0, height)
-                            espData.container.Visible = espState.on and espState.box
-                            
-                            -- Обновляем цвет
-                            espData.box.BorderColor3 = espState.color
-                            espData.outline.Color = espState.color
+                    -- Если персонаж очень далеко - пропускаем
+                    if height < 5 then
+                        if espBoxes[player] then
+                            espBoxes[player].container.Visible = false
                         end
+                        continue
+                    end
+                    
+                    -- Ширина пропорциональна высоте (стандартный коэффициент)
+                    local width = height * 0.4
+                    
+                    -- Центрируем бокс по корпусу
+                    local centerX = rootScreen.X
+                    local topY = math.min(headScreen.Y, feetScreen.Y)
+                    
+                    if espBoxes[player] then
+                        local espData = espBoxes[player]
+                        espData.container.Position = UDim2.new(0, centerX - width/2, 0, topY)
+                        espData.container.Size = UDim2.new(0, width, 0, height)
+                        espData.container.Visible = espState.on and espState.box
+                        
+                        -- Обновляем цвет
+                        espData.box.BorderColor3 = espState.color
+                        espData.outline.Color = espState.color
                     else
-                        espData.container.Visible = false
+                        -- Создаем новый бокс
+                        CreateEspBox(player)
+                        local espData = espBoxes[player]
+                        espData.container.Position = UDim2.new(0, centerX - width/2, 0, topY)
+                        espData.container.Size = UDim2.new(0, width, 0, height)
+                        espData.container.Visible = espState.on and espState.box
+                        espData.box.BorderColor3 = espState.color
+                        espData.outline.Color = espState.color
                     end
                 else
-                    espData.container.Visible = false
+                    if espBoxes[player] then
+                        espBoxes[player].container.Visible = false
+                    end
+                end
+            else
+                if espBoxes[player] then
+                    espBoxes[player].container.Visible = false
                 end
             end
         else
-            -- Игрок не в игре или это локальный
             if espBoxes[player] then
                 espBoxes[player].container:Destroy()
                 espBoxes[player] = nil
@@ -336,7 +353,6 @@ local function UpdateEspBoxes()
     end
 end
 
--- Запускаем обновление ESP
 local espConnection
 local function StartEspLoop()
     if espConnection then espConnection:Disconnect() end
@@ -344,7 +360,6 @@ local function StartEspLoop()
         if espState.on and espState.box then
             UpdateEspBoxes()
         else
-            -- Скрываем все боксы
             for _, data in pairs(espBoxes) do
                 data.container.Visible = false
             end
@@ -562,7 +577,6 @@ local function MiniToggle(parent, label, onChange)
     return row
 end
 
--- ══════════════ ВЫБОР ЦВЕТА (ДЛЯ ESP) ══════════════
 local function ColorPicker(parent, label, currentColor, onChange)
     local wrap = Instance.new("Frame")
     wrap.Size = UDim2.new(1, 0, 0, 70)
@@ -592,15 +606,15 @@ local function ColorPicker(parent, label, currentColor, onChange)
     gl.Parent = grid
     
     local colors = {
-        Color3.fromHex("#00FF00"), -- Зеленый
-        Color3.fromHex("#FF0000"), -- Красный
-        Color3.fromHex("#0000FF"), -- Синий
-        Color3.fromHex("#FFFF00"), -- Желтый
-        Color3.fromHex("#FF00FF"), -- Фиолетовый
-        Color3.fromHex("#00FFFF"), -- Голубой
-        Color3.fromHex("#FFA500"), -- Оранжевый
-        Color3.fromHex("#FF1493"), -- Розовый
-        Color3.fromHex("#FFFFFF")  -- Белый
+        Color3.fromHex("#00FF00"),
+        Color3.fromHex("#FF0000"),
+        Color3.fromHex("#0000FF"),
+        Color3.fromHex("#FFFF00"),
+        Color3.fromHex("#FF00FF"),
+        Color3.fromHex("#00FFFF"),
+        Color3.fromHex("#FFA500"),
+        Color3.fromHex("#FF1493"),
+        Color3.fromHex("#FFFFFF")
     }
     
     for _, col in ipairs(colors) do
@@ -741,12 +755,10 @@ end)
 
 -- ══════════════ СТРАНИЦА MM ══════════════
 local pMM = NewPage("MM"); Title(pMM, "MM", "пустые слоты")
--- Оставляем пустую для будущих функций
 
 -- ══════════════ СТРАНИЦА EE (ESP) ══════════════
 local pEE = NewPage("EE"); Title(pEE, "EE", "ESP · Box · Цвет")
 
--- Основная карточка ESP
 local espCard = Instance.new("Frame")
 espCard.Size = UDim2.new(1, 0, 0, COLL)
 espCard.BackgroundColor3 = CFG.Card; espCard.BorderSizePixel = 0
@@ -767,8 +779,7 @@ espKnob.Size = UDim2.new(0,16,0,16); espKnob.Position = UDim2.new(0,3,0.5,-8)
 espKnob.BackgroundColor3 = CFG.TxtMut; espKnob.BorderSizePixel = 0; espKnob.Parent = espTrack
 Corner(espKnob, 8)
 
--- Расширяемая область ESP
-local ESP_EXPD = COLL + 8 + 1 + 28 + 6 + 70 + 14 -- разделитель + BoxToggle + ColorPicker + отступы
+local ESP_EXPD = COLL + 8 + 1 + 28 + 6 + 70 + 14
 
 local espSub = Instance.new("Frame")
 espSub.Size = UDim2.new(1, -28, 0, ESP_EXPD - COLL - 8)
@@ -780,17 +791,14 @@ local espSepLine = Instance.new("Frame")
 espSepLine.Size = UDim2.new(1, 0, 0, 1); espSepLine.BackgroundColor3 = CFG.Sep
 espSepLine.BorderSizePixel = 0; espSepLine.Parent = espSub
 
--- Toggle для Box
 MiniToggle(espSub, "Box", function(v)
     espState.box = v
 end)
 
--- Color Picker для ESP
 ColorPicker(espSub, "Цвет бокса", espState.color, function(col)
     espState.color = col
 end)
 
--- Кнопка включения ESP
 local espBtn = Instance.new("TextButton")
 espBtn.Size = UDim2.new(1,0,1,0); espBtn.BackgroundTransparency = 1; espBtn.Text = ""; espBtn.Parent = espTrack
 espBtn.MouseButton1Click:Connect(function()

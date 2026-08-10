@@ -5,7 +5,7 @@
 ║       Silent-Aim (Soon...)                   ║
 ║   SS: цвет меню + цвет ватермарка            ║
 ║   Executor Delta · Android 10-13             ║
-║   Полноценный рабочий Aim-Bot                ║
+║   Полноценный рабочий Aim-Bot + FOV Circle   ║
 ╚══════════════════════════════════════════════╝--]]
 
 local Players          = game:GetService("Players")
@@ -84,51 +84,77 @@ local aimState = {
     target = nil
 }
 
--- ══════════════ FOV CIRCLE (Drawing API) ══════════════
-local fovCircle = nil
-local function SetupFovCircle()
-    if fovCircle then return end
-    pcall(function()
-        fovCircle = Drawing.new("Circle")
-        fovCircle.Visible      = false
-        fovCircle.Filled       = false
-        fovCircle.Color        = Color3.new(1, 1, 1)
-        fovCircle.Thickness    = 1.5
-        fovCircle.NumSides     = 64
-        fovCircle.Radius       = 90
-        fovCircle.Transparency = 0.3
-    end)
-end
-SetupFovCircle()
+-- ══════════════ FOV CIRCLE (UI) ══════════════
+-- Создаем круг через UI-элементы (гарантированно работает во всех играх)
+local FovContainer = Instance.new("Frame")
+FovContainer.Name = "FovCircle"
+FovContainer.Size = UDim2.new(0, 180, 0, 180) -- Будет обновляться
+FovContainer.Position = UDim2.new(0.5, -90, 0.5, -90)
+FovContainer.BackgroundTransparency = 1
+FovContainer.BorderSizePixel = 0
+FovContainer.Visible = false
+FovContainer.Parent = GUI
 
-local function GetScreenCenter()
-    local cam = workspace.CurrentCamera
-    if cam then
-        local vp = cam.ViewportSize
-        return Vector2.new(vp.X / 2, vp.Y / 2)
-    end
-    return Vector2.new(700, 400)
-end
+-- Внешний круг (ободок)
+local FovCircleOuter = Instance.new("Frame")
+FovCircleOuter.Name = "Outer"
+FovCircleOuter.Size = UDim2.new(1, 0, 1, 0)
+FovCircleOuter.Position = UDim2.new(0, 0, 0, 0)
+FovCircleOuter.BackgroundColor3 = Color3.new(1, 1, 1)
+FovCircleOuter.BackgroundTransparency = 0.5
+FovCircleOuter.BorderSizePixel = 0
+FovCircleOuter.Parent = FovContainer
+Corner(FovCircleOuter, 90) -- Делаем круг
 
+-- Внутренний круг (заливка с прозрачностью)
+local FovCircleInner = Instance.new("Frame")
+FovCircleInner.Name = "Inner"
+FovCircleInner.Size = UDim2.new(0.8, 0, 0.8, 0)
+FovCircleInner.Position = UDim2.new(0.1, 0, 0.1, 0)
+FovCircleInner.BackgroundColor3 = Color3.new(1, 1, 1)
+FovCircleInner.BackgroundTransparency = 0.8
+FovCircleInner.BorderSizePixel = 0
+FovCircleInner.Parent = FovContainer
+Corner(FovCircleInner, 90)
+
+-- Центральная точка
+local FovDot = Instance.new("Frame")
+FovDot.Name = "Dot"
+FovDot.Size = UDim2.new(0, 4, 0, 4)
+FovDot.Position = UDim2.new(0.5, -2, 0.5, -2)
+FovDot.BackgroundColor3 = Color3.new(0, 1, 0)
+FovDot.BackgroundTransparency = 0.3
+FovDot.BorderSizePixel = 0
+FovDot.Parent = FovContainer
+Corner(FovDot, 2)
+
+-- Функция обновления круга
 local function RefreshFovCircle()
-    if not fovCircle then 
-        SetupFovCircle()
-        if not fovCircle then return end
-    end
     if aimState.showFov and aimState.on then
-        fovCircle.Radius   = math.max(4, aimState.fov)
-        fovCircle.Position = GetScreenCenter()
-        fovCircle.Visible  = true
+        local radius = math.max(10, aimState.fov)
+        local size = radius * 2
+        FovContainer.Size = UDim2.new(0, size, 0, size)
+        FovContainer.Position = UDim2.new(0.5, -size/2, 0.5, -size/2)
+        FovContainer.Visible = true
+        
+        -- Обновляем прозрачность внешнего круга в зависимости от состояния
+        FovCircleOuter.BackgroundTransparency = 0.4
+        FovCircleInner.BackgroundTransparency = 0.85
+        FovDot.BackgroundTransparency = 0.2
     else
-        fovCircle.Visible = false
+        FovContainer.Visible = false
     end
 end
 
--- Обновляем позицию круга каждый кадр
+-- Обновляем позицию круга при изменении размера окна или камеры
 RunService.RenderStepped:Connect(function()
-    if fovCircle and fovCircle.Visible then
-        fovCircle.Position = GetScreenCenter()
-        fovCircle.Radius   = math.max(4, aimState.fov)
+    if FovContainer.Visible then
+        local cam = workspace.CurrentCamera
+        if cam then
+            local vp = cam.ViewportSize
+            local size = math.max(10, aimState.fov) * 2
+            FovContainer.Position = UDim2.new(0.5, -size/2, 0.5, -size/2)
+        end
     end
 end)
 
@@ -153,7 +179,7 @@ local function GetClosestPlayer()
             if aimState.visCheck then
                 local ray = Ray.new(myPos.Position, (targetPos - myPos.Position).Unit * 1000)
                 local hit = workspace:FindPartOnRay(ray, LocalPlayer.Character)
-                if hit and hit:IsDescendantOf(player.Character) == false then
+                if hit and not hit:IsDescendantOf(player.Character) then
                     -- Скрыт за стеной
                     continue
                 end
@@ -163,7 +189,7 @@ local function GetClosestPlayer()
             local screenPos, onScreen = camera:WorldToScreenPoint(targetPos)
             if not onScreen then continue end
             
-            local center = GetScreenCenter()
+            local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
             local distance = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
             
             if distance <= maxDistance and distance < bestScore then
@@ -188,18 +214,30 @@ local function AimAtTarget()
     local targetPart = target.Character and target.Character.PrimaryPart
     if not targetPart then return end
     
-    -- Наводим камеру на цель
-    local targetPos = targetPart.Position + Vector3.new(0, 1.5, 0) -- Голова
+    -- Наводим камеру на цель (в голову)
+    local targetPos = targetPart.Position + Vector3.new(0, 1.5, 0)
     local direction = (targetPos - camera.CFrame.Position).Unit
     local targetCFrame = CFrame.lookAt(camera.CFrame.Position, targetPos)
     
     -- Плавность наведения
-    local smoothFactor = aimState.smoothness / 100
+    local smoothFactor = math.min(aimState.smoothness / 100, 0.95)
     local currentCFrame = camera.CFrame
     local lerpCFrame = currentCFrame:Lerp(targetCFrame, smoothFactor)
     
     camera.CFrame = lerpCFrame
 end
+
+-- Запускаем цикл наведения
+local aimConnection
+local function StartAimLoop()
+    if aimConnection then aimConnection:Disconnect() end
+    aimConnection = RunService.RenderStepped:Connect(function()
+        if aimState.on then
+            AimAtTarget()
+        end
+    end)
+end
+StartAimLoop()
 
 -- ══════════════ ВОДЯНОЙ ЗНАК ══════════════
 local WM = Instance.new("Frame")
@@ -487,32 +525,22 @@ local sepLine = Instance.new("Frame")
 sepLine.Size = UDim2.new(1, 0, 0, 1); sepLine.BackgroundColor3 = CFG.Sep
 sepLine.BorderSizePixel = 0; sepLine.Parent = aimSub
 
--- Сохраняем функции обновления для использования в кнопках
-local updateSmoothness
-local updateFov
-local updateVisCheck
-local updateShowFov
-
 MakeSlider(aimSub, "Smoothness", 80,  40,  function(v) 
     aimState.smoothness = v 
-    if updateSmoothness then updateSmoothness(v) end
 end)
 
 MakeSlider(aimSub, "Fov",        180, 90,  function(v) 
     aimState.fov = v 
     RefreshFovCircle()
-    if updateFov then updateFov(v) end
 end)
 
 MiniToggle(aimSub, "VisibleCheck", function(v) 
     aimState.visCheck = v 
-    if updateVisCheck then updateVisCheck(v) end
 end)
 
 MiniToggle(aimSub, "ShowFov",      function(v) 
     aimState.showFov = v 
     RefreshFovCircle()
-    if updateShowFov then updateShowFov(v) end
 end)
 
 -- Кнопка тоггла Aim-Bot
@@ -527,16 +555,6 @@ aimBtn.MouseButton1Click:Connect(function()
     Tw(aimTrack, { BackgroundColor3 = aimState.on and CFG.Accent or CFG.Panel }, 0.18):Play()
     Tw(aimCard,  { Size = UDim2.new(1, 0, 0, aimState.on and EXPD or COLL) }, 0.22):Play()
     RefreshFovCircle()
-    
-    -- Если включили Aim-Bot, запускаем цикл наведения
-    if aimState.on then
-        -- Запускаем цикл наведения
-        game:GetService("RunService").RenderStepped:Connect(function()
-            if aimState.on then
-                AimAtTarget()
-            end
-        end)
-    end
 end)
 
 -- ── Silent-Aim (карточка) ──
@@ -750,10 +768,20 @@ MakeDrag(WM,   WM)
 Tw(WM, { BackgroundTransparency = 0.15 }, 0.4):Play()
 task.delay(0.4, OpenMenu)
 
--- ══════════════ ДОПОЛНИТЕЛЬНО: БЕЗОПАСНОЕ ОТКЛЮЧЕНИЕ ══════════════
--- При закрытии игры или отключении скрипта, скрываем круг
+-- Первоначальное обновление круга
+RefreshFovCircle()
+
+-- ══════════════ ДОПОЛНИТЕЛЬНО: ОЧИСТКА ПРИ ЗАКРЫТИИ ══════════════
+-- При отключении скрипта скрываем круг
 game:GetService("Players").LocalPlayer:GetPropertyChangedSignal("Character"):Connect(function()
     if not LocalPlayer.Character then
-        if fovCircle then fovCircle.Visible = false end
+        FovContainer.Visible = false
+    end
+end)
+
+-- При выходе из игры чистим за собой
+game:GetService("RunService").Heartbeat:Connect(function()
+    if not game:IsLoaded() then
+        FovContainer:Destroy()
     end
 end)

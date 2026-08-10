@@ -1,7 +1,10 @@
 --[[╔══════════════════════════════════════════════╗
-║           SeraphiCA UI v3.0                  ║
+║           SeraphiCA UI v3.1                  ║
 ║   Вкладки: AA · MM · EE · SS                 ║
+║   AA: Aim-Bot (Smoothness·Fov·VisCheck·ShowFov)
+║       Silent-Aim (Soon...)                   ║
 ║   SS: цвет меню + цвет ватермарка            ║
+║   Executor Delta · Android 10-13             ║
 ║   Только интерфейс. Никаких игровых функций. ║
 ╚══════════════════════════════════════════════╝--]]
 
@@ -20,8 +23,8 @@ local CFG = {
     BG      = Color3.fromHex("#0D0F1A"),
     Panel   = Color3.fromHex("#131629"),
     Card    = Color3.fromHex("#1B1F36"),
-    Accent  = Color3.fromHex("#5B6EF5"),   -- цвет меню (меняется в SS)
-    WMColor = Color3.fromHex("#5B6EF5"),   -- цвет ватермарка (меняется в SS)
+    Accent  = Color3.fromHex("#5B6EF5"),
+    WMColor = Color3.fromHex("#5B6EF5"),
     TabOff  = Color3.fromHex("#1B1F36"),
     TxtPri  = Color3.fromHex("#EAEEFF"),
     TxtSec  = Color3.fromHex("#7A82B0"),
@@ -29,22 +32,23 @@ local CFG = {
     Sep     = Color3.fromHex("#232742"),
 }
 
--- живые ссылки для перекраски
 local LIVE = { Accents = {}, WM = {}, MenuStroke = nil, Tabs = {} }
 
 -- ══════════════ УТИЛИТЫ ══════════════
 local function Tw(o, p, d)
     return TweenService:Create(o, TweenInfo.new(d or CFG.Spd, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), p)
 end
-local function Corner(p, r) local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r or 10); c.Parent = p; return c end
+local function Corner(p, r)
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r or 10); c.Parent = p; return c
+end
 local function Stroke(p, col, th)
     local s = Instance.new("UIStroke"); s.Color = col or CFG.Sep; s.Thickness = th or 1
     s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; s.Parent = p; return s
 end
 local function Pad(p, t, b, l, r)
     local u = Instance.new("UIPadding")
-    u.PaddingTop = UDim.new(0, t or 10);  u.PaddingBottom = UDim.new(0, b or 10)
-    u.PaddingLeft = UDim.new(0, l or 12); u.PaddingRight = UDim.new(0, r or 12)
+    u.PaddingTop    = UDim.new(0, t or 10); u.PaddingBottom = UDim.new(0, b or 10)
+    u.PaddingLeft   = UDim.new(0, l or 12); u.PaddingRight  = UDim.new(0, r or 12)
     u.Parent = p; return u
 end
 local function Lbl(parent, text, sz, col, font, size)
@@ -55,7 +59,6 @@ local function Lbl(parent, text, sz, col, font, size)
     l.TextXAlignment = Enum.TextXAlignment.Left; l.RichText = true; l.Parent = parent
     return l
 end
--- регистрация элемента как "акцентного"
 local function Acc(obj, prop)
     table.insert(LIVE.Accents, { o = obj, p = prop or "BackgroundColor3" })
     obj[prop or "BackgroundColor3"] = CFG.Accent
@@ -69,6 +72,37 @@ local GUI = Instance.new("ScreenGui")
 GUI.Name = "SeraphiCA"; GUI.ResetOnSpawn = false
 GUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 GUI.IgnoreGuiInset = true; GUI.Parent = PlayerGui
+
+-- ══════════════ FOV CIRCLE (Drawing API) ══════════════
+local fovCircle = nil
+pcall(function()
+    fovCircle = Drawing.new("Circle")
+    fovCircle.Visible  = false
+    fovCircle.Filled   = false
+    fovCircle.Color    = Color3.new(1, 1, 1)
+    fovCircle.Thickness = 1.5
+    fovCircle.NumSides  = 64
+    fovCircle.Radius    = 90
+    fovCircle.Transparency = 1
+end)
+
+local aimState = { on = false, smoothness = 40, fov = 90, visCheck = false, showFov = false }
+
+local function RefreshFovCircle()
+    if not fovCircle then return end
+    local show = aimState.on and aimState.showFov
+    if show then
+        local cam = workspace.CurrentCamera
+        if cam then
+            local vp = cam.ViewportSize
+            fovCircle.Position = Vector2.new(vp.X / 2, vp.Y / 2)
+        end
+        fovCircle.Radius  = math.max(4, aimState.fov)
+        fovCircle.Visible = true
+    else
+        fovCircle.Visible = false
+    end
+end
 
 -- ══════════════ ВАТЕРМАРК ══════════════
 local WM = Instance.new("Frame")
@@ -86,7 +120,8 @@ wmDot.BorderSizePixel = 0; wmDot.Parent = WM
 Corner(wmDot, 4)
 LIVE.WM.Dot = wmDot; wmDot.BackgroundColor3 = CFG.WMColor
 
-local wmTxt = Lbl(WM, "SeraphiCA  <font color='#454A6E'>|</font>  UI", UDim2.new(1, -32, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 13)
+local wmTxt = Lbl(WM, "SeraphiCA  <font color='#454A6E'>|</font>  UI",
+    UDim2.new(1, -32, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 13)
 wmTxt.Position = UDim2.new(0, 26, 0, 0)
 LIVE.WM.Text = wmTxt
 
@@ -96,11 +131,10 @@ wmBtn.Text = ""; wmBtn.Parent = WM
 
 -- ══════════════ МЕНЮ ══════════════
 local Menu = Instance.new("Frame")
-Menu.Size = UDim2.new(0, CFG.MenuW, 0, CFG.MenuH)
+Menu.Size     = UDim2.new(0, CFG.MenuW, 0, CFG.MenuH)
 Menu.Position = UDim2.new(0.5, -CFG.MenuW/2, 0.5, -CFG.MenuH/2)
 Menu.BackgroundColor3 = CFG.BG
-Menu.Visible = false
-Menu.Parent = GUI
+Menu.Visible  = false; Menu.Parent = GUI
 Corner(Menu, 14)
 LIVE.MenuStroke = Stroke(Menu, CFG.Accent, 1.5)
 
@@ -119,8 +153,8 @@ logo.Size = UDim2.new(0, 5, 0, 22); logo.Position = UDim2.new(0, 16, 0.5, -11)
 logo.BorderSizePixel = 0; logo.Parent = Head
 Corner(logo, 3); Acc(logo)
 
-Lbl(Head, "SeraphiCA", UDim2.new(0, 200, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 16).Position = UDim2.new(0, 30, 0, 0)
-Lbl(Head, "v3.0", UDim2.new(0, 60, 1, 0), CFG.TxtMut, Enum.Font.GothamMedium, 12).Position = UDim2.new(0, 122, 0, 0)
+Lbl(Head, "SeraphiCA",  UDim2.new(0, 200, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 16).Position   = UDim2.new(0, 30, 0, 0)
+Lbl(Head, "v3.1",       UDim2.new(0,  60, 1, 0), CFG.TxtMut, Enum.Font.GothamMedium, 12).Position = UDim2.new(0, 122, 0, 0)
 
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 28, 0, 28); closeBtn.Position = UDim2.new(1, -40, 0.5, -14)
@@ -143,6 +177,7 @@ Content.Size = UDim2.new(1, -130, 1, -50); Content.Position = UDim2.new(0, 130, 
 Content.BackgroundTransparency = 1; Content.Parent = Menu
 
 local Pages, TabBtns = {}, {}
+
 local function NewPage(name)
     local p = Instance.new("ScrollingFrame")
     p.Name = name; p.Size = UDim2.new(1, 0, 1, 0)
@@ -153,8 +188,7 @@ local function NewPage(name)
     p.Visible = false; p.Parent = Content
     Pad(p, 16, 16, 16, 16)
     local ll = Instance.new("UIListLayout"); ll.Padding = UDim.new(0, 10); ll.Parent = p
-    Pages[name] = p
-    return p
+    Pages[name] = p; return p
 end
 
 local function Title(page, txt, sub)
@@ -162,50 +196,275 @@ local function Title(page, txt, sub)
     h.Size = UDim2.new(1, 0, 0, sub and 40 or 26)
     h.BackgroundTransparency = 1; h.Parent = page
     Lbl(h, txt, UDim2.new(1, 0, 0, 20), CFG.TxtPri, Enum.Font.GothamBold, 16)
-    if sub then Lbl(h, sub, UDim2.new(1, 0, 0, 16), CFG.TxtMut, Enum.Font.Gotham, 12).Position = UDim2.new(0, 0, 0, 22) end
+    if sub then
+        local s = Lbl(h, sub, UDim2.new(1, 0, 0, 16), CFG.TxtMut, Enum.Font.Gotham, 12)
+        s.Position = UDim2.new(0, 0, 0, 22)
+    end
 end
 
--- пустой слот (без игровой логики — только визуал)
+-- Обычный слот (для MM / EE)
 local function Slot(page, name, desc)
     local card = Instance.new("Frame")
     card.Size = UDim2.new(1, 0, 0, 54); card.BackgroundColor3 = CFG.Card
     card.BorderSizePixel = 0; card.Parent = page
     Corner(card, 10); Stroke(card, CFG.Sep, 1)
-    Lbl(card, name, UDim2.new(1, -80, 0, 18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0, 14, 0, 9)
-    Lbl(card, desc or "слот свободен", UDim2.new(1, -80, 0, 14), CFG.TxtMut, Enum.Font.Gotham, 11).Position = UDim2.new(0, 14, 0, 29)
+    Lbl(card, name, UDim2.new(1,-80,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
+    Lbl(card, desc or "слот свободен", UDim2.new(1,-80,0,14), CFG.TxtMut, Enum.Font.Gotham, 11).Position = UDim2.new(0,14,0,29)
 
     local track = Instance.new("Frame")
-    track.Size = UDim2.new(0, 42, 0, 22); track.Position = UDim2.new(1, -56, 0.5, -11)
+    track.Size = UDim2.new(0,42,0,22); track.Position = UDim2.new(1,-56,0.5,-11)
     track.BackgroundColor3 = CFG.Panel; track.BorderSizePixel = 0; track.Parent = card
     Corner(track, 11)
     local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 16, 0, 16); knob.Position = UDim2.new(0, 3, 0.5, -8)
+    knob.Size = UDim2.new(0,16,0,16); knob.Position = UDim2.new(0,3,0.5,-8)
     knob.BackgroundColor3 = CFG.TxtMut; knob.BorderSizePixel = 0; knob.Parent = track
     Corner(knob, 8)
 
     local on = false
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1; btn.Text = ""; btn.Parent = track
+    btn.Size = UDim2.new(1,0,1,0); btn.BackgroundTransparency = 1; btn.Text = ""; btn.Parent = track
     btn.MouseButton1Click:Connect(function()
         on = not on
-        Tw(knob, { Position = on and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8),
+        Tw(knob, { Position = on and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
                    BackgroundColor3 = on and Color3.new(1,1,1) or CFG.TxtMut }, 0.18):Play()
         Tw(track, { BackgroundColor3 = on and CFG.Accent or CFG.Panel }, 0.18):Play()
     end)
     return card
 end
 
--- ══════════════ СТРАНИЦЫ AA / MM / EE ══════════════
-local pAA = NewPage("AA"); Title(pAA, "AA", "пустые слоты")
-Slot(pAA, "Slot A1"); Slot(pAA, "Slot A2"); Slot(pAA, "Slot A3")
+-- ══════════════ ВСПОМОГАТЕЛЬНЫЕ ВИДЖЕТЫ ══════════════
 
+-- Ползунок (Slider)
+local function MakeSlider(parent, label, maxVal, initVal, onChange)
+    local c = Instance.new("Frame")
+    c.Size = UDim2.new(1, 0, 0, 46)
+    c.BackgroundTransparency = 1
+    c.Parent = parent
+
+    -- Строка с названием и значением
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 16); row.BackgroundTransparency = 1; row.Parent = c
+
+    Lbl(row, label, UDim2.new(1, 0, 1, 0), CFG.TxtSec, Enum.Font.Gotham, 11)
+    local valLbl = Lbl(row, tostring(initVal), UDim2.new(1, 0, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 11)
+    valLbl.TextXAlignment = Enum.TextXAlignment.Right
+
+    -- Дорожка
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(1, 0, 0, 5)
+    track.Position = UDim2.new(0, 0, 0, 24)
+    track.BackgroundColor3 = CFG.Panel; track.BorderSizePixel = 0; track.Parent = c
+    Corner(track, 3)
+
+    -- Заливка
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(initVal / maxVal, 0, 1, 0)
+    fill.BackgroundColor3 = CFG.Accent; fill.BorderSizePixel = 0; fill.Parent = track
+    Corner(fill, 3)
+    table.insert(LIVE.Accents, { o = fill, p = "BackgroundColor3" })
+
+    -- Кружок
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.new(0, 14, 0, 14)
+    knob.Position = UDim2.new(initVal / maxVal, -7, 0.5, -7)
+    knob.BackgroundColor3 = Color3.new(1, 1, 1); knob.BorderSizePixel = 0; knob.Parent = track
+    Corner(knob, 7)
+
+    -- Невидимая кнопка-хитбокс
+    local hitbox = Instance.new("TextButton")
+    hitbox.Size = UDim2.new(1, 0, 0, 28)
+    hitbox.Position = UDim2.new(0, 0, 0, 14)
+    hitbox.BackgroundTransparency = 1; hitbox.Text = ""; hitbox.ZIndex = 8; hitbox.Parent = c
+
+    local val = initVal
+    local dragging = false
+
+    local function Upd(sx)
+        local ap = track.AbsolutePosition
+        local as = track.AbsoluteSize
+        local ratio = math.clamp((sx - ap.X) / as.X, 0, 1)
+        val = math.floor(ratio * maxVal + 0.5)
+        valLbl.Text = tostring(val)
+        fill.Size = UDim2.new(ratio, 0, 1, 0)
+        knob.Position = UDim2.new(ratio, -7, 0.5, -7)
+        if onChange then onChange(val) end
+    end
+
+    hitbox.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; Upd(i.Position.X)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
+        or i.UserInputType == Enum.UserInputType.Touch) then
+            Upd(i.Position.X)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    return c
+end
+
+-- Мини-переключатель (для VisibleCheck / ShowFov)
+local function MiniToggle(parent, label, onChange)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 28); row.BackgroundTransparency = 1; row.Parent = parent
+
+    Lbl(row, label, UDim2.new(1, -48, 1, 0), CFG.TxtSec, Enum.Font.Gotham, 12)
+
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(0, 36, 0, 18); track.Position = UDim2.new(1, -38, 0.5, -9)
+    track.BackgroundColor3 = CFG.Panel; track.BorderSizePixel = 0; track.Parent = row
+    Corner(track, 9)
+
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.new(0, 12, 0, 12); knob.Position = UDim2.new(0, 3, 0.5, -6)
+    knob.BackgroundColor3 = CFG.TxtMut; knob.BorderSizePixel = 0; knob.Parent = track
+    Corner(knob, 6)
+
+    local on = false
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1,0,1,0); btn.BackgroundTransparency = 1; btn.Text = ""; btn.Parent = track
+    btn.MouseButton1Click:Connect(function()
+        on = not on
+        Tw(knob, {
+            Position = on and UDim2.new(1,-15,0.5,-6) or UDim2.new(0,3,0.5,-6),
+            BackgroundColor3 = on and Color3.new(1,1,1) or CFG.TxtMut
+        }, 0.15):Play()
+        Tw(track, { BackgroundColor3 = on and CFG.Accent or CFG.Panel }, 0.15):Play()
+        if onChange then onChange(on) end
+    end)
+    return row
+end
+
+-- ══════════════ СТРАНИЦА AA ══════════════
+local pAA = NewPage("AA"); Title(pAA, "AA", "Aim-Bot · Silent-Aim")
+
+-- ── Aim-Bot (расширяемая карточка) ──
+local COLL = 54   -- высота свёрнутой карточки
+-- Контент: разделитель(1) + 2 слайдера(46×2) + 2 мини-тогла(28×2) + отступы(≈ 8+6*5) = ~190
+local EXPD = COLL + 8 + 1 + 46 + 6 + 46 + 6 + 28 + 6 + 28 + 14  -- ≈ 249
+
+local aimCard = Instance.new("Frame")
+aimCard.Size = UDim2.new(1, 0, 0, COLL)
+aimCard.BackgroundColor3 = CFG.Card; aimCard.BorderSizePixel = 0
+aimCard.ClipsDescendants = true; aimCard.Parent = pAA
+Corner(aimCard, 10); Stroke(aimCard, CFG.Sep, 1)
+
+-- Заголовок
+Lbl(aimCard, "Aim-Bot",
+    UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position    = UDim2.new(0,14,0,9)
+Lbl(aimCard, "Smoothness · FOV · VisCheck · ShowFov",
+    UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position        = UDim2.new(0,14,0,30)
+
+-- Тоггл Aim-Bot
+local aimTrack = Instance.new("Frame")
+aimTrack.Size = UDim2.new(0,42,0,22); aimTrack.Position = UDim2.new(1,-56,0,16)
+aimTrack.BackgroundColor3 = CFG.Panel; aimTrack.BorderSizePixel = 0; aimTrack.Parent = aimCard
+Corner(aimTrack, 11)
+local aimKnob = Instance.new("Frame")
+aimKnob.Size = UDim2.new(0,16,0,16); aimKnob.Position = UDim2.new(0,3,0.5,-8)
+aimKnob.BackgroundColor3 = CFG.TxtMut; aimKnob.BorderSizePixel = 0; aimKnob.Parent = aimTrack
+Corner(aimKnob, 8)
+
+-- Контент под тогглом
+local aimSub = Instance.new("Frame")
+aimSub.Size = UDim2.new(1, -28, 0, EXPD - COLL - 8)
+aimSub.Position = UDim2.new(0, 14, 0, COLL + 8)
+aimSub.BackgroundTransparency = 1; aimSub.Parent = aimCard
+local subList = Instance.new("UIListLayout"); subList.Padding = UDim.new(0, 6); subList.Parent = aimSub
+
+-- Тонкий разделитель
+local sepLine = Instance.new("Frame")
+sepLine.Size = UDim2.new(1, 0, 0, 1); sepLine.BackgroundColor3 = CFG.Sep
+sepLine.BorderSizePixel = 0; sepLine.Parent = aimSub
+
+MakeSlider(aimSub, "Smoothness", 80,  40,  function(v) aimState.smoothness = v end)
+MakeSlider(aimSub, "Fov",        360, 90,  function(v) aimState.fov = v; RefreshFovCircle() end)
+MiniToggle(aimSub, "VisibleCheck", function(v) aimState.visCheck = v end)
+MiniToggle(aimSub, "ShowFov",      function(v) aimState.showFov = v; RefreshFovCircle() end)
+
+-- Кнопка тоггла Aim-Bot
+local aimBtn = Instance.new("TextButton")
+aimBtn.Size = UDim2.new(1,0,1,0); aimBtn.BackgroundTransparency = 1; aimBtn.Text = ""; aimBtn.Parent = aimTrack
+aimBtn.MouseButton1Click:Connect(function()
+    aimState.on = not aimState.on
+    Tw(aimKnob, {
+        Position = aimState.on and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
+        BackgroundColor3 = aimState.on and Color3.new(1,1,1) or CFG.TxtMut
+    }, 0.18):Play()
+    Tw(aimTrack, { BackgroundColor3 = aimState.on and CFG.Accent or CFG.Panel }, 0.18):Play()
+    Tw(aimCard,  { Size = UDim2.new(1, 0, 0, aimState.on and EXPD or COLL) }, 0.22):Play()
+    RefreshFovCircle()
+end)
+
+-- ── Silent-Aim (карточка) ──
+local SA_EXPD = COLL + 44
+
+local saCard = Instance.new("Frame")
+saCard.Size = UDim2.new(1, 0, 0, COLL)
+saCard.BackgroundColor3 = CFG.Card; saCard.BorderSizePixel = 0
+saCard.ClipsDescendants = true; saCard.Parent = pAA
+Corner(saCard, 10); Stroke(saCard, CFG.Sep, 1)
+
+Lbl(saCard, "Silent-Aim",
+    UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
+Lbl(saCard, "visual slot",
+    UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 11).Position     = UDim2.new(0,14,0,29)
+
+local saTrack = Instance.new("Frame")
+saTrack.Size = UDim2.new(0,42,0,22); saTrack.Position = UDim2.new(1,-56,0,16)
+saTrack.BackgroundColor3 = CFG.Panel; saTrack.BorderSizePixel = 0; saTrack.Parent = saCard
+Corner(saTrack, 11)
+local saKnob = Instance.new("Frame")
+saKnob.Size = UDim2.new(0,16,0,16); saKnob.Position = UDim2.new(0,3,0.5,-8)
+saKnob.BackgroundColor3 = CFG.TxtMut; saKnob.BorderSizePixel = 0; saKnob.Parent = saTrack
+Corner(saKnob, 8)
+
+-- «Soon...» надпись
+local saSoonRow = Instance.new("Frame")
+saSoonRow.Size = UDim2.new(1, 0, 0, SA_EXPD - COLL - 8)
+saSoonRow.Position = UDim2.new(0, 0, 0, COLL + 8)
+saSoonRow.BackgroundTransparency = 1; saSoonRow.Parent = saCard
+
+local saSepLine = Instance.new("Frame")
+saSepLine.Size = UDim2.new(1, -28, 0, 1)
+saSepLine.Position = UDim2.new(0, 14, 0, 0)
+saSepLine.BackgroundColor3 = CFG.Sep; saSepLine.BorderSizePixel = 0; saSepLine.Parent = saSoonRow
+
+local saSoonLbl = Lbl(saSoonRow, "🕐  Soon...",
+    UDim2.new(1, -28, 0, 22), CFG.TxtMut, Enum.Font.GothamMedium, 13)
+saSoonLbl.Position = UDim2.new(0, 14, 0, 10)
+saSoonLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+local saBtn = Instance.new("TextButton")
+saBtn.Size = UDim2.new(1,0,1,0); saBtn.BackgroundTransparency = 1; saBtn.Text = ""; saBtn.Parent = saTrack
+local saOn = false
+saBtn.MouseButton1Click:Connect(function()
+    saOn = not saOn
+    Tw(saKnob, {
+        Position = saOn and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
+        BackgroundColor3 = saOn and Color3.new(1,1,1) or CFG.TxtMut
+    }, 0.18):Play()
+    Tw(saTrack, { BackgroundColor3 = saOn and CFG.Accent or CFG.Panel }, 0.18):Play()
+    Tw(saCard,  { Size = UDim2.new(1, 0, 0, saOn and SA_EXPD or COLL) }, 0.22):Play()
+end)
+
+-- ══════════════ СТРАНИЦЫ MM / EE ══════════════
 local pMM = NewPage("MM"); Title(pMM, "MM", "пустые слоты")
 Slot(pMM, "Slot M1"); Slot(pMM, "Slot M2"); Slot(pMM, "Slot M3")
 
 local pEE = NewPage("EE"); Title(pEE, "EE", "пустые слоты")
 Slot(pEE, "Slot E1"); Slot(pEE, "Slot E2"); Slot(pEE, "Slot E3")
 
--- ══════════════ СТРАНИЦА SS (цвета) ══════════════
+-- ══════════════ СТРАНИЦА SS ══════════════
 local pSS = NewPage("SS"); Title(pSS, "SS · Style", "цвет меню и ватермарка")
 
 local function ApplyAccent(col)
@@ -218,7 +477,6 @@ local function ApplyAccent(col)
         if t.active then Tw(t.btn, { BackgroundColor3 = col }, 0.2):Play() end
     end
 end
-
 local function ApplyWM(col)
     CFG.WMColor = col
     Tw(LIVE.WM.Stroke, { Color = col }, 0.2):Play()
@@ -236,18 +494,18 @@ local function ColorSection(titleTxt, applyFn, getCur)
     wrap.Size = UDim2.new(1, 0, 0, 132); wrap.BackgroundColor3 = CFG.Card
     wrap.BorderSizePixel = 0; wrap.Parent = pSS
     Corner(wrap, 10); Stroke(wrap, CFG.Sep, 1)
-    Lbl(wrap, titleTxt, UDim2.new(1, -20, 0, 18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0, 14, 0, 10)
+    Lbl(wrap, titleTxt, UDim2.new(1,-20,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,10)
 
     local preview = Instance.new("Frame")
-    preview.Size = UDim2.new(0, 26, 0, 14); preview.Position = UDim2.new(1, -42, 0, 12)
+    preview.Size = UDim2.new(0,26,0,14); preview.Position = UDim2.new(1,-42,0,12)
     preview.BackgroundColor3 = getCur(); preview.BorderSizePixel = 0; preview.Parent = wrap
     Corner(preview, 5)
 
     local grid = Instance.new("Frame")
-    grid.Size = UDim2.new(1, -28, 0, 40); grid.Position = UDim2.new(0, 14, 0, 36)
+    grid.Size = UDim2.new(1,-28,0,40); grid.Position = UDim2.new(0,14,0,36)
     grid.BackgroundTransparency = 1; grid.Parent = wrap
     local gl = Instance.new("UIGridLayout")
-    gl.CellSize = UDim2.new(0, 34, 0, 34); gl.CellPadding = UDim2.new(0, 8, 0, 8); gl.Parent = grid
+    gl.CellSize = UDim2.new(0,34,0,34); gl.CellPadding = UDim2.new(0,8,0,8); gl.Parent = grid
 
     for _, c in ipairs(PALETTE) do
         local col = Color3.fromHex(c[2])
@@ -257,13 +515,13 @@ local function ColorSection(titleTxt, applyFn, getCur)
         Corner(sw, 8); Stroke(sw, CFG.Sep, 1)
         sw.MouseButton1Click:Connect(function()
             applyFn(col); preview.BackgroundColor3 = col
-            Tw(sw, { Size = UDim2.new(0, 30, 0, 30) }, 0.08):Play()
-            task.delay(0.1, function() Tw(sw, { Size = UDim2.new(0, 34, 0, 34) }, 0.1):Play() end)
+            Tw(sw, { Size = UDim2.new(0,30,0,30) }, 0.08):Play()
+            task.delay(0.1, function() Tw(sw, { Size = UDim2.new(0,34,0,34) }, 0.1):Play() end)
         end)
     end
 
     local box = Instance.new("TextBox")
-    box.Size = UDim2.new(1, -28, 0, 28); box.Position = UDim2.new(0, 14, 0, 92)
+    box.Size = UDim2.new(1,-28,0,28); box.Position = UDim2.new(0,14,0,92)
     box.BackgroundColor3 = CFG.Panel; box.BorderSizePixel = 0
     box.PlaceholderText = "HEX (#5B6EF5)"; box.Text = ""
     box.TextColor3 = CFG.TxtPri; box.PlaceholderColor3 = CFG.TxtMut
@@ -271,16 +529,16 @@ local function ColorSection(titleTxt, applyFn, getCur)
     box.Parent = wrap
     Corner(box, 7); Stroke(box, CFG.Sep, 1)
     box.FocusLost:Connect(function()
-        local t = box.Text:gsub("%s", "")
-        if t:sub(1,1) ~= "#" then t = "#" .. t end
+        local t = box.Text:gsub("%s","")
+        if t:sub(1,1) ~= "#" then t = "#"..t end
         local ok, col = pcall(Color3.fromHex, t)
         if ok then applyFn(col); preview.BackgroundColor3 = col; box.Text = t:upper()
         else box.Text = "" end
     end)
 end
 
-ColorSection("Цвет меню",      ApplyAccent, function() return CFG.Accent  end)
-ColorSection("Цвет ватермарка", ApplyWM,    function() return CFG.WMColor end)
+ColorSection("Цвет меню",       ApplyAccent, function() return CFG.Accent  end)
+ColorSection("Цвет ватермарка", ApplyWM,     function() return CFG.WMColor end)
 
 -- ══════════════ ВКЛАДКИ ══════════════
 local function SwitchTab(name)
@@ -295,7 +553,7 @@ end
 
 for _, name in ipairs({ "AA", "MM", "EE", "SS" }) do
     local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, 0, 0, 38); b.BackgroundColor3 = CFG.TabOff
+    b.Size = UDim2.new(1,0,0,38); b.BackgroundColor3 = CFG.TabOff
     b.Text = name; b.TextColor3 = CFG.TxtSec
     b.Font = Enum.Font.GothamBold; b.TextSize = 14
     b.AutoButtonColor = false; b.Parent = TabBar
@@ -310,13 +568,13 @@ SwitchTab("AA")
 local isOpen = false
 local function OpenMenu()
     isOpen = true; Menu.Visible = true
-    Menu.Size = UDim2.new(0, CFG.MenuW * 0.9, 0, CFG.MenuH * 0.9)
+    Menu.Size = UDim2.new(0, CFG.MenuW*0.9, 0, CFG.MenuH*0.9)
     Menu.BackgroundTransparency = 1
-    Tw(Menu, { Size = UDim2.new(0, CFG.MenuW, 0, CFG.MenuH), BackgroundTransparency = 0 }, 0.28):Play()
+    Tw(Menu, { Size = UDim2.new(0,CFG.MenuW,0,CFG.MenuH), BackgroundTransparency = 0 }, 0.28):Play()
 end
 local function CloseMenu()
     isOpen = false
-    local t = Tw(Menu, { Size = UDim2.new(0, CFG.MenuW*0.9, 0, CFG.MenuH*0.9), BackgroundTransparency = 1 }, 0.2)
+    local t = Tw(Menu, { Size = UDim2.new(0,CFG.MenuW*0.9,0,CFG.MenuH*0.9), BackgroundTransparency = 1 }, 0.2)
     t:Play(); t.Completed:Wait(); Menu.Visible = false
 end
 wmBtn.MouseButton1Click:Connect(function()
@@ -334,20 +592,26 @@ end)
 local function MakeDrag(frame, handle)
     local dragging, startPos, startInput
     handle.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch then
             dragging = true; startInput = i.Position; startPos = frame.Position
-            i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then dragging = false end end)
+            i.Changed:Connect(function()
+                if i.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
         end
     end)
     UserInputService.InputChanged:Connect(function(i)
-        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
+        or i.UserInputType == Enum.UserInputType.Touch) then
             local d = i.Position - startInput
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y)
         end
     end)
 end
 MakeDrag(Menu, Head)
-MakeDrag(WM, WM)
+MakeDrag(WM,   WM)
 
 -- ══════════════ ПОЯВЛЕНИЕ ══════════════
 Tw(WM, { BackgroundTransparency = 0.15 }, 0.4):Play()

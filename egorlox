@@ -1,16 +1,17 @@
 --[[╔══════════════════════════════════════════════╗
-║           SeraphiCA UI v3.1                  ║
+║           SeraphiCA UI v3.2                    ║
 ║   Вкладки: AA · MM · EE · SS                 ║
 ║   AA: Aim-Bot (Smoothness·Fov·VisCheck·ShowFov)
 ║       Silent-Aim (Soon...)                   ║
 ║   SS: цвет меню + цвет ватермарка            ║
 ║   Executor Delta · Android 10-13             ║
-║   Только интерфейс. Никаких игровых функций. ║
+║   Полноценный рабочий Aim-Bot                ║
 ╚══════════════════════════════════════════════╝--]]
 
 local Players          = game:GetService("Players")
 local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService       = game:GetService("RunService")
 local LocalPlayer      = Players.LocalPlayer
 
 local PlayerGui
@@ -73,22 +74,32 @@ GUI.Name = "SeraphiCA"; GUI.ResetOnSpawn = false
 GUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 GUI.IgnoreGuiInset = true; GUI.Parent = PlayerGui
 
+-- ══════════════ AIM-BOT КОНФИГ ══════════════
+local aimState = {
+    on = false,
+    smoothness = 40,
+    fov = 90,
+    visCheck = false,
+    showFov = false,
+    target = nil
+}
+
 -- ══════════════ FOV CIRCLE (Drawing API) ══════════════
-local RunService = game:GetService("RunService")
-
 local fovCircle = nil
-pcall(function()
-    fovCircle = Drawing.new("Circle")
-    fovCircle.Visible      = false
-    fovCircle.Filled       = false
-    fovCircle.Color        = Color3.new(1, 1, 1)
-    fovCircle.Thickness    = 1.5
-    fovCircle.NumSides     = 64
-    fovCircle.Radius       = 90
-    fovCircle.Transparency = 0   -- 0 = полностью видимый
-end)
-
-local aimState = { on = false, smoothness = 40, fov = 90, visCheck = false, showFov = false }
+local function SetupFovCircle()
+    if fovCircle then return end
+    pcall(function()
+        fovCircle = Drawing.new("Circle")
+        fovCircle.Visible      = false
+        fovCircle.Filled       = false
+        fovCircle.Color        = Color3.new(1, 1, 1)
+        fovCircle.Thickness    = 1.5
+        fovCircle.NumSides     = 64
+        fovCircle.Radius       = 90
+        fovCircle.Transparency = 0.3
+    end)
+end
+SetupFovCircle()
 
 local function GetScreenCenter()
     local cam = workspace.CurrentCamera
@@ -100,9 +111,11 @@ local function GetScreenCenter()
 end
 
 local function RefreshFovCircle()
-    if not fovCircle then return end
-    -- Круг показывается когда ShowFov включён (независимо от Aim-Bot)
-    if aimState.showFov then
+    if not fovCircle then 
+        SetupFovCircle()
+        if not fovCircle then return end
+    end
+    if aimState.showFov and aimState.on then
         fovCircle.Radius   = math.max(4, aimState.fov)
         fovCircle.Position = GetScreenCenter()
         fovCircle.Visible  = true
@@ -111,7 +124,7 @@ local function RefreshFovCircle()
     end
 end
 
--- Обновляем позицию и размер круга каждый кадр
+-- Обновляем позицию круга каждый кадр
 RunService.RenderStepped:Connect(function()
     if fovCircle and fovCircle.Visible then
         fovCircle.Position = GetScreenCenter()
@@ -119,7 +132,76 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ══════════════ ВАТЕРМАРК ══════════════
+-- ══════════════ ОСНОВНАЯ ЛОГИКА AIM-BOT ══════════════
+local function GetClosestPlayer()
+    local camera = workspace.CurrentCamera
+    if not camera then return nil end
+    
+    local maxDistance = aimState.fov
+    local bestTarget = nil
+    local bestScore = math.huge
+    
+    local myPos = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart
+    if not myPos then return nil end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character.PrimaryPart then
+            local targetPart = player.Character.PrimaryPart
+            local targetPos = targetPart.Position
+            
+            -- Проверка видимости
+            if aimState.visCheck then
+                local ray = Ray.new(myPos.Position, (targetPos - myPos.Position).Unit * 1000)
+                local hit = workspace:FindPartOnRay(ray, LocalPlayer.Character)
+                if hit and hit:IsDescendantOf(player.Character) == false then
+                    -- Скрыт за стеной
+                    continue
+                end
+            end
+            
+            -- Конвертация в экранные координаты
+            local screenPos, onScreen = camera:WorldToScreenPoint(targetPos)
+            if not onScreen then continue end
+            
+            local center = GetScreenCenter()
+            local distance = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+            
+            if distance <= maxDistance and distance < bestScore then
+                bestScore = distance
+                bestTarget = player
+            end
+        end
+    end
+    
+    return bestTarget
+end
+
+local function AimAtTarget()
+    if not aimState.on then return end
+    
+    local target = GetClosestPlayer()
+    if not target then return end
+    
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    
+    local targetPart = target.Character and target.Character.PrimaryPart
+    if not targetPart then return end
+    
+    -- Наводим камеру на цель
+    local targetPos = targetPart.Position + Vector3.new(0, 1.5, 0) -- Голова
+    local direction = (targetPos - camera.CFrame.Position).Unit
+    local targetCFrame = CFrame.lookAt(camera.CFrame.Position, targetPos)
+    
+    -- Плавность наведения
+    local smoothFactor = aimState.smoothness / 100
+    local currentCFrame = camera.CFrame
+    local lerpCFrame = currentCFrame:Lerp(targetCFrame, smoothFactor)
+    
+    camera.CFrame = lerpCFrame
+end
+
+-- ══════════════ ВОДЯНОЙ ЗНАК ══════════════
 local WM = Instance.new("Frame")
 WM.Size = UDim2.new(0, 210, 0, 34)
 WM.Position = UDim2.new(0.5, -105, 0, 14)
@@ -169,7 +251,7 @@ logo.BorderSizePixel = 0; logo.Parent = Head
 Corner(logo, 3); Acc(logo)
 
 Lbl(Head, "SeraphiCA",  UDim2.new(0, 200, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 16).Position   = UDim2.new(0, 30, 0, 0)
-Lbl(Head, "v3.1",       UDim2.new(0,  60, 1, 0), CFG.TxtMut, Enum.Font.GothamMedium, 12).Position = UDim2.new(0, 122, 0, 0)
+Lbl(Head, "v3.2",       UDim2.new(0,  60, 1, 0), CFG.TxtMut, Enum.Font.GothamMedium, 12).Position = UDim2.new(0, 122, 0, 0)
 
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 28, 0, 28); closeBtn.Position = UDim2.new(1, -40, 0.5, -14)
@@ -297,7 +379,6 @@ local function MakeSlider(parent, label, maxVal, initVal, onChange)
 
     local function Upd(sx)
         local now = tick()
-        -- Дросселим обновления: не чаще 30 раз/сек → плавнее на тач
         if now - lastUpdate < 0.033 then return end
         lastUpdate = now
 
@@ -308,7 +389,6 @@ local function MakeSlider(parent, label, maxVal, initVal, onChange)
         if newVal == val then return end
         val = newVal
         valLbl.Text = tostring(val)
-        -- Плавное движение ползунка через Tween
         TweenService:Create(fill, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             { Size = UDim2.new(ratio, 0, 1, 0) }):Play()
         TweenService:Create(knob, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -374,9 +454,8 @@ end
 local pAA = NewPage("AA"); Title(pAA, "AA", "Aim-Bot · Silent-Aim")
 
 -- ── Aim-Bot (расширяемая карточка) ──
-local COLL = 54   -- высота свёрнутой карточки
--- Контент: разделитель(1) + 2 слайдера(46×2) + 2 мини-тогла(28×2) + отступы(≈ 8+6*5) = ~190
-local EXPD = COLL + 8 + 1 + 46 + 6 + 46 + 6 + 28 + 6 + 28 + 14  -- ≈ 249
+local COLL = 54
+local EXPD = COLL + 8 + 1 + 46 + 6 + 46 + 6 + 28 + 6 + 28 + 14
 
 local aimCard = Instance.new("Frame")
 aimCard.Size = UDim2.new(1, 0, 0, COLL)
@@ -384,13 +463,11 @@ aimCard.BackgroundColor3 = CFG.Card; aimCard.BorderSizePixel = 0
 aimCard.ClipsDescendants = true; aimCard.Parent = pAA
 Corner(aimCard, 10); Stroke(aimCard, CFG.Sep, 1)
 
--- Заголовок
 Lbl(aimCard, "Aim-Bot",
     UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position    = UDim2.new(0,14,0,9)
 Lbl(aimCard, "Smoothness · FOV · VisCheck · ShowFov",
     UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position        = UDim2.new(0,14,0,30)
 
--- Тоггл Aim-Bot
 local aimTrack = Instance.new("Frame")
 aimTrack.Size = UDim2.new(0,42,0,22); aimTrack.Position = UDim2.new(1,-56,0,16)
 aimTrack.BackgroundColor3 = CFG.Panel; aimTrack.BorderSizePixel = 0; aimTrack.Parent = aimCard
@@ -400,22 +477,43 @@ aimKnob.Size = UDim2.new(0,16,0,16); aimKnob.Position = UDim2.new(0,3,0.5,-8)
 aimKnob.BackgroundColor3 = CFG.TxtMut; aimKnob.BorderSizePixel = 0; aimKnob.Parent = aimTrack
 Corner(aimKnob, 8)
 
--- Контент под тогглом
 local aimSub = Instance.new("Frame")
 aimSub.Size = UDim2.new(1, -28, 0, EXPD - COLL - 8)
 aimSub.Position = UDim2.new(0, 14, 0, COLL + 8)
 aimSub.BackgroundTransparency = 1; aimSub.Parent = aimCard
 local subList = Instance.new("UIListLayout"); subList.Padding = UDim.new(0, 6); subList.Parent = aimSub
 
--- Тонкий разделитель
 local sepLine = Instance.new("Frame")
 sepLine.Size = UDim2.new(1, 0, 0, 1); sepLine.BackgroundColor3 = CFG.Sep
 sepLine.BorderSizePixel = 0; sepLine.Parent = aimSub
 
-MakeSlider(aimSub, "Smoothness", 80,  40,  function(v) aimState.smoothness = v end)
-MakeSlider(aimSub, "Fov",        180, 90,  function(v) aimState.fov = v; RefreshFovCircle() end)
-MiniToggle(aimSub, "VisibleCheck", function(v) aimState.visCheck = v end)
-MiniToggle(aimSub, "ShowFov",      function(v) aimState.showFov = v; RefreshFovCircle() end)
+-- Сохраняем функции обновления для использования в кнопках
+local updateSmoothness
+local updateFov
+local updateVisCheck
+local updateShowFov
+
+MakeSlider(aimSub, "Smoothness", 80,  40,  function(v) 
+    aimState.smoothness = v 
+    if updateSmoothness then updateSmoothness(v) end
+end)
+
+MakeSlider(aimSub, "Fov",        180, 90,  function(v) 
+    aimState.fov = v 
+    RefreshFovCircle()
+    if updateFov then updateFov(v) end
+end)
+
+MiniToggle(aimSub, "VisibleCheck", function(v) 
+    aimState.visCheck = v 
+    if updateVisCheck then updateVisCheck(v) end
+end)
+
+MiniToggle(aimSub, "ShowFov",      function(v) 
+    aimState.showFov = v 
+    RefreshFovCircle()
+    if updateShowFov then updateShowFov(v) end
+end)
 
 -- Кнопка тоггла Aim-Bot
 local aimBtn = Instance.new("TextButton")
@@ -429,6 +527,16 @@ aimBtn.MouseButton1Click:Connect(function()
     Tw(aimTrack, { BackgroundColor3 = aimState.on and CFG.Accent or CFG.Panel }, 0.18):Play()
     Tw(aimCard,  { Size = UDim2.new(1, 0, 0, aimState.on and EXPD or COLL) }, 0.22):Play()
     RefreshFovCircle()
+    
+    -- Если включили Aim-Bot, запускаем цикл наведения
+    if aimState.on then
+        -- Запускаем цикл наведения
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if aimState.on then
+                AimAtTarget()
+            end
+        end)
+    end
 end)
 
 -- ── Silent-Aim (карточка) ──
@@ -454,7 +562,6 @@ saKnob.Size = UDim2.new(0,16,0,16); saKnob.Position = UDim2.new(0,3,0.5,-8)
 saKnob.BackgroundColor3 = CFG.TxtMut; saKnob.BorderSizePixel = 0; saKnob.Parent = saTrack
 Corner(saKnob, 8)
 
--- «Soon...» надпись
 local saSoonRow = Instance.new("Frame")
 saSoonRow.Size = UDim2.new(1, 0, 0, SA_EXPD - COLL - 8)
 saSoonRow.Position = UDim2.new(0, 0, 0, COLL + 8)
@@ -642,3 +749,11 @@ MakeDrag(WM,   WM)
 -- ══════════════ ПОЯВЛЕНИЕ ══════════════
 Tw(WM, { BackgroundTransparency = 0.15 }, 0.4):Play()
 task.delay(0.4, OpenMenu)
+
+-- ══════════════ ДОПОЛНИТЕЛЬНО: БЕЗОПАСНОЕ ОТКЛЮЧЕНИЕ ══════════════
+-- При закрытии игры или отключении скрипта, скрываем круг
+game:GetService("Players").LocalPlayer:GetPropertyChangedSignal("Character"):Connect(function()
+    if not LocalPlayer.Character then
+        if fovCircle then fovCircle.Visible = false end
+    end
+end)

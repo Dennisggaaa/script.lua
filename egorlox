@@ -79,10 +79,11 @@ GUI.IgnoreGuiInset = true; GUI.Parent = PlayerGui
 -- ══════════════ AIM-BOT КОНФИГ ══════════════
 local aimState = {
     on = false,
-    smoothness = 40,
+    smoothness = 8,
     fov = 90,
-    visCheck = false,
+    visCheck = true,
     showFov = false,
+    prediction = true,
 }
 
 -- ══════════════ MM КОНФИГ ══════════════
@@ -160,6 +161,34 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- ══════════════ ПРОВЕРКА ТИММЕЙТОВ ══════════════
+local function IsTeammate(player)
+    if not LocalPlayer or not player then return false end
+    
+    -- Проверка через Team
+    if LocalPlayer.Team and player.Team then
+        return LocalPlayer.Team == player.Team
+    end
+    
+    -- Проверка через TeamColor
+    if LocalPlayer.TeamColor and player.TeamColor then
+        return LocalPlayer.TeamColor == player.TeamColor
+    end
+    
+    -- Проверка через атрибуты персонажа (для BloxStrike)
+    local myChar = LocalPlayer.Character
+    local theirChar = player.Character
+    if myChar and theirChar then
+        local myTeam = myChar:GetAttribute("Team") or myChar:GetAttribute("team")
+        local theirTeam = theirChar:GetAttribute("Team") or theirChar:GetAttribute("team")
+        if myTeam and theirTeam then
+            return myTeam == theirTeam
+        end
+    end
+    
+    return false
+end
+
 -- ══════════════ AIM-BOT ЛОГИКА ══════════════
 local function GetClosestPlayer()
     local camera = workspace.CurrentCamera
@@ -169,36 +198,61 @@ local function GetClosestPlayer()
     local bestTarget = nil
     local bestScore = math.huge
     
-    local myPos = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart
+    local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myPos then return nil end
     
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character.PrimaryPart then
-            local targetPart = player.Character.PrimaryPart
-            local targetPos = targetPart.Position
+        if player ~= LocalPlayer and player.Character and not IsTeammate(player) then
+            local char = player.Character
+            local targetPart = char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
             
-            if aimState.visCheck then
-                local ray = Ray.new(myPos.Position, (targetPos - myPos.Position).Unit * 1000)
-                local hit = workspace:FindPartOnRay(ray, LocalPlayer.Character)
-                if hit and not hit:IsDescendantOf(player.Character) then
-                    continue
+            if targetPart and humanoid and humanoid.Health > 0 then
+                local targetPos = targetPart.Position + Vector3.new(0, 1.5, 0)
+                
+                if aimState.visCheck then
+                    local rayParams = RaycastParams.new()
+                    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                    rayParams.FilterDescendantsInstances = {LocalPlayer.Character, camera}
+                    
+                    local direction = (targetPos - myPos.Position).Unit * 1000
+                    local result = workspace:Raycast(myPos.Position, direction, rayParams)
+                    
+                    if result and not result.Instance:IsDescendantOf(char) then
+                        continue
+                    end
                 end
-            end
-            
-            local screenPos, onScreen = camera:WorldToScreenPoint(targetPos)
-            if not onScreen then continue end
-            
-            local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-            local distance = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-            
-            if distance <= maxDistance and distance < bestScore then
-                bestScore = distance
-                bestTarget = player
+                
+                local screenPos, onScreen = camera:WorldToScreenPoint(targetPos)
+                if not onScreen then continue end
+                
+                local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                
+                if distance <= maxDistance and distance < bestScore then
+                    bestScore = distance
+                    bestTarget = player
+                end
             end
         end
     end
     
     return bestTarget
+end
+
+local function PredictPosition(targetPart, velocity)
+    if not aimState.prediction then return targetPart.Position + Vector3.new(0, 1.5, 0) end
+    
+    local camera = workspace.CurrentCamera
+    if not camera then return targetPart.Position + Vector3.new(0, 1.5, 0) end
+    
+    local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myPos then return targetPart.Position + Vector3.new(0, 1.5, 0) end
+    
+    local distance = (targetPart.Position - myPos.Position).Magnitude
+    local travelTime = distance / 1000 -- предполагаемая скорость пули
+    
+    return targetPart.Position + velocity * travelTime + Vector3.new(0, 1.5, 0)
 end
 
 local function AimAtTarget()
@@ -210,13 +264,16 @@ local function AimAtTarget()
     local camera = workspace.CurrentCamera
     if not camera then return end
     
-    local targetPart = target.Character and target.Character.PrimaryPart
-    if not targetPart then return end
+    local targetChar = target.Character
+    local targetPart = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    local targetHumanoid = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+    if not targetPart or not targetHumanoid then return end
     
-    local targetPos = targetPart.Position + Vector3.new(0, 1.5, 0)
-    local targetCFrame = CFrame.lookAt(camera.CFrame.Position, targetPos)
+    local targetVelocity = targetPart.Velocity
+    local predictedPos = PredictPosition(targetPart, targetVelocity)
+    local targetCFrame = CFrame.lookAt(camera.CFrame.Position, predictedPos)
     
-    local smoothFactor = math.min(aimState.smoothness / 100, 0.95)
+    local smoothFactor = math.min(1 - (aimState.smoothness / 100), 0.95)
     local currentCFrame = camera.CFrame
     local lerpCFrame = currentCFrame:Lerp(targetCFrame, smoothFactor)
     
@@ -279,35 +336,31 @@ local function UpdateEspBoxes()
     if not camera then return end
     
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
+        if player ~= LocalPlayer and player.Character and not IsTeammate(player) then
             local char = player.Character
             local rootPart = char:FindFirstChild("HumanoidRootPart")
             local humanoid = char:FindFirstChildOfClass("Humanoid")
             
-            if rootPart and humanoid then
-                local rootPos = rootPart.Position
+            if rootPart and humanoid and humanoid.Health > 0 then
+                -- Получаем размеры персонажа
+                local charSize = char:GetExtentsSize()
+                local headPos = rootPart.Position + Vector3.new(0, charSize.Y, 0)
+                local feetPos = rootPart.Position - Vector3.new(0, charSize.Y * 0.1, 0)
                 
-                -- Получаем реальные размеры персонажа
-                local height = humanoid.HipHeight or 2
-                local headPos = rootPos + Vector3.new(0, height, 0)
-                local feetPos = rootPos - Vector3.new(0, height * 0.5, 0)
-                
-                -- Проверяем видимость
                 local headScreen, headOnScreen = camera:WorldToScreenPoint(headPos)
                 local feetScreen, feetOnScreen = camera:WorldToScreenPoint(feetPos)
                 
                 if headOnScreen and feetOnScreen then
                     local boxHeight = math.abs(feetScreen.Y - headScreen.Y)
                     
-                    -- Пропускаем слишком далеких
-                    if boxHeight < 5 then
+                    if boxHeight < 10 then
                         if espBoxes[player] then
                             espBoxes[player].container.Visible = false
                         end
                         continue
                     end
                     
-                    local boxWidth = boxHeight * 0.4
+                    local boxWidth = boxHeight * 0.45
                     local centerX = (headScreen.X + feetScreen.X) / 2
                     local topY = math.min(headScreen.Y, feetScreen.Y)
                     
@@ -333,8 +386,7 @@ local function UpdateEspBoxes()
             end
         else
             if espBoxes[player] then
-                espBoxes[player].container:Destroy()
-                espBoxes[player] = nil
+                espBoxes[player].container.Visible = false
             end
         end
     end
@@ -350,12 +402,14 @@ end
 
 -- Chams (подсветка через стены)
 local function ApplyChams(player)
-    if not player.Character then return end
+    if not player.Character or IsTeammate(player) then return end
     
     -- Удаляем старые чамсы
     if chamsObjects[player] then
         for _, obj in ipairs(chamsObjects[player]) do
-            obj:Destroy()
+            if obj and obj.Parent then
+                obj:Destroy()
+            end
         end
         chamsObjects[player] = nil
     end
@@ -365,24 +419,19 @@ local function ApplyChams(player)
     local char = player.Character
     local chamsList = {}
     
-    -- Обрабатываем все части тела
+    -- Обрабатываем только основные части тела
     for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-            -- Создаем копию части с эффектом свечения
-            local clone = part:Clone()
-            clone.Parent = char
-            clone.Name = "Chams_" .. part.Name
-            clone.Transparency = 0.3
-            clone.Material = Enum.Material.Neon
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" and not part.Name:find("Chams_") then
+            local highlight = Instance.new("Highlight")
+            highlight.Parent = part
+            highlight.FillColor = espState.color
+            highlight.FillTransparency = 0.7
+            highlight.OutlineColor = espState.color
+            highlight.OutlineTransparency = 0
+            highlight.Adornee = part
+            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
             
-            -- Устанавливаем цвет
-            clone.Color = espState.color
-            
-            -- Делаем видимым через стены
-            clone.CanCollide = false
-            clone.CastShadow = false
-            
-            table.insert(chamsList, clone)
+            table.insert(chamsList, highlight)
         end
     end
     
@@ -393,20 +442,29 @@ end
 local function RemoveChams(player)
     if chamsObjects[player] then
         for _, obj in ipairs(chamsObjects[player]) do
-            obj:Destroy()
+            if obj and obj.Parent then
+                obj:Destroy()
+            end
         end
         chamsObjects[player] = nil
     end
 end
 
--- Обновление чамсов
+-- Обновление чамсов (применяется один раз)
+local chamsApplied = {}
 local function UpdateChams()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            if espState.on and espState.chams and player.Character then
-                ApplyChams(player)
+            if espState.on and espState.chams and player.Character and not IsTeammate(player) then
+                if not chamsApplied[player] then
+                    ApplyChams(player)
+                    chamsApplied[player] = true
+                end
             else
-                RemoveChams(player)
+                if chamsApplied[player] then
+                    RemoveChams(player)
+                    chamsApplied[player] = nil
+                end
             end
         end
     end
@@ -433,8 +491,9 @@ local function StartEspLoop()
             for _, data in pairs(espBoxes) do
                 data.container.Visible = false
             end
-            for player, _ in pairs(chamsObjects) do
+            for player, _ in pairs(chamsApplied) do
                 RemoveChams(player)
+                chamsApplied[player] = nil
             end
         end
     end)
@@ -443,79 +502,173 @@ StartEspLoop()
 
 -- ══════════════ MM ФУНКЦИИ ══════════════
 -- WallShot - стрельба через стены
+local wallShotApplied = false
 local function ApplyWallShot()
-    if not mmState.wallShot then return end
-    
-    -- Находим оружие
-    local char = LocalPlayer.Character
-    if not char then return end
-    
-    local tool = char:FindFirstChildOfClass("Tool")
-    if not tool then return end
-    
-    -- Ищем обработчик выстрела
-    for _, script in ipairs(tool:GetDescendants()) do
-        if script:IsA("Script") or script:IsA("LocalScript") then
-            -- Модифицируем Raycast для игнорирования стен
-            pcall(function()
-                local old = script.Disabled
-                script.Disabled = false
-                -- Здесь можно добавить модификацию параметров выстрела
-            end)
-        end
+    if not mmState.wallShot then
+        wallShotApplied = false
+        return
     end
-end
-
--- Infinity Ammo
-local function ApplyInfAmmo()
-    if not mmState.infAmmo then return end
+    
+    if wallShotApplied then return end
+    wallShotApplied = true
     
     local char = LocalPlayer.Character
     if not char then return end
     
-    local tool = char:FindFirstChildOfClass("Tool")
-    if not tool then return end
-    
-    -- Ищем переменные патронов
-    for _, obj in ipairs(tool:GetDescendants()) do
-        if obj:IsA("IntValue") or obj:IsA("NumberValue") then
-            if obj.Name:lower():find("ammo") or obj.Name:lower():find("bullet") then
-                obj.Value = 999
+    -- Ищем оружие и модифицируем его
+    for _, tool in ipairs(char:GetChildren()) do
+        if tool:IsA("Tool") then
+            -- Модифицируем скрипты оружия
+            for _, script in ipairs(tool:GetDescendants()) do
+                if script:IsA("LocalScript") or script:IsA("Script") then
+                    pcall(function()
+                        -- Ищем функции связанные с raycast
+                        local source = script.Source
+                        if source:find("RaycastParams") or source:find("raycast") or source:find("Raycast") then
+                            -- Добавляем модификацию для игнорирования стен
+                            local newSource = source:gsub("RaycastParams%.new%(%)", "RaycastParams.new(); params.FilterDescendantsInstances = {workspace.Terrain}; params.FilterType = Enum.RaycastFilterType.Exclude")
+                            script.Source = newSource
+                        end
+                    end)
+                end
             end
         end
     end
 end
 
--- RapidFire
-local function ApplyRapidFire()
-    if not mmState.rapidFire then return end
-    
-    local char = LocalPlayer.Character
-    if not char then return end
-    
-    local tool = char:FindFirstChildOfClass("Tool")
-    if not tool then return end
-    
-    -- Ускоряем анимацию и задержки
-    for _, animator in ipairs(tool:GetDescendants()) do
-        if animator:IsA("Animation") then
-            animator:Stop()
+-- Infinity Ammo
+local infAmmoConnection
+local function ApplyInfAmmo()
+    if not mmState.infAmmo then
+        if infAmmoConnection then
+            infAmmoConnection:Disconnect()
+            infAmmoConnection = nil
         end
+        return
     end
+    
+    if infAmmoConnection then return end
+    
+    infAmmoConnection = RunService.Heartbeat:Connect(function()
+        if not mmState.infAmmo then
+            if infAmmoConnection then
+                infAmmoConnection:Disconnect()
+                infAmmoConnection = nil
+            end
+            return
+        end
+        
+        local char = LocalPlayer.Character
+        if not char then return end
+        
+        -- Ищем значения патронов в инструментах
+        for _, tool in ipairs(char:GetChildren()) do
+            if tool:IsA("Tool") then
+                -- Ищем IntValue/NumberValue с ammo/bullet
+                for _, obj in ipairs(tool:GetDescendants()) do
+                    if obj:IsA("IntValue") or obj:IsA("NumberValue") then
+                        local name = obj.Name:lower()
+                        if name:find("ammo") or name:find("bullet") or name:find("clip") or name:find("magazine") then
+                            if obj.Value < 999 then
+                                obj.Value = 999
+                            end
+                        end
+                    end
+                end
+                
+                -- Ищем атрибуты
+                local ammo = tool:GetAttribute("Ammo") or tool:GetAttribute("ammo")
+                if ammo and ammo < 999 then
+                    tool:SetAttribute("Ammo", 999)
+                end
+            end
+        end
+    end)
+end
+
+-- RapidFire
+local rapidFireConnection
+local function ApplyRapidFire()
+    if not mmState.rapidFire then
+        if rapidFireConnection then
+            rapidFireConnection:Disconnect()
+            rapidFireConnection = nil
+        end
+        return
+    end
+    
+    if rapidFireConnection then return end
+    
+    rapidFireConnection = RunService.Heartbeat:Connect(function()
+        if not mmState.rapidFire then
+            if rapidFireConnection then
+                rapidFireConnection:Disconnect()
+                rapidFireConnection = nil
+            end
+            return
+        end
+        
+        local char = LocalPlayer.Character
+        if not char then return end
+        
+        -- Ищем оружие
+        local tool = char:FindFirstChildOfClass("Tool")
+        if not tool then return end
+        
+        -- Модифицируем fire rate через атрибуты
+        local fireRate = tool:GetAttribute("FireRate") or tool:GetAttribute("firerate")
+        if fireRate and fireRate > 0.1 then
+            tool:SetAttribute("FireRate", 0.05)
+        end
+        
+        local cooldown = tool:GetAttribute("Cooldown") or tool:GetAttribute("cooldown")
+        if cooldown and cooldown > 0.1 then
+            tool:SetAttribute("Cooldown", 0.05)
+        end
+        
+        -- Модифицируем значения в скриптах
+        for _, obj in ipairs(tool:GetDescendants()) do
+            if obj:IsA("NumberValue") or obj:IsA("IntValue") then
+                local name = obj.Name:lower()
+                if name:find("cooldown") or name:find("delay") or name:find("firerate") then
+                    if obj.Value > 0.1 then
+                        obj.Value = 0.05
+                    end
+                end
+            end
+        end
+    end)
 end
 
 -- NoRecoil
+local noRecoilConnection
+local savedCameraCFrame
 local function ApplyNoRecoil()
-    if not mmState.noRecoil then return end
+    if not mmState.noRecoil then
+        if noRecoilConnection then
+            noRecoilConnection:Disconnect()
+            noRecoilConnection = nil
+        end
+        savedCameraCFrame = nil
+        return
+    end
     
-    local camera = workspace.CurrentCamera
-    if not camera then return end
+    if noRecoilConnection then return end
     
-    -- Замораживаем отдачу камеры
-    local oldCFrame = camera.CFrame
-    RunService.RenderStepped:Connect(function()
-        if mmState.noRecoil then
-            camera.CFrame = oldCFrame
+    savedCameraCFrame = workspace.CurrentCamera.CFrame
+    
+    noRecoilConnection = RunService.RenderStepped:Connect(function()
+        if not mmState.noRecoil then
+            if noRecoilConnection then
+                noRecoilConnection:Disconnect()
+                noRecoilConnection = nil
+            end
+            savedCameraCFrame = nil
+            return
+        end
+        
+        if savedCameraCFrame then
+            workspace.CurrentCamera.CFrame = savedCameraCFrame
         end
     end)
 end
@@ -830,7 +983,7 @@ local sepLine = Instance.new("Frame")
 sepLine.Size = UDim2.new(1, 0, 0, 1); sepLine.BackgroundColor3 = CFG.Sep
 sepLine.BorderSizePixel = 0; sepLine.Parent = aimSub
 
-MakeSlider(aimSub, "Smoothness", 80,  40,  function(v) aimState.smoothness = v end)
+MakeSlider(aimSub, "Smoothness", 20,  8,  function(v) aimState.smoothness = v end)
 MakeSlider(aimSub, "Fov",        180, 90,  function(v) aimState.fov = v; RefreshFovCircle() end)
 MiniToggle(aimSub, "VisibleCheck", function(v) aimState.visCheck = v end)
 MiniToggle(aimSub, "ShowFov",      function(v) aimState.showFov = v; RefreshFovCircle() end)
@@ -935,22 +1088,22 @@ mmSepLine.BorderSizePixel = 0; mmSepLine.Parent = mmSub
 
 MiniToggle(mmSub, "WallShot", function(v)
     mmState.wallShot = v
-    if v then ApplyWallShot() end
+    ApplyWallShot()
 end)
 
 MiniToggle(mmSub, "Infinity Ammo", function(v)
     mmState.infAmmo = v
-    if v then ApplyInfAmmo() end
+    ApplyInfAmmo()
 end)
 
 MiniToggle(mmSub, "RapidFire", function(v)
     mmState.rapidFire = v
-    if v then ApplyRapidFire() end
+    ApplyRapidFire()
 end)
 
 MiniToggle(mmSub, "NoRecoil", function(v)
     mmState.noRecoil = v
-    if v then ApplyNoRecoil() end
+    ApplyNoRecoil()
 end)
 
 local mmBtn = Instance.new("TextButton")
@@ -1008,8 +1161,9 @@ end)
 MiniToggle(espSub, "Chams", function(v)
     espState.chams = v
     if not v then
-        for player, _ in pairs(chamsObjects) do
+        for player, _ in pairs(chamsApplied) do
             RemoveChams(player)
+            chamsApplied[player] = nil
         end
     end
 end)
@@ -1191,8 +1345,9 @@ game:GetService("Players").LocalPlayer:GetPropertyChangedSignal("Character"):Con
         for _, data in pairs(espBoxes) do
             data.container.Visible = false
         end
-        for player, _ in pairs(chamsObjects) do
+        for player, _ in pairs(chamsApplied) do
             RemoveChams(player)
+            chamsApplied[player] = nil
         end
     end
 end)
@@ -1204,8 +1359,9 @@ game:GetService("RunService").Heartbeat:Connect(function()
             data.container:Destroy()
         end
         espBoxes = {}
-        for player, _ in pairs(chamsObjects) do
+        for player, _ in pairs(chamsApplied) do
             RemoveChams(player)
+            chamsApplied[player] = nil
         end
     end
 end)

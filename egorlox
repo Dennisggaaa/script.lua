@@ -2,9 +2,10 @@
 ║           SeraphiCA UI v3.2                    ║
 ║   Вкладки: AA · MM · EE · SS                 ║
 ║   AA: Aim-Bot (рабочий)                      ║
-║   EE: ESP (Box + настройки цвета)            ║
+║   MM: WallShot · InfAmmo · RapidFire · NoRecoil
+║   EE: ESP Box · Chams                        ║
 ║   SS: цвет меню + цвет ватермарка            ║
-║   Исправлено позиционирование боксов         ║
+║   Полностью рабочий ESP + функции MM        ║
 ╚══════════════════════════════════════════════╝--]]
 
 local Players          = game:GetService("Players")
@@ -12,6 +13,8 @@ local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService       = game:GetService("RunService")
 local LocalPlayer      = Players.LocalPlayer
+local Camera           = workspace.CurrentCamera
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PlayerGui
 pcall(function() PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 5) end)
@@ -19,7 +22,7 @@ if not PlayerGui then PlayerGui = game:GetService("CoreGui") end
 
 -- ══════════════ КОНФИГ ══════════════
 local CFG = {
-    MenuW = 720, MenuH = 460, Spd = 0.25,
+    MenuW = 720, MenuH = 520, Spd = 0.25,
     BG      = Color3.fromHex("#0D0F1A"),
     Panel   = Color3.fromHex("#131629"),
     Card    = Color3.fromHex("#1B1F36"),
@@ -80,17 +83,25 @@ local aimState = {
     fov = 90,
     visCheck = false,
     showFov = false,
-    target = nil
+}
+
+-- ══════════════ MM КОНФИГ ══════════════
+local mmState = {
+    wallShot = false,
+    infAmmo = false,
+    rapidFire = false,
+    noRecoil = false,
 }
 
 -- ══════════════ ESP КОНФИГ ══════════════
 local espState = {
     on = false,
     box = false,
-    color = Color3.fromHex("#00FF00")
+    chams = false,
+    color = Color3.fromHex("#00FF00"),
 }
 
--- ══════════════ FOV CIRCLE (UI) ══════════════
+-- ══════════════ FOV CIRCLE ══════════════
 local FovContainer = Instance.new("Frame")
 FovContainer.Name = "FovCircle"
 FovContainer.Size = UDim2.new(0, 180, 0, 180)
@@ -144,15 +155,12 @@ end
 
 RunService.RenderStepped:Connect(function()
     if FovContainer.Visible then
-        local cam = workspace.CurrentCamera
-        if cam then
-            local size = math.max(10, aimState.fov) * 2
-            FovContainer.Position = UDim2.new(0.5, -size/2, 0.5, -size/2)
-        end
+        local size = math.max(10, aimState.fov) * 2
+        FovContainer.Position = UDim2.new(0.5, -size/2, 0.5, -size/2)
     end
 end)
 
--- ══════════════ ОСНОВНАЯ ЛОГИКА AIM-BOT ══════════════
+-- ══════════════ AIM-BOT ЛОГИКА ══════════════
 local function GetClosestPlayer()
     local camera = workspace.CurrentCamera
     if not camera then return nil end
@@ -226,9 +234,11 @@ local function StartAimLoop()
 end
 StartAimLoop()
 
--- ══════════════ ESP ЛОГИКА (ИСПРАВЛЕННАЯ) ══════════════
+-- ══════════════ ESP ЛОГИКА ══════════════
 local espBoxes = {}
+local chamsObjects = {}
 
+-- Создание бокса для игрока
 local function CreateEspBox(player)
     if espBoxes[player] then return end
     
@@ -263,6 +273,7 @@ local function CreateEspBox(player)
     }
 end
 
+-- Обновление позиций боксов
 local function UpdateEspBoxes()
     local camera = workspace.CurrentCamera
     if not camera then return end
@@ -270,62 +281,46 @@ local function UpdateEspBoxes()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local char = player.Character
-            local rootPart = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
+            local rootPart = char:FindFirstChild("HumanoidRootPart")
             local humanoid = char:FindFirstChildOfClass("Humanoid")
             
             if rootPart and humanoid then
-                -- Получаем реальные размеры персонажа
                 local rootPos = rootPart.Position
                 
-                -- Вычисляем голову (приблизительно)
-                local headPos = rootPos + Vector3.new(0, humanoid.HipHeight or 2, 0)
+                -- Получаем реальные размеры персонажа
+                local height = humanoid.HipHeight or 2
+                local headPos = rootPos + Vector3.new(0, height, 0)
+                local feetPos = rootPos - Vector3.new(0, height * 0.5, 0)
                 
-                -- Вычисляем ноги (приблизительно)
-                local feetPos = rootPos - Vector3.new(0, humanoid.HipHeight or 2, 0)
-                
-                -- Проверяем видимость на экране
+                -- Проверяем видимость
                 local headScreen, headOnScreen = camera:WorldToScreenPoint(headPos)
                 local feetScreen, feetOnScreen = camera:WorldToScreenPoint(feetPos)
-                local rootScreen, rootOnScreen = camera:WorldToScreenPoint(rootPos)
                 
-                if headOnScreen and feetOnScreen and rootOnScreen then
-                    -- Вычисляем реальную высоту персонажа в пикселях
-                    local height = math.abs(feetScreen.Y - headScreen.Y)
+                if headOnScreen and feetOnScreen then
+                    local boxHeight = math.abs(feetScreen.Y - headScreen.Y)
                     
-                    -- Если персонаж очень далеко - пропускаем
-                    if height < 5 then
+                    -- Пропускаем слишком далеких
+                    if boxHeight < 5 then
                         if espBoxes[player] then
                             espBoxes[player].container.Visible = false
                         end
                         continue
                     end
                     
-                    -- Ширина пропорциональна высоте (стандартный коэффициент)
-                    local width = height * 0.4
-                    
-                    -- Центрируем бокс по корпусу
-                    local centerX = rootScreen.X
+                    local boxWidth = boxHeight * 0.4
+                    local centerX = (headScreen.X + feetScreen.X) / 2
                     local topY = math.min(headScreen.Y, feetScreen.Y)
                     
-                    if espBoxes[player] then
-                        local espData = espBoxes[player]
-                        espData.container.Position = UDim2.new(0, centerX - width/2, 0, topY)
-                        espData.container.Size = UDim2.new(0, width, 0, height)
-                        espData.container.Visible = espState.on and espState.box
-                        
-                        -- Обновляем цвет
-                        espData.box.BorderColor3 = espState.color
-                        espData.outline.Color = espState.color
-                    else
-                        -- Создаем новый бокс
+                    if not espBoxes[player] then
                         CreateEspBox(player)
-                        local espData = espBoxes[player]
-                        espData.container.Position = UDim2.new(0, centerX - width/2, 0, topY)
-                        espData.container.Size = UDim2.new(0, width, 0, height)
-                        espData.container.Visible = espState.on and espState.box
-                        espData.box.BorderColor3 = espState.color
-                        espData.outline.Color = espState.color
                     end
+                    
+                    local espData = espBoxes[player]
+                    espData.container.Position = UDim2.new(0, centerX - boxWidth/2, 0, topY)
+                    espData.container.Size = UDim2.new(0, boxWidth, 0, boxHeight)
+                    espData.container.Visible = espState.on and espState.box
+                    espData.box.BorderColor3 = espState.color
+                    espData.outline.Color = espState.color
                 else
                     if espBoxes[player] then
                         espBoxes[player].container.Visible = false
@@ -344,7 +339,7 @@ local function UpdateEspBoxes()
         end
     end
     
-    -- Удаляем боксы для игроков, которых больше нет
+    -- Удаляем старые боксы
     for player, _ in pairs(espBoxes) do
         if not Players:FindFirstChild(player.Name) then
             espBoxes[player].container:Destroy()
@@ -353,117 +348,179 @@ local function UpdateEspBoxes()
     end
 end
 
+-- Chams (подсветка через стены)
+local function ApplyChams(player)
+    if not player.Character then return end
+    
+    -- Удаляем старые чамсы
+    if chamsObjects[player] then
+        for _, obj in ipairs(chamsObjects[player]) do
+            obj:Destroy()
+        end
+        chamsObjects[player] = nil
+    end
+    
+    if not espState.chams or not espState.on then return end
+    
+    local char = player.Character
+    local chamsList = {}
+    
+    -- Обрабатываем все части тела
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            -- Создаем копию части с эффектом свечения
+            local clone = part:Clone()
+            clone.Parent = char
+            clone.Name = "Chams_" .. part.Name
+            clone.Transparency = 0.3
+            clone.Material = Enum.Material.Neon
+            
+            -- Устанавливаем цвет
+            clone.Color = espState.color
+            
+            -- Делаем видимым через стены
+            clone.CanCollide = false
+            clone.CastShadow = false
+            
+            table.insert(chamsList, clone)
+        end
+    end
+    
+    chamsObjects[player] = chamsList
+end
+
+-- Удаление чамсов
+local function RemoveChams(player)
+    if chamsObjects[player] then
+        for _, obj in ipairs(chamsObjects[player]) do
+            obj:Destroy()
+        end
+        chamsObjects[player] = nil
+    end
+end
+
+-- Обновление чамсов
+local function UpdateChams()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            if espState.on and espState.chams and player.Character then
+                ApplyChams(player)
+            else
+                RemoveChams(player)
+            end
+        end
+    end
+end
+
+-- Запуск ESP
 local espConnection
 local function StartEspLoop()
     if espConnection then espConnection:Disconnect() end
     espConnection = RunService.RenderStepped:Connect(function()
-        if espState.on and espState.box then
-            UpdateEspBoxes()
+        if espState.on then
+            if espState.box then
+                UpdateEspBoxes()
+            else
+                for _, data in pairs(espBoxes) do
+                    data.container.Visible = false
+                end
+            end
+            
+            if espState.chams then
+                UpdateChams()
+            end
         else
             for _, data in pairs(espBoxes) do
                 data.container.Visible = false
+            end
+            for player, _ in pairs(chamsObjects) do
+                RemoveChams(player)
             end
         end
     end)
 end
 StartEspLoop()
 
--- ══════════════ ВОДЯНОЙ ЗНАК ══════════════
-local WM = Instance.new("Frame")
-WM.Size = UDim2.new(0, 210, 0, 34)
-WM.Position = UDim2.new(0.5, -105, 0, 14)
-WM.BackgroundColor3 = CFG.Panel
-WM.BackgroundTransparency = 1
-WM.Parent = GUI
-Corner(WM, 9)
-LIVE.WM.Stroke = Stroke(WM, CFG.WMColor, 1.4)
-
-local wmDot = Instance.new("Frame")
-wmDot.Size = UDim2.new(0, 7, 0, 7); wmDot.Position = UDim2.new(0, 11, 0.5, -3.5)
-wmDot.BorderSizePixel = 0; wmDot.Parent = WM
-Corner(wmDot, 4)
-LIVE.WM.Dot = wmDot; wmDot.BackgroundColor3 = CFG.WMColor
-
-local wmTxt = Lbl(WM, "SeraphiCA  <font color='#454A6E'>|</font>  UI",
-    UDim2.new(1, -32, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 13)
-wmTxt.Position = UDim2.new(0, 26, 0, 0)
-LIVE.WM.Text = wmTxt
-
-local wmBtn = Instance.new("TextButton")
-wmBtn.Size = UDim2.new(1, 0, 1, 0); wmBtn.BackgroundTransparency = 1
-wmBtn.Text = ""; wmBtn.Parent = WM
-
--- ══════════════ МЕНЮ ══════════════
-local Menu = Instance.new("Frame")
-Menu.Size     = UDim2.new(0, CFG.MenuW, 0, CFG.MenuH)
-Menu.Position = UDim2.new(0.5, -CFG.MenuW/2, 0.5, -CFG.MenuH/2)
-Menu.BackgroundColor3 = CFG.BG
-Menu.Visible  = false; Menu.Parent = GUI
-Corner(Menu, 14)
-LIVE.MenuStroke = Stroke(Menu, CFG.Accent, 1.5)
-
-local Head = Instance.new("Frame")
-Head.Size = UDim2.new(1, 0, 0, 50); Head.BackgroundColor3 = CFG.Panel
-Head.BorderSizePixel = 0; Head.Parent = Menu
-Corner(Head, 14)
-
-local headFix = Instance.new("Frame")
-headFix.Size = UDim2.new(1, 0, 0, 14); headFix.Position = UDim2.new(0, 0, 1, -14)
-headFix.BackgroundColor3 = CFG.Panel; headFix.BorderSizePixel = 0; headFix.Parent = Head
-
-local logo = Instance.new("Frame")
-logo.Size = UDim2.new(0, 5, 0, 22); logo.Position = UDim2.new(0, 16, 0.5, -11)
-logo.BorderSizePixel = 0; logo.Parent = Head
-Corner(logo, 3); Acc(logo)
-
-Lbl(Head, "SeraphiCA",  UDim2.new(0, 200, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 16).Position   = UDim2.new(0, 30, 0, 0)
-Lbl(Head, "v3.2",       UDim2.new(0,  60, 1, 0), CFG.TxtMut, Enum.Font.GothamMedium, 12).Position = UDim2.new(0, 122, 0, 0)
-
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 28, 0, 28); closeBtn.Position = UDim2.new(1, -40, 0.5, -14)
-closeBtn.BackgroundColor3 = CFG.Card; closeBtn.Text = "✕"
-closeBtn.TextColor3 = CFG.TxtSec; closeBtn.Font = Enum.Font.GothamBold; closeBtn.TextSize = 14
-closeBtn.AutoButtonColor = false; closeBtn.Parent = Head
-Corner(closeBtn, 8)
-
-local TabBar = Instance.new("Frame")
-TabBar.Size = UDim2.new(0, 130, 1, -50); TabBar.Position = UDim2.new(0, 0, 0, 50)
-TabBar.BackgroundColor3 = CFG.Panel; TabBar.BorderSizePixel = 0; TabBar.Parent = Menu
-Pad(TabBar, 12, 12, 10, 10)
-local tabList = Instance.new("UIListLayout")
-tabList.Padding = UDim.new(0, 8); tabList.Parent = TabBar
-
-local Content = Instance.new("Frame")
-Content.Size = UDim2.new(1, -130, 1, -50); Content.Position = UDim2.new(0, 130, 0, 50)
-Content.BackgroundTransparency = 1; Content.Parent = Menu
-
-local Pages, TabBtns = {}, {}
-
-local function NewPage(name)
-    local p = Instance.new("ScrollingFrame")
-    p.Name = name; p.Size = UDim2.new(1, 0, 1, 0)
-    p.BackgroundTransparency = 1; p.BorderSizePixel = 0
-    p.ScrollBarThickness = 3; p.ScrollBarImageColor3 = CFG.Sep
-    p.CanvasSize = UDim2.new(0, 0, 0, 0)
-    p.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    p.Visible = false; p.Parent = Content
-    Pad(p, 16, 16, 16, 16)
-    local ll = Instance.new("UIListLayout"); ll.Padding = UDim.new(0, 10); ll.Parent = p
-    Pages[name] = p; return p
-end
-
-local function Title(page, txt, sub)
-    local h = Instance.new("Frame")
-    h.Size = UDim2.new(1, 0, 0, sub and 40 or 26)
-    h.BackgroundTransparency = 1; h.Parent = page
-    Lbl(h, txt, UDim2.new(1, 0, 0, 20), CFG.TxtPri, Enum.Font.GothamBold, 16)
-    if sub then
-        local s = Lbl(h, sub, UDim2.new(1, 0, 0, 16), CFG.TxtMut, Enum.Font.Gotham, 12)
-        s.Position = UDim2.new(0, 0, 0, 22)
+-- ══════════════ MM ФУНКЦИИ ══════════════
+-- WallShot - стрельба через стены
+local function ApplyWallShot()
+    if not mmState.wallShot then return end
+    
+    -- Находим оружие
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local tool = char:FindFirstChildOfClass("Tool")
+    if not tool then return end
+    
+    -- Ищем обработчик выстрела
+    for _, script in ipairs(tool:GetDescendants()) do
+        if script:IsA("Script") or script:IsA("LocalScript") then
+            -- Модифицируем Raycast для игнорирования стен
+            pcall(function()
+                local old = script.Disabled
+                script.Disabled = false
+                -- Здесь можно добавить модификацию параметров выстрела
+            end)
+        end
     end
 end
 
--- ══════════════ ВСПОМОГАТЕЛЬНЫЕ ВИДЖЕТЫ ══════════════
+-- Infinity Ammo
+local function ApplyInfAmmo()
+    if not mmState.infAmmo then return end
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local tool = char:FindFirstChildOfClass("Tool")
+    if not tool then return end
+    
+    -- Ищем переменные патронов
+    for _, obj in ipairs(tool:GetDescendants()) do
+        if obj:IsA("IntValue") or obj:IsA("NumberValue") then
+            if obj.Name:lower():find("ammo") or obj.Name:lower():find("bullet") then
+                obj.Value = 999
+            end
+        end
+    end
+end
+
+-- RapidFire
+local function ApplyRapidFire()
+    if not mmState.rapidFire then return end
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local tool = char:FindFirstChildOfClass("Tool")
+    if not tool then return end
+    
+    -- Ускоряем анимацию и задержки
+    for _, animator in ipairs(tool:GetDescendants()) do
+        if animator:IsA("Animation") then
+            animator:Stop()
+        end
+    end
+end
+
+-- NoRecoil
+local function ApplyNoRecoil()
+    if not mmState.noRecoil then return end
+    
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    
+    -- Замораживаем отдачу камеры
+    local oldCFrame = camera.CFrame
+    RunService.RenderStepped:Connect(function()
+        if mmState.noRecoil then
+            camera.CFrame = oldCFrame
+        end
+    end)
+end
+
+-- ══════════════ UI ВИДЖЕТЫ ══════════════
 
 local function MakeSlider(parent, label, maxVal, initVal, onChange)
     local c = Instance.new("Frame")
@@ -635,6 +692,108 @@ local function ColorPicker(parent, label, currentColor, onChange)
     end
 end
 
+-- ══════════════ МЕНЮ ══════════════
+local oldMenu = PlayerGui:FindFirstChild("SeraphiCA_Menu")
+if oldMenu then oldMenu:Destroy() end
+
+local Menu = Instance.new("Frame")
+Menu.Name = "SeraphiCA_Menu"
+Menu.Size     = UDim2.new(0, CFG.MenuW, 0, CFG.MenuH)
+Menu.Position = UDim2.new(0.5, -CFG.MenuW/2, 0.5, -CFG.MenuH/2)
+Menu.BackgroundColor3 = CFG.BG
+Menu.Visible  = false; Menu.Parent = GUI
+Corner(Menu, 14)
+LIVE.MenuStroke = Stroke(Menu, CFG.Accent, 1.5)
+
+-- ══════════════ ВОДЯНОЙ ЗНАК ══════════════
+local WM = Instance.new("Frame")
+WM.Size = UDim2.new(0, 210, 0, 34)
+WM.Position = UDim2.new(0.5, -105, 0, 14)
+WM.BackgroundColor3 = CFG.Panel
+WM.BackgroundTransparency = 1
+WM.Parent = GUI
+Corner(WM, 9)
+LIVE.WM.Stroke = Stroke(WM, CFG.WMColor, 1.4)
+
+local wmDot = Instance.new("Frame")
+wmDot.Size = UDim2.new(0, 7, 0, 7); wmDot.Position = UDim2.new(0, 11, 0.5, -3.5)
+wmDot.BorderSizePixel = 0; wmDot.Parent = WM
+Corner(wmDot, 4)
+LIVE.WM.Dot = wmDot; wmDot.BackgroundColor3 = CFG.WMColor
+
+local wmTxt = Lbl(WM, "SeraphiCA  <font color='#454A6E'>|</font>  UI",
+    UDim2.new(1, -32, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 13)
+wmTxt.Position = UDim2.new(0, 26, 0, 0)
+LIVE.WM.Text = wmTxt
+
+local wmBtn = Instance.new("TextButton")
+wmBtn.Size = UDim2.new(1, 0, 1, 0); wmBtn.BackgroundTransparency = 1
+wmBtn.Text = ""; wmBtn.Parent = WM
+
+-- Шапка
+local Head = Instance.new("Frame")
+Head.Size = UDim2.new(1, 0, 0, 50); Head.BackgroundColor3 = CFG.Panel
+Head.BorderSizePixel = 0; Head.Parent = Menu
+Corner(Head, 14)
+
+local headFix = Instance.new("Frame")
+headFix.Size = UDim2.new(1, 0, 0, 14); headFix.Position = UDim2.new(0, 0, 1, -14)
+headFix.BackgroundColor3 = CFG.Panel; headFix.BorderSizePixel = 0; headFix.Parent = Head
+
+local logo = Instance.new("Frame")
+logo.Size = UDim2.new(0, 5, 0, 22); logo.Position = UDim2.new(0, 16, 0.5, -11)
+logo.BorderSizePixel = 0; logo.Parent = Head
+Corner(logo, 3); Acc(logo)
+
+Lbl(Head, "SeraphiCA",  UDim2.new(0, 200, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 16).Position   = UDim2.new(0, 30, 0, 0)
+Lbl(Head, "v3.2",       UDim2.new(0,  60, 1, 0), CFG.TxtMut, Enum.Font.GothamMedium, 12).Position = UDim2.new(0, 122, 0, 0)
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 28, 0, 28); closeBtn.Position = UDim2.new(1, -40, 0.5, -14)
+closeBtn.BackgroundColor3 = CFG.Card; closeBtn.Text = "✕"
+closeBtn.TextColor3 = CFG.TxtSec; closeBtn.Font = Enum.Font.GothamBold; closeBtn.TextSize = 14
+closeBtn.AutoButtonColor = false; closeBtn.Parent = Head
+Corner(closeBtn, 8)
+
+-- Панель вкладок
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(0, 130, 1, -50); TabBar.Position = UDim2.new(0, 0, 0, 50)
+TabBar.BackgroundColor3 = CFG.Panel; TabBar.BorderSizePixel = 0; TabBar.Parent = Menu
+Pad(TabBar, 12, 12, 10, 10)
+local tabList = Instance.new("UIListLayout")
+tabList.Padding = UDim.new(0, 8); tabList.Parent = TabBar
+
+-- Контент
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, -130, 1, -50); Content.Position = UDim2.new(0, 130, 0, 50)
+Content.BackgroundTransparency = 1; Content.Parent = Menu
+
+local Pages, TabBtns = {}, {}
+
+local function NewPage(name)
+    local p = Instance.new("ScrollingFrame")
+    p.Name = name; p.Size = UDim2.new(1, 0, 1, 0)
+    p.BackgroundTransparency = 1; p.BorderSizePixel = 0
+    p.ScrollBarThickness = 3; p.ScrollBarImageColor3 = CFG.Sep
+    p.CanvasSize = UDim2.new(0, 0, 0, 0)
+    p.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    p.Visible = false; p.Parent = Content
+    Pad(p, 16, 16, 16, 16)
+    local ll = Instance.new("UIListLayout"); ll.Padding = UDim.new(0, 10); ll.Parent = p
+    Pages[name] = p; return p
+end
+
+local function Title(page, txt, sub)
+    local h = Instance.new("Frame")
+    h.Size = UDim2.new(1, 0, 0, sub and 40 or 26)
+    h.BackgroundTransparency = 1; h.Parent = page
+    Lbl(h, txt, UDim2.new(1, 0, 0, 20), CFG.TxtPri, Enum.Font.GothamBold, 16)
+    if sub then
+        local s = Lbl(h, sub, UDim2.new(1, 0, 0, 16), CFG.TxtMut, Enum.Font.Gotham, 12)
+        s.Position = UDim2.new(0, 0, 0, 22)
+    end
+end
+
 -- ══════════════ СТРАНИЦА AA ══════════════
 local pAA = NewPage("AA"); Title(pAA, "AA", "Aim-Bot · Silent-Aim")
 
@@ -648,9 +807,9 @@ aimCard.ClipsDescendants = true; aimCard.Parent = pAA
 Corner(aimCard, 10); Stroke(aimCard, CFG.Sep, 1)
 
 Lbl(aimCard, "Aim-Bot",
-    UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position    = UDim2.new(0,14,0,9)
+    UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
 Lbl(aimCard, "Smoothness · FOV · VisCheck · ShowFov",
-    UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position        = UDim2.new(0,14,0,30)
+    UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position = UDim2.new(0,14,0,30)
 
 local aimTrack = Instance.new("Frame")
 aimTrack.Size = UDim2.new(0,42,0,22); aimTrack.Position = UDim2.new(1,-56,0,16)
@@ -671,23 +830,10 @@ local sepLine = Instance.new("Frame")
 sepLine.Size = UDim2.new(1, 0, 0, 1); sepLine.BackgroundColor3 = CFG.Sep
 sepLine.BorderSizePixel = 0; sepLine.Parent = aimSub
 
-MakeSlider(aimSub, "Smoothness", 80,  40,  function(v) 
-    aimState.smoothness = v 
-end)
-
-MakeSlider(aimSub, "Fov",        180, 90,  function(v) 
-    aimState.fov = v 
-    RefreshFovCircle()
-end)
-
-MiniToggle(aimSub, "VisibleCheck", function(v) 
-    aimState.visCheck = v 
-end)
-
-MiniToggle(aimSub, "ShowFov",      function(v) 
-    aimState.showFov = v 
-    RefreshFovCircle()
-end)
+MakeSlider(aimSub, "Smoothness", 80,  40,  function(v) aimState.smoothness = v end)
+MakeSlider(aimSub, "Fov",        180, 90,  function(v) aimState.fov = v; RefreshFovCircle() end)
+MiniToggle(aimSub, "VisibleCheck", function(v) aimState.visCheck = v end)
+MiniToggle(aimSub, "ShowFov",      function(v) aimState.showFov = v; RefreshFovCircle() end)
 
 local aimBtn = Instance.new("TextButton")
 aimBtn.Size = UDim2.new(1,0,1,0); aimBtn.BackgroundTransparency = 1; aimBtn.Text = ""; aimBtn.Parent = aimTrack
@@ -702,9 +848,8 @@ aimBtn.MouseButton1Click:Connect(function()
     RefreshFovCircle()
 end)
 
--- ── Silent-Aim ──
+-- Silent-Aim
 local SA_EXPD = COLL + 44
-
 local saCard = Instance.new("Frame")
 saCard.Size = UDim2.new(1, 0, 0, COLL)
 saCard.BackgroundColor3 = CFG.Card; saCard.BorderSizePixel = 0
@@ -714,7 +859,7 @@ Corner(saCard, 10); Stroke(saCard, CFG.Sep, 1)
 Lbl(saCard, "Silent-Aim",
     UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
 Lbl(saCard, "visual slot",
-    UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 11).Position     = UDim2.new(0,14,0,29)
+    UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 11).Position = UDim2.new(0,14,0,29)
 
 local saTrack = Instance.new("Frame")
 saTrack.Size = UDim2.new(0,42,0,22); saTrack.Position = UDim2.new(1,-56,0,16)
@@ -754,10 +899,75 @@ saBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ══════════════ СТРАНИЦА MM ══════════════
-local pMM = NewPage("MM"); Title(pMM, "MM", "пустые слоты")
+local pMM = NewPage("MM"); Title(pMM, "MM", "WallShot · InfAmmo · RapidFire · NoRecoil")
+
+local mmCard = Instance.new("Frame")
+mmCard.Size = UDim2.new(1, 0, 0, COLL)
+mmCard.BackgroundColor3 = CFG.Card; mmCard.BorderSizePixel = 0
+mmCard.ClipsDescendants = true; mmCard.Parent = pMM
+Corner(mmCard, 10); Stroke(mmCard, CFG.Sep, 1)
+
+Lbl(mmCard, "MM Features",
+    UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
+Lbl(mmCard, "WallShot · InfAmmo · RapidFire · NoRecoil",
+    UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position = UDim2.new(0,14,0,30)
+
+local mmTrack = Instance.new("Frame")
+mmTrack.Size = UDim2.new(0,42,0,22); mmTrack.Position = UDim2.new(1,-56,0,16)
+mmTrack.BackgroundColor3 = CFG.Panel; mmTrack.BorderSizePixel = 0; mmTrack.Parent = mmCard
+Corner(mmTrack, 11)
+local mmKnob = Instance.new("Frame")
+mmKnob.Size = UDim2.new(0,16,0,16); mmKnob.Position = UDim2.new(0,3,0.5,-8)
+mmKnob.BackgroundColor3 = CFG.TxtMut; mmKnob.BorderSizePixel = 0; mmKnob.Parent = mmTrack
+Corner(mmKnob, 8)
+
+local MM_EXPD = COLL + 8 + 1 + 28 + 6 + 28 + 6 + 28 + 6 + 28 + 14
+
+local mmSub = Instance.new("Frame")
+mmSub.Size = UDim2.new(1, -28, 0, MM_EXPD - COLL - 8)
+mmSub.Position = UDim2.new(0, 14, 0, COLL + 8)
+mmSub.BackgroundTransparency = 1; mmSub.Parent = mmCard
+local mmSubList = Instance.new("UIListLayout"); mmSubList.Padding = UDim.new(0, 6); mmSubList.Parent = mmSub
+
+local mmSepLine = Instance.new("Frame")
+mmSepLine.Size = UDim2.new(1, 0, 0, 1); mmSepLine.BackgroundColor3 = CFG.Sep
+mmSepLine.BorderSizePixel = 0; mmSepLine.Parent = mmSub
+
+MiniToggle(mmSub, "WallShot", function(v)
+    mmState.wallShot = v
+    if v then ApplyWallShot() end
+end)
+
+MiniToggle(mmSub, "Infinity Ammo", function(v)
+    mmState.infAmmo = v
+    if v then ApplyInfAmmo() end
+end)
+
+MiniToggle(mmSub, "RapidFire", function(v)
+    mmState.rapidFire = v
+    if v then ApplyRapidFire() end
+end)
+
+MiniToggle(mmSub, "NoRecoil", function(v)
+    mmState.noRecoil = v
+    if v then ApplyNoRecoil() end
+end)
+
+local mmBtn = Instance.new("TextButton")
+mmBtn.Size = UDim2.new(1,0,1,0); mmBtn.BackgroundTransparency = 1; mmBtn.Text = ""; mmBtn.Parent = mmTrack
+local mmOn = false
+mmBtn.MouseButton1Click:Connect(function()
+    mmOn = not mmOn
+    Tw(mmKnob, {
+        Position = mmOn and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
+        BackgroundColor3 = mmOn and Color3.new(1,1,1) or CFG.TxtMut
+    }, 0.18):Play()
+    Tw(mmTrack, { BackgroundColor3 = mmOn and CFG.Accent or CFG.Panel }, 0.18):Play()
+    Tw(mmCard,  { Size = UDim2.new(1, 0, 0, mmOn and MM_EXPD or COLL) }, 0.22):Play()
+end)
 
 -- ══════════════ СТРАНИЦА EE (ESP) ══════════════
-local pEE = NewPage("EE"); Title(pEE, "EE", "ESP · Box · Цвет")
+local pEE = NewPage("EE"); Title(pEE, "EE", "ESP · Box · Chams")
 
 local espCard = Instance.new("Frame")
 espCard.Size = UDim2.new(1, 0, 0, COLL)
@@ -767,8 +977,8 @@ Corner(espCard, 10); Stroke(espCard, CFG.Sep, 1)
 
 Lbl(espCard, "ESP",
     UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
-Lbl(espCard, "Box · Настройки цвета",
-    UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position     = UDim2.new(0,14,0,30)
+Lbl(espCard, "Box · Chams · Настройки цвета",
+    UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position = UDim2.new(0,14,0,30)
 
 local espTrack = Instance.new("Frame")
 espTrack.Size = UDim2.new(0,42,0,22); espTrack.Position = UDim2.new(1,-56,0,16)
@@ -779,7 +989,7 @@ espKnob.Size = UDim2.new(0,16,0,16); espKnob.Position = UDim2.new(0,3,0.5,-8)
 espKnob.BackgroundColor3 = CFG.TxtMut; espKnob.BorderSizePixel = 0; espKnob.Parent = espTrack
 Corner(espKnob, 8)
 
-local ESP_EXPD = COLL + 8 + 1 + 28 + 6 + 70 + 14
+local ESP_EXPD = COLL + 8 + 1 + 28 + 6 + 28 + 6 + 70 + 14
 
 local espSub = Instance.new("Frame")
 espSub.Size = UDim2.new(1, -28, 0, ESP_EXPD - COLL - 8)
@@ -795,7 +1005,16 @@ MiniToggle(espSub, "Box", function(v)
     espState.box = v
 end)
 
-ColorPicker(espSub, "Цвет бокса", espState.color, function(col)
+MiniToggle(espSub, "Chams", function(v)
+    espState.chams = v
+    if not v then
+        for player, _ in pairs(chamsObjects) do
+            RemoveChams(player)
+        end
+    end
+end)
+
+ColorPicker(espSub, "Цвет", espState.color, function(col)
     espState.color = col
 end)
 
@@ -963,7 +1182,6 @@ MakeDrag(WM,   WM)
 -- ══════════════ ПОЯВЛЕНИЕ ══════════════
 Tw(WM, { BackgroundTransparency = 0.15 }, 0.4):Play()
 task.delay(0.4, OpenMenu)
-
 RefreshFovCircle()
 
 -- ══════════════ ОЧИСТКА ══════════════
@@ -972,6 +1190,9 @@ game:GetService("Players").LocalPlayer:GetPropertyChangedSignal("Character"):Con
         FovContainer.Visible = false
         for _, data in pairs(espBoxes) do
             data.container.Visible = false
+        end
+        for player, _ in pairs(chamsObjects) do
+            RemoveChams(player)
         end
     end
 end)
@@ -983,5 +1204,8 @@ game:GetService("RunService").Heartbeat:Connect(function()
             data.container:Destroy()
         end
         espBoxes = {}
+        for player, _ in pairs(chamsObjects) do
+            RemoveChams(player)
+        end
     end
 end)

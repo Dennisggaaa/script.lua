@@ -1,11 +1,11 @@
 --[[╔══════════════════════════════════════════════╗
 ║           SeraphiCA UI v3.2                    ║
 ║   Вкладки: AA · MM · EE · SS                 ║
-║   AA: Aim-Bot (Smoothness·Fov·VisCheck·ShowFov)
-║       Silent-Aim (Soon...)                   ║
+║   AA: Aim-Bot (рабочий)                      ║
+║   EE: ESP (Box + настройки цвета)            ║
 ║   SS: цвет меню + цвет ватермарка            ║
 ║   Executor Delta · Android 10-13             ║
-║   Полноценный рабочий Aim-Bot + FOV Circle   ║
+║   Полный Aim-Bot + ESP Box                   ║
 ╚══════════════════════════════════════════════╝--]]
 
 local Players          = game:GetService("Players")
@@ -84,18 +84,23 @@ local aimState = {
     target = nil
 }
 
+-- ══════════════ ESP КОНФИГ ══════════════
+local espState = {
+    on = false,
+    box = false,
+    color = Color3.fromHex("#00FF00") -- Зеленый по умолчанию
+}
+
 -- ══════════════ FOV CIRCLE (UI) ══════════════
--- Создаем круг через UI-элементы (гарантированно работает во всех играх)
 local FovContainer = Instance.new("Frame")
 FovContainer.Name = "FovCircle"
-FovContainer.Size = UDim2.new(0, 180, 0, 180) -- Будет обновляться
+FovContainer.Size = UDim2.new(0, 180, 0, 180)
 FovContainer.Position = UDim2.new(0.5, -90, 0.5, -90)
 FovContainer.BackgroundTransparency = 1
 FovContainer.BorderSizePixel = 0
 FovContainer.Visible = false
 FovContainer.Parent = GUI
 
--- Внешний круг (ободок)
 local FovCircleOuter = Instance.new("Frame")
 FovCircleOuter.Name = "Outer"
 FovCircleOuter.Size = UDim2.new(1, 0, 1, 0)
@@ -104,31 +109,28 @@ FovCircleOuter.BackgroundColor3 = Color3.new(1, 1, 1)
 FovCircleOuter.BackgroundTransparency = 0.5
 FovCircleOuter.BorderSizePixel = 0
 FovCircleOuter.Parent = FovContainer
-Corner(FovCircleOuter, 90) -- Делаем круг
+Corner(FovCircleOuter, 90)
 
--- Внутренний круг (заливка с прозрачностью)
 local FovCircleInner = Instance.new("Frame")
 FovCircleInner.Name = "Inner"
 FovCircleInner.Size = UDim2.new(0.8, 0, 0.8, 0)
 FovCircleInner.Position = UDim2.new(0.1, 0, 0.1, 0)
 FovCircleInner.BackgroundColor3 = Color3.new(1, 1, 1)
-FovCircleInner.BackgroundTransparency = 0.8
+FovCircleInner.BackgroundTransparency = 0.85
 FovCircleInner.BorderSizePixel = 0
 FovCircleInner.Parent = FovContainer
 Corner(FovCircleInner, 90)
 
--- Центральная точка
 local FovDot = Instance.new("Frame")
 FovDot.Name = "Dot"
 FovDot.Size = UDim2.new(0, 4, 0, 4)
 FovDot.Position = UDim2.new(0.5, -2, 0.5, -2)
 FovDot.BackgroundColor3 = Color3.new(0, 1, 0)
-FovDot.BackgroundTransparency = 0.3
+FovDot.BackgroundTransparency = 0.2
 FovDot.BorderSizePixel = 0
 FovDot.Parent = FovContainer
 Corner(FovDot, 2)
 
--- Функция обновления круга
 local function RefreshFovCircle()
     if aimState.showFov and aimState.on then
         local radius = math.max(10, aimState.fov)
@@ -136,17 +138,11 @@ local function RefreshFovCircle()
         FovContainer.Size = UDim2.new(0, size, 0, size)
         FovContainer.Position = UDim2.new(0.5, -size/2, 0.5, -size/2)
         FovContainer.Visible = true
-        
-        -- Обновляем прозрачность внешнего круга в зависимости от состояния
-        FovCircleOuter.BackgroundTransparency = 0.4
-        FovCircleInner.BackgroundTransparency = 0.85
-        FovDot.BackgroundTransparency = 0.2
     else
         FovContainer.Visible = false
     end
 end
 
--- Обновляем позицию круга при изменении размера окна или камеры
 RunService.RenderStepped:Connect(function()
     if FovContainer.Visible then
         local cam = workspace.CurrentCamera
@@ -175,17 +171,14 @@ local function GetClosestPlayer()
             local targetPart = player.Character.PrimaryPart
             local targetPos = targetPart.Position
             
-            -- Проверка видимости
             if aimState.visCheck then
                 local ray = Ray.new(myPos.Position, (targetPos - myPos.Position).Unit * 1000)
                 local hit = workspace:FindPartOnRay(ray, LocalPlayer.Character)
                 if hit and not hit:IsDescendantOf(player.Character) then
-                    -- Скрыт за стеной
                     continue
                 end
             end
             
-            -- Конвертация в экранные координаты
             local screenPos, onScreen = camera:WorldToScreenPoint(targetPos)
             if not onScreen then continue end
             
@@ -214,12 +207,9 @@ local function AimAtTarget()
     local targetPart = target.Character and target.Character.PrimaryPart
     if not targetPart then return end
     
-    -- Наводим камеру на цель (в голову)
     local targetPos = targetPart.Position + Vector3.new(0, 1.5, 0)
-    local direction = (targetPos - camera.CFrame.Position).Unit
     local targetCFrame = CFrame.lookAt(camera.CFrame.Position, targetPos)
     
-    -- Плавность наведения
     local smoothFactor = math.min(aimState.smoothness / 100, 0.95)
     local currentCFrame = camera.CFrame
     local lerpCFrame = currentCFrame:Lerp(targetCFrame, smoothFactor)
@@ -227,7 +217,6 @@ local function AimAtTarget()
     camera.CFrame = lerpCFrame
 end
 
--- Запускаем цикл наведения
 local aimConnection
 local function StartAimLoop()
     if aimConnection then aimConnection:Disconnect() end
@@ -238,6 +227,131 @@ local function StartAimLoop()
     end)
 end
 StartAimLoop()
+
+-- ══════════════ ESP ЛОГИКА ══════════════
+local espBoxes = {} -- Храним все боксы
+
+local function CreateEspBox(player)
+    if espBoxes[player] then return end
+    
+    local container = Instance.new("Frame")
+    container.Name = "ESP_" .. player.Name
+    container.Size = UDim2.new(0, 100, 0, 150)
+    container.Position = UDim2.new(0, 0, 0, 0)
+    container.BackgroundTransparency = 1
+    container.BorderSizePixel = 0
+    container.Visible = false
+    container.Parent = GUI
+    
+    -- Основной бокс (незалитый)
+    local box = Instance.new("Frame")
+    box.Name = "Box"
+    box.Size = UDim2.new(1, 0, 1, 0)
+    box.Position = UDim2.new(0, 0, 0, 0)
+    box.BackgroundTransparency = 1
+    box.BorderSizePixel = 2
+    box.BorderColor3 = espState.color
+    box.Parent = container
+    
+    -- Обводка для лучшей видимости
+    local outline = Instance.new("UIStroke")
+    outline.Color = espState.color
+    outline.Thickness = 2
+    outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    outline.Parent = box
+    
+    espBoxes[player] = {
+        container = container,
+        box = box,
+        outline = outline
+    }
+end
+
+local function UpdateEspBoxes()
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    
+    -- Обновляем существующие и создаем новые
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character.PrimaryPart then
+            if not espBoxes[player] then
+                CreateEspBox(player)
+            end
+            
+            local espData = espBoxes[player]
+            if espData then
+                local char = player.Character
+                local rootPart = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
+                if rootPart then
+                    local pos = rootPart.Position
+                    local screenPos, onScreen = camera:WorldToScreenPoint(pos)
+                    
+                    if onScreen then
+                        -- Получаем размеры персонажа (приблизительно)
+                        local size = 4 -- Высота персонажа в студиях
+                        local headPos = pos + Vector3.new(0, size/2, 0)
+                        local feetPos = pos - Vector3.new(0, size/2, 0)
+                        
+                        local headScreen, _ = camera:WorldToScreenPoint(headPos)
+                        local feetScreen, _ = camera:WorldToScreenPoint(feetPos)
+                        
+                        if headScreen and feetScreen then
+                            local height = math.abs(feetScreen.Y - headScreen.Y)
+                            local width = height * 0.35 -- Ширина бокса пропорционально высоте
+                            
+                            local centerX = screenPos.X
+                            local topY = math.min(headScreen.Y, feetScreen.Y)
+                            
+                            -- Обновляем позицию и размер
+                            espData.container.Position = UDim2.new(0, centerX - width/2, 0, topY)
+                            espData.container.Size = UDim2.new(0, width, 0, height)
+                            espData.container.Visible = espState.on and espState.box
+                            
+                            -- Обновляем цвет
+                            espData.box.BorderColor3 = espState.color
+                            espData.outline.Color = espState.color
+                        end
+                    else
+                        espData.container.Visible = false
+                    end
+                else
+                    espData.container.Visible = false
+                end
+            end
+        else
+            -- Игрок не в игре или это локальный
+            if espBoxes[player] then
+                espBoxes[player].container:Destroy()
+                espBoxes[player] = nil
+            end
+        end
+    end
+    
+    -- Удаляем боксы для игроков, которых больше нет
+    for player, _ in pairs(espBoxes) do
+        if not Players:FindFirstChild(player.Name) then
+            espBoxes[player].container:Destroy()
+            espBoxes[player] = nil
+        end
+    end
+end
+
+-- Запускаем обновление ESP
+local espConnection
+local function StartEspLoop()
+    if espConnection then espConnection:Disconnect() end
+    espConnection = RunService.RenderStepped:Connect(function()
+        if espState.on and espState.box then
+            UpdateEspBoxes()
+        else
+            -- Скрываем все боксы
+            for _, data in pairs(espBoxes) do
+                data.container.Visible = false
+            end
+        end
+    end)
+end
+StartEspLoop()
 
 -- ══════════════ ВОДЯНОЙ ЗНАК ══════════════
 local WM = Instance.new("Frame")
@@ -273,7 +387,6 @@ Menu.Visible  = false; Menu.Parent = GUI
 Corner(Menu, 14)
 LIVE.MenuStroke = Stroke(Menu, CFG.Accent, 1.5)
 
--- шапка
 local Head = Instance.new("Frame")
 Head.Size = UDim2.new(1, 0, 0, 50); Head.BackgroundColor3 = CFG.Panel
 Head.BorderSizePixel = 0; Head.Parent = Menu
@@ -298,7 +411,6 @@ closeBtn.TextColor3 = CFG.TxtSec; closeBtn.Font = Enum.Font.GothamBold; closeBtn
 closeBtn.AutoButtonColor = false; closeBtn.Parent = Head
 Corner(closeBtn, 8)
 
--- панель вкладок
 local TabBar = Instance.new("Frame")
 TabBar.Size = UDim2.new(0, 130, 1, -50); TabBar.Position = UDim2.new(0, 0, 0, 50)
 TabBar.BackgroundColor3 = CFG.Panel; TabBar.BorderSizePixel = 0; TabBar.Parent = Menu
@@ -306,7 +418,6 @@ Pad(TabBar, 12, 12, 10, 10)
 local tabList = Instance.new("UIListLayout")
 tabList.Padding = UDim.new(0, 8); tabList.Parent = TabBar
 
--- область контента
 local Content = Instance.new("Frame")
 Content.Size = UDim2.new(1, -130, 1, -50); Content.Position = UDim2.new(0, 130, 0, 50)
 Content.BackgroundTransparency = 1; Content.Parent = Menu
@@ -337,46 +448,14 @@ local function Title(page, txt, sub)
     end
 end
 
--- Обычный слот (для MM / EE)
-local function Slot(page, name, desc)
-    local card = Instance.new("Frame")
-    card.Size = UDim2.new(1, 0, 0, 54); card.BackgroundColor3 = CFG.Card
-    card.BorderSizePixel = 0; card.Parent = page
-    Corner(card, 10); Stroke(card, CFG.Sep, 1)
-    Lbl(card, name, UDim2.new(1,-80,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
-    Lbl(card, desc or "слот свободен", UDim2.new(1,-80,0,14), CFG.TxtMut, Enum.Font.Gotham, 11).Position = UDim2.new(0,14,0,29)
-
-    local track = Instance.new("Frame")
-    track.Size = UDim2.new(0,42,0,22); track.Position = UDim2.new(1,-56,0.5,-11)
-    track.BackgroundColor3 = CFG.Panel; track.BorderSizePixel = 0; track.Parent = card
-    Corner(track, 11)
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0,16,0,16); knob.Position = UDim2.new(0,3,0.5,-8)
-    knob.BackgroundColor3 = CFG.TxtMut; knob.BorderSizePixel = 0; knob.Parent = track
-    Corner(knob, 8)
-
-    local on = false
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1,0,1,0); btn.BackgroundTransparency = 1; btn.Text = ""; btn.Parent = track
-    btn.MouseButton1Click:Connect(function()
-        on = not on
-        Tw(knob, { Position = on and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
-                   BackgroundColor3 = on and Color3.new(1,1,1) or CFG.TxtMut }, 0.18):Play()
-        Tw(track, { BackgroundColor3 = on and CFG.Accent or CFG.Panel }, 0.18):Play()
-    end)
-    return card
-end
-
 -- ══════════════ ВСПОМОГАТЕЛЬНЫЕ ВИДЖЕТЫ ══════════════
 
--- Ползунок (Slider)
 local function MakeSlider(parent, label, maxVal, initVal, onChange)
     local c = Instance.new("Frame")
     c.Size = UDim2.new(1, 0, 0, 46)
     c.BackgroundTransparency = 1
     c.Parent = parent
 
-    -- Строка с названием и значением
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 16); row.BackgroundTransparency = 1; row.Parent = c
 
@@ -384,28 +463,24 @@ local function MakeSlider(parent, label, maxVal, initVal, onChange)
     local valLbl = Lbl(row, tostring(initVal), UDim2.new(1, 0, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 11)
     valLbl.TextXAlignment = Enum.TextXAlignment.Right
 
-    -- Дорожка
     local track = Instance.new("Frame")
     track.Size = UDim2.new(1, 0, 0, 5)
     track.Position = UDim2.new(0, 0, 0, 24)
     track.BackgroundColor3 = CFG.Panel; track.BorderSizePixel = 0; track.Parent = c
     Corner(track, 3)
 
-    -- Заливка
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(initVal / maxVal, 0, 1, 0)
     fill.BackgroundColor3 = CFG.Accent; fill.BorderSizePixel = 0; fill.Parent = track
     Corner(fill, 3)
     table.insert(LIVE.Accents, { o = fill, p = "BackgroundColor3" })
 
-    -- Кружок
     local knob = Instance.new("Frame")
     knob.Size = UDim2.new(0, 14, 0, 14)
     knob.Position = UDim2.new(initVal / maxVal, -7, 0.5, -7)
     knob.BackgroundColor3 = Color3.new(1, 1, 1); knob.BorderSizePixel = 0; knob.Parent = track
     Corner(knob, 7)
 
-    -- Невидимая кнопка-хитбокс
     local hitbox = Instance.new("TextButton")
     hitbox.Size = UDim2.new(1, 0, 0, 28)
     hitbox.Position = UDim2.new(0, 0, 0, 14)
@@ -456,7 +531,6 @@ local function MakeSlider(parent, label, maxVal, initVal, onChange)
     return c
 end
 
--- Мини-переключатель (для VisibleCheck / ShowFov)
 local function MiniToggle(parent, label, onChange)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 28); row.BackgroundTransparency = 1; row.Parent = parent
@@ -488,10 +562,68 @@ local function MiniToggle(parent, label, onChange)
     return row
 end
 
+-- ══════════════ ВЫБОР ЦВЕТА (ДЛЯ ESP) ══════════════
+local function ColorPicker(parent, label, currentColor, onChange)
+    local wrap = Instance.new("Frame")
+    wrap.Size = UDim2.new(1, 0, 0, 70)
+    wrap.BackgroundTransparency = 1
+    wrap.Parent = parent
+    
+    Lbl(wrap, label, UDim2.new(1, 0, 0, 18), CFG.TxtSec, Enum.Font.Gotham, 12)
+    
+    local preview = Instance.new("Frame")
+    preview.Size = UDim2.new(0, 30, 0, 20)
+    preview.Position = UDim2.new(0, 0, 0, 22)
+    preview.BackgroundColor3 = currentColor
+    preview.BorderSizePixel = 0
+    preview.Parent = wrap
+    Corner(preview, 5)
+    Stroke(preview, CFG.Sep, 1)
+    
+    local grid = Instance.new("Frame")
+    grid.Size = UDim2.new(1, 0, 0, 28)
+    grid.Position = UDim2.new(0, 44, 0, 22)
+    grid.BackgroundTransparency = 1
+    grid.Parent = wrap
+    
+    local gl = Instance.new("UIGridLayout")
+    gl.CellSize = UDim2.new(0, 24, 0, 24)
+    gl.CellPadding = UDim2.new(0, 6, 0, 0)
+    gl.Parent = grid
+    
+    local colors = {
+        Color3.fromHex("#00FF00"), -- Зеленый
+        Color3.fromHex("#FF0000"), -- Красный
+        Color3.fromHex("#0000FF"), -- Синий
+        Color3.fromHex("#FFFF00"), -- Желтый
+        Color3.fromHex("#FF00FF"), -- Фиолетовый
+        Color3.fromHex("#00FFFF"), -- Голубой
+        Color3.fromHex("#FFA500"), -- Оранжевый
+        Color3.fromHex("#FF1493"), -- Розовый
+        Color3.fromHex("#FFFFFF")  -- Белый
+    }
+    
+    for _, col in ipairs(colors) do
+        local sw = Instance.new("TextButton")
+        sw.Size = UDim2.new(1, 0, 1, 0)
+        sw.BackgroundColor3 = col
+        sw.Text = ""
+        sw.AutoButtonColor = false
+        sw.BorderSizePixel = 0
+        sw.Parent = grid
+        Corner(sw, 5)
+        Stroke(sw, CFG.Sep, 0.5)
+        
+        sw.MouseButton1Click:Connect(function()
+            onChange(col)
+            preview.BackgroundColor3 = col
+        end)
+    end
+end
+
 -- ══════════════ СТРАНИЦА AA ══════════════
 local pAA = NewPage("AA"); Title(pAA, "AA", "Aim-Bot · Silent-Aim")
 
--- ── Aim-Bot (расширяемая карточка) ──
 local COLL = 54
 local EXPD = COLL + 8 + 1 + 46 + 6 + 46 + 6 + 28 + 6 + 28 + 14
 
@@ -543,7 +675,6 @@ MiniToggle(aimSub, "ShowFov",      function(v)
     RefreshFovCircle()
 end)
 
--- Кнопка тоггла Aim-Bot
 local aimBtn = Instance.new("TextButton")
 aimBtn.Size = UDim2.new(1,0,1,0); aimBtn.BackgroundTransparency = 1; aimBtn.Text = ""; aimBtn.Parent = aimTrack
 aimBtn.MouseButton1Click:Connect(function()
@@ -557,7 +688,7 @@ aimBtn.MouseButton1Click:Connect(function()
     RefreshFovCircle()
 end)
 
--- ── Silent-Aim (карточка) ──
+-- ── Silent-Aim ──
 local SA_EXPD = COLL + 44
 
 local saCard = Instance.new("Frame")
@@ -608,12 +739,69 @@ saBtn.MouseButton1Click:Connect(function()
     Tw(saCard,  { Size = UDim2.new(1, 0, 0, saOn and SA_EXPD or COLL) }, 0.22):Play()
 end)
 
--- ══════════════ СТРАНИЦЫ MM / EE ══════════════
+-- ══════════════ СТРАНИЦА MM ══════════════
 local pMM = NewPage("MM"); Title(pMM, "MM", "пустые слоты")
-Slot(pMM, "Slot M1"); Slot(pMM, "Slot M2"); Slot(pMM, "Slot M3")
+-- Оставляем пустую для будущих функций
 
-local pEE = NewPage("EE"); Title(pEE, "EE", "пустые слоты")
-Slot(pEE, "Slot E1"); Slot(pEE, "Slot E2"); Slot(pEE, "Slot E3")
+-- ══════════════ СТРАНИЦА EE (ESP) ══════════════
+local pEE = NewPage("EE"); Title(pEE, "EE", "ESP · Box · Цвет")
+
+-- Основная карточка ESP
+local espCard = Instance.new("Frame")
+espCard.Size = UDim2.new(1, 0, 0, COLL)
+espCard.BackgroundColor3 = CFG.Card; espCard.BorderSizePixel = 0
+espCard.ClipsDescendants = true; espCard.Parent = pEE
+Corner(espCard, 10); Stroke(espCard, CFG.Sep, 1)
+
+Lbl(espCard, "ESP",
+    UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
+Lbl(espCard, "Box · Настройки цвета",
+    UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position     = UDim2.new(0,14,0,30)
+
+local espTrack = Instance.new("Frame")
+espTrack.Size = UDim2.new(0,42,0,22); espTrack.Position = UDim2.new(1,-56,0,16)
+espTrack.BackgroundColor3 = CFG.Panel; espTrack.BorderSizePixel = 0; espTrack.Parent = espCard
+Corner(espTrack, 11)
+local espKnob = Instance.new("Frame")
+espKnob.Size = UDim2.new(0,16,0,16); espKnob.Position = UDim2.new(0,3,0.5,-8)
+espKnob.BackgroundColor3 = CFG.TxtMut; espKnob.BorderSizePixel = 0; espKnob.Parent = espTrack
+Corner(espKnob, 8)
+
+-- Расширяемая область ESP
+local ESP_EXPD = COLL + 8 + 1 + 28 + 6 + 70 + 14 -- разделитель + BoxToggle + ColorPicker + отступы
+
+local espSub = Instance.new("Frame")
+espSub.Size = UDim2.new(1, -28, 0, ESP_EXPD - COLL - 8)
+espSub.Position = UDim2.new(0, 14, 0, COLL + 8)
+espSub.BackgroundTransparency = 1; espSub.Parent = espCard
+local espSubList = Instance.new("UIListLayout"); espSubList.Padding = UDim.new(0, 6); espSubList.Parent = espSub
+
+local espSepLine = Instance.new("Frame")
+espSepLine.Size = UDim2.new(1, 0, 0, 1); espSepLine.BackgroundColor3 = CFG.Sep
+espSepLine.BorderSizePixel = 0; espSepLine.Parent = espSub
+
+-- Toggle для Box
+MiniToggle(espSub, "Box", function(v)
+    espState.box = v
+end)
+
+-- Color Picker для ESP
+ColorPicker(espSub, "Цвет бокса", espState.color, function(col)
+    espState.color = col
+end)
+
+-- Кнопка включения ESP
+local espBtn = Instance.new("TextButton")
+espBtn.Size = UDim2.new(1,0,1,0); espBtn.BackgroundTransparency = 1; espBtn.Text = ""; espBtn.Parent = espTrack
+espBtn.MouseButton1Click:Connect(function()
+    espState.on = not espState.on
+    Tw(espKnob, {
+        Position = espState.on and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
+        BackgroundColor3 = espState.on and Color3.new(1,1,1) or CFG.TxtMut
+    }, 0.18):Play()
+    Tw(espTrack, { BackgroundColor3 = espState.on and CFG.Accent or CFG.Panel }, 0.18):Play()
+    Tw(espCard,  { Size = UDim2.new(1, 0, 0, espState.on and ESP_EXPD or COLL) }, 0.22):Play()
+end)
 
 -- ══════════════ СТРАНИЦА SS ══════════════
 local pSS = NewPage("SS"); Title(pSS, "SS · Style", "цвет меню и ватермарка")
@@ -768,20 +956,24 @@ MakeDrag(WM,   WM)
 Tw(WM, { BackgroundTransparency = 0.15 }, 0.4):Play()
 task.delay(0.4, OpenMenu)
 
--- Первоначальное обновление круга
 RefreshFovCircle()
 
--- ══════════════ ДОПОЛНИТЕЛЬНО: ОЧИСТКА ПРИ ЗАКРЫТИИ ══════════════
--- При отключении скрипта скрываем круг
+-- ══════════════ ОЧИСТКА ══════════════
 game:GetService("Players").LocalPlayer:GetPropertyChangedSignal("Character"):Connect(function()
     if not LocalPlayer.Character then
         FovContainer.Visible = false
+        for _, data in pairs(espBoxes) do
+            data.container.Visible = false
+        end
     end
 end)
 
--- При выходе из игры чистим за собой
 game:GetService("RunService").Heartbeat:Connect(function()
     if not game:IsLoaded() then
         FovContainer:Destroy()
+        for _, data in pairs(espBoxes) do
+            data.container:Destroy()
+        end
+        espBoxes = {}
     end
 end)

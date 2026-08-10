@@ -74,16 +74,18 @@ GUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 GUI.IgnoreGuiInset = true; GUI.Parent = PlayerGui
 
 -- ══════════════ FOV CIRCLE (Drawing API) ══════════════
+local RunService = game:GetService("RunService")
+
 local fovCircle = nil
 pcall(function()
     fovCircle = Drawing.new("Circle")
-    fovCircle.Visible  = false
-    fovCircle.Filled   = false
-    fovCircle.Color    = Color3.new(1, 1, 1)
-    fovCircle.Thickness = 1.5
-    fovCircle.NumSides  = 64
-    fovCircle.Radius    = 90
-    fovCircle.Transparency = 1
+    fovCircle.Visible      = false
+    fovCircle.Filled       = false
+    fovCircle.Color        = Color3.new(1, 1, 1)
+    fovCircle.Thickness    = 1.5
+    fovCircle.NumSides     = 64
+    fovCircle.Radius       = 90
+    fovCircle.Transparency = 0   -- 0 = полностью видимый
 end)
 
 local aimState = { on = false, smoothness = 40, fov = 90, visCheck = false, showFov = false }
@@ -92,17 +94,23 @@ local function RefreshFovCircle()
     if not fovCircle then return end
     local show = aimState.on and aimState.showFov
     if show then
-        local cam = workspace.CurrentCamera
-        if cam then
-            local vp = cam.ViewportSize
-            fovCircle.Position = Vector2.new(vp.X / 2, vp.Y / 2)
-        end
         fovCircle.Radius  = math.max(4, aimState.fov)
         fovCircle.Visible = true
     else
         fovCircle.Visible = false
     end
 end
+
+-- Обновляем позицию круга каждый кадр по центру экрана
+RunService.RenderStepped:Connect(function()
+    if fovCircle and fovCircle.Visible then
+        local cam = workspace.CurrentCamera
+        if cam then
+            local vp = cam.ViewportSize
+            fovCircle.Position = Vector2.new(vp.X / 2, vp.Y / 2)
+        end
+    end
+end)
 
 -- ══════════════ ВАТЕРМАРК ══════════════
 local WM = Instance.new("Frame")

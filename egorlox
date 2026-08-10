@@ -90,25 +90,32 @@ end)
 
 local aimState = { on = false, smoothness = 40, fov = 90, visCheck = false, showFov = false }
 
+local function GetScreenCenter()
+    local cam = workspace.CurrentCamera
+    if cam then
+        local vp = cam.ViewportSize
+        return Vector2.new(vp.X / 2, vp.Y / 2)
+    end
+    return Vector2.new(700, 400)
+end
+
 local function RefreshFovCircle()
     if not fovCircle then return end
-    local show = aimState.on and aimState.showFov
-    if show then
-        fovCircle.Radius  = math.max(4, aimState.fov)
-        fovCircle.Visible = true
+    -- Круг показывается когда ShowFov включён (независимо от Aim-Bot)
+    if aimState.showFov then
+        fovCircle.Radius   = math.max(4, aimState.fov)
+        fovCircle.Position = GetScreenCenter()
+        fovCircle.Visible  = true
     else
         fovCircle.Visible = false
     end
 end
 
--- Обновляем позицию круга каждый кадр по центру экрана
+-- Обновляем позицию и размер круга каждый кадр
 RunService.RenderStepped:Connect(function()
     if fovCircle and fovCircle.Visible then
-        local cam = workspace.CurrentCamera
-        if cam then
-            local vp = cam.ViewportSize
-            fovCircle.Position = Vector2.new(vp.X / 2, vp.Y / 2)
-        end
+        fovCircle.Position = GetScreenCenter()
+        fovCircle.Radius   = math.max(4, aimState.fov)
     end
 end)
 
@@ -286,15 +293,26 @@ local function MakeSlider(parent, label, maxVal, initVal, onChange)
 
     local val = initVal
     local dragging = false
+    local lastUpdate = 0
 
     local function Upd(sx)
+        local now = tick()
+        -- Дросселим обновления: не чаще 30 раз/сек → плавнее на тач
+        if now - lastUpdate < 0.033 then return end
+        lastUpdate = now
+
         local ap = track.AbsolutePosition
         local as = track.AbsoluteSize
         local ratio = math.clamp((sx - ap.X) / as.X, 0, 1)
-        val = math.floor(ratio * maxVal + 0.5)
+        local newVal = math.floor(ratio * maxVal + 0.5)
+        if newVal == val then return end
+        val = newVal
         valLbl.Text = tostring(val)
-        fill.Size = UDim2.new(ratio, 0, 1, 0)
-        knob.Position = UDim2.new(ratio, -7, 0.5, -7)
+        -- Плавное движение ползунка через Tween
+        TweenService:Create(fill, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Size = UDim2.new(ratio, 0, 1, 0) }):Play()
+        TweenService:Create(knob, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Position = UDim2.new(ratio, -7, 0.5, -7) }):Play()
         if onChange then onChange(val) end
     end
 
@@ -395,7 +413,7 @@ sepLine.Size = UDim2.new(1, 0, 0, 1); sepLine.BackgroundColor3 = CFG.Sep
 sepLine.BorderSizePixel = 0; sepLine.Parent = aimSub
 
 MakeSlider(aimSub, "Smoothness", 80,  40,  function(v) aimState.smoothness = v end)
-MakeSlider(aimSub, "Fov",        360, 90,  function(v) aimState.fov = v; RefreshFovCircle() end)
+MakeSlider(aimSub, "Fov",        180, 90,  function(v) aimState.fov = v; RefreshFovCircle() end)
 MiniToggle(aimSub, "VisibleCheck", function(v) aimState.visCheck = v end)
 MiniToggle(aimSub, "ShowFov",      function(v) aimState.showFov = v; RefreshFovCircle() end)
 

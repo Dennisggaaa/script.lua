@@ -1,8 +1,8 @@
 --[[
 ╔══════════════════════════════════════════════╗
-║           SeraphiCA v4.0                      ║
-║   Полный фикс: ESP · Aimbot · MM · UI         ║
-║   Delta Android · BloxStrike                  ║
+║           SeraphiCA v4.1                      ║
+║   MM2 Edition · Delta Android                 ║
+║   ChamsMurder · ChamsSherif · WallShot · Anti ║
 ╚══════════════════════════════════════════════╝--]]
 
 local Players            = game:GetService("Players")
@@ -73,282 +73,80 @@ GUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 GUI.IgnoreGuiInset = true; GUI.Parent = PlayerGui
 
 -- ══════════════ STATE ══════════════
-local aimState = {
-    on = false,
-    smoothness = 0.15,
-    fov = 120,
-    visCheck = true,
-    showFov = true,
-    targetPart = "Head",
-}
-
 local mmState = {
     wallShot = false,
-    infAmmo = false,
-    rapidFire = false,
-    noRecoil = false,
+    antiFling = false,
 }
 
 local espState = {
-    on = false,
-    box = true,
-    chams = true,
-    teamCheck = true,
-    color = Color3.fromHex("#00FF00"),
-    enemyColor = Color3.fromHex("#FF0040"),
-    teamColor = Color3.fromHex("#00AAFF"),
+    chamsMurder = false,
+    chamsSherif = false,
 }
 
--- ══════════════ TEAM CHECK ══════════════
-local function isTeammate(player)
-    if not player or not LocalPlayer then return false end
-    if player.Team == nil or LocalPlayer.Team == nil then
-        -- Fallback: check if character has same team-colored attributes
-        return false
-    end
-    return player.Team == LocalPlayer.Team
+-- ══════════════ УВЕДОМЛЕНИЯ ══════════════
+local function ShowMessage(text)
+    local msg = Instance.new("TextLabel")
+    msg.Size = UDim2.new(0, 300, 0, 40)
+    msg.Position = UDim2.new(0.5, -150, 0.8, 0)
+    msg.BackgroundColor3 = CFG.Card
+    msg.BackgroundTransparency = 1
+    msg.TextColor3 = CFG.TxtPri
+    msg.Text = text
+    msg.Font = Enum.Font.GothamBold
+    msg.TextSize = 14
+    msg.Parent = GUI
+    Corner(msg, 8)
+    Stroke(msg, CFG.Accent, 1.5)
+    
+    Tw(msg, { Position = UDim2.new(0.5, -150, 0.75, 0), BackgroundTransparency = 0.2 }, 0.3):Play()
+    task.delay(2, function()
+        local t = Tw(msg, { Position = UDim2.new(0.5, -150, 0.85, 0), BackgroundTransparency = 1 }, 0.3)
+        t:Play()
+        t.Completed:Wait()
+        msg:Destroy()
+    end)
 end
 
-local function isEnemy(player)
-    if espState.teamCheck then
-        return not isTeammate(player)
-    end
-    return true
-end
-
-local function isAlive(player)
-    if not player or not player.Character then return false end
-    local hum = player.Character:FindFirstChildOfClass("Humanoid")
-    return hum and hum.Health > 0
-end
-
--- ══════════════ FOV CIRCLE ══════════════
-local FovContainer = Instance.new("Frame")
-FovContainer.Name = "FovCircle"
-FovContainer.Size = UDim2.new(0, 240, 0, 240)
-FovContainer.Position = UDim2.new(0.5, -120, 0.5, -120)
-FovContainer.BackgroundTransparency = 1
-FovContainer.BorderSizePixel = 0
-FovContainer.Visible = false
-FovContainer.Parent = GUI
-
-local FovCircleOuter = Instance.new("Frame")
-FovCircleOuter.Size = UDim2.new(1, 0, 1, 0)
-FovCircleOuter.BackgroundColor3 = Color3.new(1, 1, 1)
-FovCircleOuter.BackgroundTransparency = 0.5
-FovCircleOuter.BorderSizePixel = 0
-FovCircleOuter.Parent = FovContainer
-Corner(FovCircleOuter, 120)
-
-local FovDot = Instance.new("Frame")
-FovDot.Size = UDim2.new(0, 4, 0, 4)
-FovDot.Position = UDim2.new(0.5, -2, 0.5, -2)
-FovDot.BackgroundColor3 = Color3.new(0, 1, 0)
-FovDot.BackgroundTransparency = 0.2
-FovDot.BorderSizePixel = 0
-FovDot.Parent = FovContainer
-Corner(FovDot, 2)
-
-local function RefreshFovCircle()
-    if aimState.showFov and aimState.on then
-        local radius = math.max(10, aimState.fov)
-        local size = radius * 2
-        FovContainer.Size = UDim2.new(0, size, 0, size)
-        FovContainer.Position = UDim2.new(0.5, -size/2, 0.5, -size/2)
-        FovContainer.Visible = true
-    else
-        FovContainer.Visible = false
-    end
-end
-
-RunService.RenderStepped:Connect(function()
-    if FovContainer.Visible then
-        local size = math.max(10, aimState.fov) * 2
-        FovContainer.Position = UDim2.new(0.5, -size/2, 0.5, -size/2)
-    end
-end)
-
--- ══════════════ VISIBILITY CHECK ══════════════
-local function isVisible(targetPart)
-    if not aimState.visCheck then return true end
-    local char = LocalPlayer.Character
-    if not char then return false end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return false end
-
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = { char, Camera }
-
-    local dir = (targetPart.Position - root.Position)
-    local result = workspace:Raycast(root.Position, dir, params)
-
-    if result then
-        if result.Instance:IsDescendantOf(targetPart.Parent) then
-            return true
-        end
-        return false
-    end
-    return true
-end
-
--- ══════════════ AIMBOT ══════════════
-local function getAimTarget()
-    local camera = workspace.CurrentCamera
-    if not camera then return nil end
-
-    local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-    local maxDist = aimState.fov
-    local bestTarget = nil
-    local bestDist = math.huge
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and isAlive(player) and isEnemy(player) then
-            local char = player.Character
-            local targetPart = char:FindFirstChild(aimState.targetPart) or char:FindFirstChild("HumanoidRootPart")
-            if not targetPart then continue end
-
-            local screenPos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
-            if not onScreen then continue end
-
-            local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-            if dist <= maxDist and dist < bestDist then
-                if isVisible(targetPart) then
-                    bestDist = dist
-                    bestTarget = { player = player, part = targetPart, screenPos = screenPos }
-                end
+-- ══════════════ ROLE DETECTION (MM2) ══════════════
+local function getRole(player)
+    if not player or not player.Character then return nil end
+    for _, tool in ipairs(player.Character:GetChildren()) do
+        if tool:IsA("Tool") then
+            local name = tool.Name:lower()
+            if name:find("knife") or name:find("blade") or name:find("dagger") then
+                return "Murderer"
+            elseif name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then
+                return "Sheriff"
             end
         end
     end
-
-    return bestTarget
+    return nil
 end
 
-local aimConnection
-local function StartAimLoop()
-    if aimConnection then aimConnection:Disconnect() end
-    aimConnection = RunService.RenderStepped:Connect(function()
-        if not aimState.on then return end
-        local camera = workspace.CurrentCamera
-        if not camera then return end
-
-        local target = getAimTarget()
-        if not target then return end
-
-        local targetPos = target.part.Position
-        local currentCFrame = camera.CFrame
-        local aimCFrame = CFrame.lookAt(currentCFrame.Position, targetPos)
-
-        local smooth = math.clamp(aimState.smoothness, 0.01, 1)
-        camera.CFrame = currentCFrame:Lerp(aimCFrame, smooth)
-    end)
-end
-StartAimLoop()
-
--- ══════════════ ESP SYSTEM ══════════════
-local espObjects = {}   --[player] = { box, outline, tracer, nameLabel, distanceLabel, highlight }
-local espConnections = {}
-
-local function getEspColor(player)
-    if espState.teamCheck and isTeammate(player) then
-        return espState.teamColor
-    end
-    return espState.enemyColor
-end
+-- ══════════════ ESP / CHAMS SYSTEM ══════════════
+local espObjects = {}
 
 local function createEspForPlayer(player)
     if espObjects[player] then return espObjects[player] end
 
-    -- Box container
-    local boxContainer = Instance.new("Frame")
-    boxContainer.Name = "ESP_" .. player.Name
-    boxContainer.Size = UDim2.new(0, 100, 0, 150)
-    boxContainer.BackgroundTransparency = 1
-    boxContainer.BorderSizePixel = 0
-    boxContainer.Visible = false
-    boxContainer.Parent = GUI
-
-    -- Box outline (outer)
-    local boxOuter = Instance.new("Frame")
-    boxOuter.Size = UDim2.new(1, 2, 1, 2)
-    boxOuter.Position = UDim2.new(0, -1, 0, -1)
-    boxOuter.BackgroundTransparency = 1
-    boxOuter.BorderSizePixel = 0
-    boxOuter.Parent = boxContainer
-
-    local boxStrokeOuter = Instance.new("UIStroke")
-    boxStrokeOuter.Color = Color3.new(0, 0, 0)
-    boxStrokeOuter.Thickness = 3
-    boxStrokeOuter.Transparency = 0.5
-    boxStrokeOuter.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    boxStrokeOuter.Parent = boxOuter
-
-    -- Box main
-    local box = Instance.new("Frame")
-    box.Size = UDim2.new(1, 0, 1, 0)
-    box.BackgroundTransparency = 1
-    box.BorderSizePixel = 0
-    box.Parent = boxContainer
-
-    local boxStroke = Instance.new("UIStroke")
-    boxStroke.Color = espState.enemyColor
-    boxStroke.Thickness = 1.5
-    boxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    boxStroke.Parent = box
-
-    -- Name label
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, 0, 0, 16)
-    nameLabel.Position = UDim2.new(0, 0, 0, -18)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = player.Name
-    nameLabel.TextColor3 = Color3.new(1, 1, 1)
-    nameLabel.TextSize = 12
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextStrokeTransparency = 0
-    nameLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-    nameLabel.Parent = boxContainer
-
-    -- Distance label
-    local distLabel = Instance.new("TextLabel")
-    distLabel.Size = UDim2.new(1, 0, 0, 14)
-    distLabel.Position = UDim2.new(0, 0, 1, 2)
-    distLabel.BackgroundTransparency = 1
-    distLabel.Text = ""
-    distLabel.TextColor3 = Color3.fromHex("#AAAAAA")
-    distLabel.TextSize = 10
-    distLabel.Font = Enum.Font.Gotham
-    distLabel.TextStrokeTransparency = 0
-    distLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-    distLabel.Parent = boxContainer
-
-    -- Highlight для chams (встроенный, 0 лагов)
     local highlight = Instance.new("Highlight")
     highlight.Name = "Chams_" .. player.Name
-    highlight.FillColor = espState.enemyColor
-    highlight.OutlineColor = Color3.new(1, 1, 1)
+    highlight.FillColor = Color3.new(1, 1, 1)
+    highlight.OutlineColor = Color3.new(0, 0, 0)
     highlight.FillTransparency = 0.5
     highlight.OutlineTransparency = 0
     highlight.Enabled = false
     highlight.Parent = nil
 
     espObjects[player] = {
-        container = boxContainer,
-        box = box,
-        boxStroke = boxStroke,
-        nameLabel = nameLabel,
-        distLabel = distLabel,
         highlight = highlight,
-        char = nil,
     }
-
     return espObjects[player]
 end
 
 local function removeEspForPlayer(player)
     local data = espObjects[player]
     if data then
-        if data.container then data.container:Destroy() end
         if data.highlight then data.highlight:Destroy() end
         espObjects[player] = nil
     end
@@ -358,80 +156,28 @@ local function updateEspForPlayer(player)
     local data = espObjects[player]
     if not data then return end
 
-    if not espState.on or not isAlive(player) then
-        data.container.Visible = false
-        if data.highlight then data.highlight.Enabled = false end
-        return
+    local role = getRole(player)
+    local shouldHighlight = false
+    local color = Color3.new(1, 1, 1)
+
+    if role == "Murderer" and espState.chamsMurder then
+        shouldHighlight = true
+        color = Color3.fromHex("#FF0040")
+    elseif role == "Sheriff" and espState.chamsSherif then
+        shouldHighlight = true
+        color = Color3.fromHex("#00AAFF")
     end
 
-    -- Team check
-    if espState.teamCheck and isTeammate(player) then
-        data.container.Visible = false
-        if data.highlight then data.highlight.Enabled = false end
-        return
-    end
-
-    local char = player.Character
-    if not char then return end
-
-    local head = char:FindFirstChild("Head")
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-
-    if not head or not root or not humanoid then return end
-
-    local camera = workspace.CurrentCamera
-    local headPos, headOnScreen = camera:WorldToViewportPoint(head.Position)
-    local rootPos, rootOnScreen = camera:WorldToViewportPoint(root.Position)
-    local feetPos, feetOnScreen = camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
-
-    if not headOnScreen and not feetOnScreen then
-        data.container.Visible = false
-        if data.highlight then data.highlight.Enabled = false end
-        return
-    end
-
-    local color = getEspColor(player)
-
-    -- Box
-    if espState.box then
-        local topY = headPos.Y
-        local bottomY = feetPos.Y
-        local height = math.abs(bottomY - topY)
-        local width = height * 0.45
-
-        if height < 5 then
-            data.container.Visible = false
-        else
-            local centerX = (headPos.X + rootPos.X) / 2
-            data.container.Position = UDim2.new(0, centerX - width/2, 0, topY)
-            data.container.Size = UDim2.new(0, width, 0, height)
-            data.container.Visible = true
-            data.boxStroke.Color = color
-            data.nameLabel.Text = player.Name
-            data.nameLabel.TextColor3 = color
-
-            -- Distance
-            local localRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if localRoot then
-                local dist = math.floor((root.Position - localRoot.Position).Magnitude)
-                data.distLabel.Text = dist .. "m"
+    if shouldHighlight then
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if data.highlight.Parent ~= player.Character then
+                data.highlight.Parent = player.Character
             end
+            data.highlight.Enabled = true
+            data.highlight.FillColor = color
+        else
+            data.highlight.Enabled = false
         end
-    else
-        data.container.Visible = false
-    end
-
-    -- Chams через Highlight
-    if espState.chams then
-        if data.highlight.Parent ~= char then
-            data.highlight.Parent = char
-        end
-        data.highlight.Enabled = true
-        data.highlight.FillColor = color
-        data.highlight.OutlineColor = Color3.new(0, 0, 0)
-        data.highlight.FillTransparency = 0.5
-        data.highlight.OutlineTransparency = 0
     else
         data.highlight.Enabled = false
     end
@@ -450,7 +196,6 @@ local function StartEspLoop()
             end
         end
 
-        -- Cleanup
         for player, _ in pairs(espObjects) do
             if not Players:FindFirstChild(player.Name) then
                 removeEspForPlayer(player)
@@ -459,188 +204,85 @@ local function StartEspLoop()
     end)
 end
 
--- Cleanup on death/leave
 Players.PlayerRemoving:Connect(function(player)
     removeEspForPlayer(player)
 end)
 
 StartEspLoop()
 
--- ══════════════ MM FUNCTIONS (HOOKS) ══════════════
-local mmHooks = {}
-local recoilOffset = Vector3.zero
-local lastCameraCFrame = nil
+-- ══════════════ WALLSHOT HOOK ══════════════
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+setreadonly(mt, false)
 
--- WallShot: модификация RaycastParams
-local originalRaycast = workspace.Raycast
-local function hookedRaycast(origin, direction, params)
-    if mmState.wallShot and params then
-        -- Убираем стены из фильтра
-        local newFilter = {}
+mt.__namecall = function(self, ...)
+    local method = getnamecallmethod()
+    if method == "Raycast" and self == workspace and mmState.wallShot then
+        local args = {...}
+        local origin = args[1]
+        local direction = args[2]
+        local params = args[3] or RaycastParams.new()
+        
+        local newParams = RaycastParams.new()
+        newParams.FilterType = Enum.RaycastFilterType.Exclude
+        local filter = {}
         if params.FilterDescendantsInstances then
-            for _, inst in ipairs(params.FilterDescendantsInstances) do
-                if inst:IsA("Model") and inst:FindFirstChild("Humanoid") then
-                    table.insert(newFilter, inst)
-                end
+            for _, v in ipairs(params.FilterDescendantsInstances) do
+                table.insert(filter, v)
             end
         end
-        params.FilterDescendantsInstances = newFilter
-    end
-    return originalRaycast(workspace, origin, direction, params)
-end
-
-local function ApplyWallShot(state)
-    mmState.wallShot = state
-    if state then
-        -- Hook Raycast через metatable
-        local mt = getrawmetatable(game)
-        if not mmHooks.raycast then
-            local oldIndex = mt.__index
-            setreadonly(mt, false)
-            mmHooks.raycast = oldIndex
-            setreadonly(mt, true)
+        if LocalPlayer.Character then 
+            table.insert(filter, LocalPlayer.Character) 
         end
-    end
-end
-
--- InfAmmo: мониторинг патронов
-local infAmmoLoop
-local function ApplyInfAmmo(state)
-    mmState.infAmmo = state
-    if infAmmoLoop then infAmmoLoop:Disconnect() end
-    if state then
-        infAmmoLoop = RunService.Heartbeat:Connect(function()
-            local char = LocalPlayer.Character
-            if not char then return end
-            local tool = char:FindFirstChildOfClass("Tool")
-            if not tool then return end
-
-            for _, obj in ipairs(tool:GetDescendants()) do
-                if obj:IsA("IntValue") or obj:IsA("NumberValue") then
-                    local name = obj.Name:lower()
-                    if name:find("ammo") or name:find("bullet") or name:find("mag") or name:find("clip") or name:find("round") then
-                        if obj.Value < 30 then
-                            obj.Value = 999
-                        end
-                    end
-                end
-                if obj:IsA("Configuration") then
-                    for _, sub in ipairs(obj:GetDescendants()) do
-                        if sub:IsA("IntValue") or sub:IsA("NumberValue") then
-                            local name = sub.Name:lower()
-                            if name:find("ammo") or name:find("bullet") or name:find("mag") then
-                                sub.Value = 999
-                            end
-                        end
-                    end
-                end
-            end
-
-            -- Backpack tools
-            local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-            if backpack then
-                for _, tool in ipairs(backpack:GetChildren()) do
-                    if tool:IsA("Tool") then
-                        for _, obj in ipairs(tool:GetDescendants()) do
-                            if obj:IsA("IntValue") or obj:IsA("NumberValue") then
-                                local name = obj.Name:lower()
-                                if name:find("ammo") or name:find("bullet") or name:find("mag") then
-                                    obj.Value = 999
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end)
-    end
-end
-
--- RapidFire: уменьшение задержки выстрела
-local rapidFireLoop
-local lastFireTime = 0
-local function ApplyRapidFire(state)
-    mmState.rapidFire = state
-    if rapidFireLoop then rapidFireLoop:Disconnect() end
-    if state then
-        rapidFireLoop = RunService.Heartbeat:Connect(function()
-            local char = LocalPlayer.Character
-            if not char then return end
-            local tool = char:FindFirstChildOfClass("Tool")
-            if not tool then return end
-
-            -- Ищем конфиг оружия
-            for _, obj in ipairs(tool:GetDescendants()) do
-                if obj:IsA("NumberValue") or obj:IsA("IntValue") then
-                    local name = obj.Name:lower()
-                    if name:find("fire") and name:find("rate") or name:find("delay") or name:find("cooldown") then
-                        obj.Value = 0.01
-                    end
-                end
-                if obj:IsA("Configuration") then
-                    for _, sub in ipairs(obj:GetDescendants()) do
-                        if sub:IsA("NumberValue") or sub:IsA("IntValue") then
-                            local name = sub.Name:lower()
-                            if name:find("fire") and name:find("rate") or name:find("delay") or name:find("cooldown") then
-                                sub.Value = 0.01
-                            end
-                        end
-                    end
-                end
-            end
-
-            -- Авто-выстрел при зажатии
-            if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-                local now = tick()
-                if now - lastFireTime > 0.05 then
-                    lastFireTime = now
-                    -- Пытаемся активировать инструмент
-                    pcall(function()
-                        tool:Activate()
-                    end)
-                end
-            end
-        end)
-    end
-end
-
--- NoRecoil: компенсация отдачи камеры
-local noRecoilLoop
-local function ApplyNoRecoil(state)
-    mmState.noRecoil = state
-    if noRecoilLoop then noRecoilLoop:Disconnect() end
-    if state then
-        local savedCFrame = nil
-        noRecoilLoop = RunService.RenderStepped:Connect(function()
-            local camera = workspace.CurrentCamera
-            if not camera then return end
-            local char = LocalPlayer.Character
-            if not char then return end
-            local tool = char:FindFirstChildOfClass("Tool")
-
-            if tool then
-                -- Сохраняем CFrame когда нет выстрела
-                if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-                    savedCFrame = camera.CFrame
-                else
-                    -- При выстреле восстанавливаем сохранённый CFrame
-                    if savedCFrame then
-                        local current = camera.CFrame
-                        -- Компенсируем только небольшое смещение (отдача)
-                        local diff = (current.Position - savedCFrame.Position).Magnitude
-                        local angleDiff = math.acos(math.clamp(current.LookVector:Dot(savedCFrame.LookVector), -1, 1))
-
-                        if diff < 5 and angleDiff < 0.1 then
-                            -- Плавная компенсация
-                            camera.CFrame = camera.CFrame:Lerp(savedCFrame, 0.8)
-                        else
-                            -- Большое смещение = движение мыши, обновляем
-                            savedCFrame = camera.CFrame
-                        end
-                    end
-                end
+        newParams.FilterDescendantsInstances = filter
+        
+        local currentOrigin = origin
+        local remainingDir = direction
+        
+        -- Идём сквозь стены до 15 раз, пока не найдём игрока
+        for i = 1, 15 do
+            local result = oldNamecall(self, currentOrigin, remainingDir, newParams)
+            if not result then return nil end
+            
+            local model = result.Instance:FindFirstAncestorOfClass("Model")
+            if model and model:FindFirstChildOfClass("Humanoid") then
+                return result -- Нашли игрока, возвращаем попадание
             else
-                savedCFrame = camera.CFrame
+                -- Это стена, добавляем в игнор и продолжаем луч
+                table.insert(filter, result.Instance)
+                currentOrigin = result.Position
+                remainingDir = origin + direction - currentOrigin
+                if remainingDir.Magnitude < 0.1 then return nil end
+            end
+        end
+        return oldNamecall(self, origin, direction, params)
+    end
+    return oldNamecall(self, ...)
+end
+setreadonly(mt, true)
+
+-- ══════════════ ANTI-FLING SYSTEM ══════════════
+local antiFlingLoop
+local function ApplyAntiFling(state)
+    mmState.antiFling = state
+    if antiFlingLoop then antiFlingLoop:Disconnect() end
+    if state then
+        antiFlingLoop = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            if char then
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hrp and hum and hum.Health > 0 then
+                    local linVel = hrp.AssemblyLinearVelocity
+                    local angVel = hrp.AssemblyAngularVelocity
+                    
+                    -- Если скорость слишком высокая (нас флингают)
+                    if linVel.Magnitude > 200 or angVel.Magnitude > 100 then
+                        -- Сбрасываем импульс, оставляя только гравитацию
+                        hrp.AssemblyLinearVelocity = Vector3.new(0, linVel.Y, 0)
+                        hrp.AssemblyAngularVelocity = Vector3.zero
+                    end
+                end
             end
         end)
     end
@@ -754,52 +396,6 @@ local function MiniToggle(parent, label, onChange)
     return row
 end
 
-local function ColorPicker(parent, label, currentColor, onChange)
-    local wrap = Instance.new("Frame")
-    wrap.Size = UDim2.new(1, 0, 0, 70)
-    wrap.BackgroundTransparency = 1
-    wrap.Parent = parent
-
-    Lbl(wrap, label, UDim2.new(1, 0, 0, 18), CFG.TxtSec, Enum.Font.Gotham, 12)
-
-    local preview = Instance.new("Frame")
-    preview.Size = UDim2.new(0, 30, 0, 20)
-    preview.Position = UDim2.new(0, 0, 0, 22)
-    preview.BackgroundColor3 = currentColor
-    preview.BorderSizePixel = 0
-    preview.Parent = wrap
-    Corner(preview, 5); Stroke(preview, CFG.Sep, 1)
-
-    local grid = Instance.new("Frame")
-    grid.Size = UDim2.new(1, 0, 0, 28)
-    grid.Position = UDim2.new(0, 44, 0, 22)
-    grid.BackgroundTransparency = 1
-    grid.Parent = wrap
-
-    local gl = Instance.new("UIGridLayout")
-    gl.CellSize = UDim2.new(0, 24, 0, 24)
-    gl.CellPadding = UDim2.new(0, 6, 0, 0)
-    gl.Parent = grid
-
-    local colors = {
-        Color3.fromHex("#FF0040"), Color3.fromHex("#00FF00"), Color3.fromHex("#00AAFF"),
-        Color3.fromHex("#FFFF00"), Color3.fromHex("#FF00FF"), Color3.fromHex("#00FFFF"),
-        Color3.fromHex("#FFA500"), Color3.fromHex("#FF1493"), Color3.fromHex("#FFFFFF"),
-    }
-
-    for _, col in ipairs(colors) do
-        local sw = Instance.new("TextButton")
-        sw.Size = UDim2.new(1, 0, 1, 0)
-        sw.BackgroundColor3 = col
-        sw.Text = ""; sw.AutoButtonColor = false
-        sw.BorderSizePixel = 0; sw.Parent = grid
-        Corner(sw, 5); Stroke(sw, CFG.Sep, 0.5)
-        sw.MouseButton1Click:Connect(function()
-            onChange(col); preview.BackgroundColor3 = col
-        end)
-    end
-end
-
 -- ══════════════ МЕНЮ ══════════════
 local oldMenu = PlayerGui:FindFirstChild("SeraphiCA_Menu")
 if oldMenu then oldMenu:Destroy() end
@@ -829,7 +425,7 @@ wmDot.BorderSizePixel = 0; wmDot.Parent = WM
 Corner(wmDot, 4)
 LIVE.WM.Dot = wmDot; wmDot.BackgroundColor3 = CFG.WMColor
 
-local wmTxt = Lbl(WM, "SeraphiCA  <font color='#454A6E'>|</font>  v4.0",
+local wmTxt = Lbl(WM, "SeraphiCA  <font color='#454A6E'>|</font>  v4.1 MM2",
 UDim2.new(1, -32, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 13)
 wmTxt.Position = UDim2.new(0, 26, 0, 0)
 LIVE.WM.Text = wmTxt
@@ -854,7 +450,7 @@ logo.BorderSizePixel = 0; logo.Parent = Head
 Corner(logo, 3); Acc(logo)
 
 Lbl(Head, "SeraphiCA", UDim2.new(0, 200, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 16).Position = UDim2.new(0, 30, 0, 0)
-Lbl(Head, "v4.0", UDim2.new(0, 60, 1, 0), CFG.TxtMut, Enum.Font.GothamMedium, 12).Position = UDim2.new(0, 122, 0, 0)
+Lbl(Head, "v4.1 MM2", UDim2.new(0, 80, 1, 0), CFG.TxtMut, Enum.Font.GothamMedium, 12).Position = UDim2.new(0, 122, 0, 0)
 
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 28, 0, 28); closeBtn.Position = UDim2.new(1, -40, 0.5, -14)
@@ -902,70 +498,14 @@ local function Title(page, txt, sub)
     end
 end
 
--- ══════════════ СТРАНИЦА AA ══════════════
-local pAA = NewPage("AA"); Title(pAA, "AA", "Aimbot · Smoothness · FOV · VisCheck")
-
-local COLL = 54
-
-local aimCard = Instance.new("Frame")
-aimCard.Size = UDim2.new(1, 0, 0, COLL)
-aimCard.BackgroundColor3 = CFG.Card; aimCard.BorderSizePixel = 0
-aimCard.ClipsDescendants = true; aimCard.Parent = pAA
-Corner(aimCard, 10); Stroke(aimCard, CFG.Sep, 1)
-
-Lbl(aimCard, "Aimbot",
-UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
-Lbl(aimCard, "Smoothness · FOV · VisCheck · ShowFov · Target",
-UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position = UDim2.new(0,14,0,30)
-
-local aimTrack = Instance.new("Frame")
-aimTrack.Size = UDim2.new(0,42,0,22); aimTrack.Position = UDim2.new(1,-56,0,16)
-aimTrack.BackgroundColor3 = CFG.Panel; aimTrack.BorderSizePixel = 0; aimTrack.Parent = aimCard
-Corner(aimTrack, 11)
-local aimKnob = Instance.new("Frame")
-aimKnob.Size = UDim2.new(0,16,0,16); aimKnob.Position = UDim2.new(0,3,0.5,-8)
-aimKnob.BackgroundColor3 = CFG.TxtMut; aimKnob.BorderSizePixel = 0; aimKnob.Parent = aimTrack
-Corner(aimKnob, 8)
-
-local AIM_EXPD = COLL + 8 + 1 + 46 + 6 + 46 + 6 + 28 + 6 + 28 + 6 + 28 + 14
-
-local aimSub = Instance.new("Frame")
-aimSub.Size = UDim2.new(1, -28, 0, AIM_EXPD - COLL - 8)
-aimSub.Position = UDim2.new(0, 14, 0, COLL + 8)
-aimSub.BackgroundTransparency = 1; aimSub.Parent = aimCard
-local subList = Instance.new("UIListLayout"); subList.Padding = UDim.new(0, 6); subList.Parent = aimSub
-
-local sepLine = Instance.new("Frame")
-sepLine.Size = UDim2.new(1, 0, 0, 1); sepLine.BackgroundColor3 = CFG.Sep
-sepLine.BorderSizePixel = 0; sepLine.Parent = aimSub
-
-MakeSlider(aimSub, "Smoothness (1=fast, 100=slow)", 100, 15, function(v)
-    aimState.smoothness = math.clamp(1 / v, 0.01, 1)
-end)
-MakeSlider(aimSub, "FOV Radius", 300, 120, function(v)
-    aimState.fov = v; RefreshFovCircle()
-end)
-MiniToggle(aimSub, "Visible Check", function(v) aimState.visCheck = v end)
-MiniToggle(aimSub, "Show FOV Circle", function(v) aimState.showFov = v; RefreshFovCircle() end)
-MiniToggle(aimSub, "Team Check (skip teammates)", function(v)
-    -- Всегда включён по умолчанию
-end)
-
-local aimBtn = Instance.new("TextButton")
-aimBtn.Size = UDim2.new(1,0,1,0); aimBtn.BackgroundTransparency = 1; aimBtn.Text = ""; aimBtn.Parent = aimTrack
-aimBtn.MouseButton1Click:Connect(function()
-    aimState.on = not aimState.on
-    Tw(aimKnob, {
-        Position = aimState.on and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
-        BackgroundColor3 = aimState.on and Color3.new(1,1,1) or CFG.TxtMut
-    }, 0.18):Play()
-    Tw(aimTrack, { BackgroundColor3 = aimState.on and CFG.Accent or CFG.Panel }, 0.18):Play()
-    Tw(aimCard, { Size = UDim2.new(1, 0, 0, aimState.on and AIM_EXPD or COLL) }, 0.22):Play()
-    RefreshFovCircle()
-end)
+-- ══════════════ СТРАНИЦА AA (ПУСТАЯ) ══════════════
+local pAA = NewPage("AA"); Title(pAA, "AA", "Not available")
+-- Функционал удалён
 
 -- ══════════════ СТРАНИЦА MM ══════════════
-local pMM = NewPage("MM"); Title(pMM, "MM", "WallShot · InfAmmo · RapidFire · NoRecoil")
+local pMM = NewPage("MM"); Title(pMM, "MM", "WallShot · AntiFling")
+
+local COLL = 54
 
 local mmCard = Instance.new("Frame")
 mmCard.Size = UDim2.new(1, 0, 0, COLL)
@@ -973,9 +513,9 @@ mmCard.BackgroundColor3 = CFG.Card; mmCard.BorderSizePixel = 0
 mmCard.ClipsDescendants = true; mmCard.Parent = pMM
 Corner(mmCard, 10); Stroke(mmCard, CFG.Sep, 1)
 
-Lbl(mmCard, "MM Features",
+Lbl(mmCard, "MM2 Features",
 UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
-Lbl(mmCard, "WallShot · InfAmmo · RapidFire · NoRecoil",
+Lbl(mmCard, "WallShot · AntiFling",
 UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position = UDim2.new(0,14,0,30)
 
 local mmTrack = Instance.new("Frame")
@@ -987,7 +527,7 @@ mmKnob.Size = UDim2.new(0,16,0,16); mmKnob.Position = UDim2.new(0,3,0.5,-8)
 mmKnob.BackgroundColor3 = CFG.TxtMut; mmKnob.BorderSizePixel = 0; mmKnob.Parent = mmTrack
 Corner(mmKnob, 8)
 
-local MM_EXPD = COLL + 8 + 1 + 28 + 6 + 28 + 6 + 28 + 6 + 28 + 14
+local MM_EXPD = COLL + 8 + 1 + 28 + 6 + 28 + 14
 
 local mmSub = Instance.new("Frame")
 mmSub.Size = UDim2.new(1, -28, 0, MM_EXPD - COLL - 8)
@@ -999,17 +539,12 @@ local mmSepLine = Instance.new("Frame")
 mmSepLine.Size = UDim2.new(1, 0, 0, 1); mmSepLine.BackgroundColor3 = CFG.Sep
 mmSepLine.BorderSizePixel = 0; mmSepLine.Parent = mmSub
 
-MiniToggle(mmSub, "WallShot (shoot through walls)", function(v)
-    ApplyWallShot(v)
+MiniToggle(mmSub, "WallShot (through walls)", function(v)
+    mmState.wallShot = v
 end)
-MiniToggle(mmSub, "Infinity Ammo", function(v)
-    ApplyInfAmmo(v)
-end)
-MiniToggle(mmSub, "RapidFire (auto + fast)", function(v)
-    ApplyRapidFire(v)
-end)
-MiniToggle(mmSub, "NoRecoil (camera fix)", function(v)
-    ApplyNoRecoil(v)
+
+MiniToggle(mmSub, "AntiFling (anti-velocity)", function(v)
+    ApplyAntiFling(v)
 end)
 
 local mmBtn = Instance.new("TextButton")
@@ -1026,7 +561,7 @@ mmBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ══════════════ СТРАНИЦА EE (ESP) ══════════════
-local pEE = NewPage("EE"); Title(pEE, "EE", "ESP · Box · Chams · Team Check")
+local pEE = NewPage("EE"); Title(pEE, "EE", "ChamsMurder · ChamsSherif")
 
 local espCard = Instance.new("Frame")
 espCard.Size = UDim2.new(1, 0, 0, COLL)
@@ -1034,9 +569,9 @@ espCard.BackgroundColor3 = CFG.Card; espCard.BorderSizePixel = 0
 espCard.ClipsDescendants = true; espCard.Parent = pEE
 Corner(espCard, 10); Stroke(espCard, CFG.Sep, 1)
 
-Lbl(espCard, "ESP System",
+Lbl(espCard, "Chams System",
 UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
-Lbl(espCard, "Box · Chams · Name · Distance · Team Check",
+Lbl(espCard, "Murder (Red) · Sherif (Blue)",
 UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position = UDim2.new(0,14,0,30)
 
 local espTrack = Instance.new("Frame")
@@ -1048,7 +583,7 @@ espKnob.Size = UDim2.new(0,16,0,16); espKnob.Position = UDim2.new(0,3,0.5,-8)
 espKnob.BackgroundColor3 = CFG.TxtMut; espKnob.BorderSizePixel = 0; espKnob.Parent = espTrack
 Corner(espKnob, 8)
 
-local ESP_EXPD = COLL + 8 + 1 + 28 + 6 + 28 + 6 + 28 + 6 + 70 + 6 + 70 + 14
+local ESP_EXPD = COLL + 8 + 1 + 28 + 6 + 28 + 14
 
 local espSub = Instance.new("Frame")
 espSub.Size = UDim2.new(1, -28, 0, ESP_EXPD - COLL - 8)
@@ -1060,35 +595,30 @@ local espSepLine = Instance.new("Frame")
 espSepLine.Size = UDim2.new(1, 0, 0, 1); espSepLine.BackgroundColor3 = CFG.Sep
 espSepLine.BorderSizePixel = 0; espSepLine.Parent = espSub
 
-MiniToggle(espSub, "Box ESP", function(v) espState.box = v end)
-MiniToggle(espSub, "Chams (Highlight)", function(v)
-    espState.chams = v
-    if not v then
-        for player, data in pairs(espObjects) do
-            if data.highlight then data.highlight.Enabled = false end
-        end
-    end
+MiniToggle(espSub, "ChamsMurder (auto detect)", function(v)
+    espState.chamsMurder = v
 end)
-MiniToggle(espSub, "Team Check (enemies only)", function(v)
-    espState.teamCheck = v
-end)
-ColorPicker(espSub, "Enemy Color", espState.enemyColor, function(col)
-    espState.enemyColor = col
-end)
-ColorPicker(espSub, "Team Color", espState.teamColor, function(col)
-    espState.teamColor = col
+
+MiniToggle(espSub, "ChamsSherif (auto detect)", function(v)
+    espState.chamsSherif = v
 end)
 
 local espBtn = Instance.new("TextButton")
 espBtn.Size = UDim2.new(1,0,1,0); espBtn.BackgroundTransparency = 1; espBtn.Text = ""; espBtn.Parent = espTrack
+local espOn = false
 espBtn.MouseButton1Click:Connect(function()
-    espState.on = not espState.on
+    espOn = not espOn
+    -- Если выключили главную кнопку, отключаем всё
+    if not espOn then
+        espState.chamsMurder = false
+        espState.chamsSherif = false
+    end
     Tw(espKnob, {
-        Position = espState.on and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
-        BackgroundColor3 = espState.on and Color3.new(1,1,1) or CFG.TxtMut
+        Position = espOn and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
+        BackgroundColor3 = espOn and Color3.new(1,1,1) or CFG.TxtMut
     }, 0.18):Play()
-    Tw(espTrack, { BackgroundColor3 = espState.on and CFG.Accent or CFG.Panel }, 0.18):Play()
-    Tw(espCard, { Size = UDim2.new(1, 0, 0, espState.on and ESP_EXPD or COLL) }, 0.22):Play()
+    Tw(espTrack, { BackgroundColor3 = espOn and CFG.Accent or CFG.Panel }, 0.18):Play()
+    Tw(espCard, { Size = UDim2.new(1, 0, 0, espOn and ESP_EXPD or COLL) }, 0.22):Play()
 end)
 
 -- ══════════════ СТРАНИЦА SS ══════════════
@@ -1184,9 +714,17 @@ for _, name in ipairs({ "AA", "MM", "EE", "SS" }) do
     b.AutoButtonColor = false; b.Parent = TabBar
     Corner(b, 9)
     table.insert(LIVE.Tabs, { name = name, btn = b, active = false })
-    b.MouseButton1Click:Connect(function() SwitchTab(name) end)
+    
+    b.MouseButton1Click:Connect(function()
+        if name == "AA" then
+            -- Не переключаемся, показываем сообщение
+            ShowMessage("*not available yet.*")
+        else
+            SwitchTab(name)
+        end
+    end)
 end
-SwitchTab("AA")
+SwitchTab("MM")
 
 -- ══════════════ ОТКРЫТИЕ / ЗАКРЫТИЕ ══════════════
 local isOpen = false
@@ -1208,34 +746,9 @@ closeBtn.MouseButton1Click:Connect(function() task.spawn(CloseMenu) end)
 UserInputService.InputBegan:Connect(function(i, gp)
     if gp then return end
     if i.KeyCode == Enum.KeyCode.RightShift then
-        if isOpen then task.spawn(CloseMenu) else OpenMenu() end
+        if isOpen then task.spawn(CloseMenu) else OpenMenu() fi
     end
 end)
-
--- ══════════════ ПЕРЕТАСКИВАНИЕ ══════════════
-local function MakeDrag(frame, handle)
-    local dragging, startPos, startInput
-    handle.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then
-            dragging = true; startInput = i.Position; startPos = frame.Position
-            i.Changed:Connect(function()
-                if i.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
-        or i.UserInputType == Enum.UserInputType.Touch) then
-            local d = i.Position - startInput
-            frame.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + d.X,
-                startPos.Y.Scale, startPos.Y.Offset + d.Y)
-        end
-    end)
-end
-MakeDrag(Menu, Head)
-MakeDrag(WM, WM)
 
 -- ══════════════ ПЕРЕТАСКИВАНИЕ ══════════════
 local function MakeDrag(frame, handle)
@@ -1265,19 +778,13 @@ MakeDrag(WM, WM)
 -- ══════════════ СТАРТ ══════════════
 Tw(WM, { BackgroundTransparency = 0.15 }, 0.4):Play()
 task.delay(0.4, OpenMenu)
-RefreshFovCircle()
 
 -- ══════════════ ОЧИСТКА ПРИ РЕСПАВНЕ ══════════════
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(1)
-    -- Пересоздаём ESP для всех игроков
     for player, data in pairs(espObjects) do
         if data.highlight then
             data.highlight.Enabled = false
         end
     end
-end)
-
-LocalPlayer.CharacterRemoving:Connect(function()
-    FovContainer.Visible = false
 end)

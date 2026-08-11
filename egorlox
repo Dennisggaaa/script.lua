@@ -1,14 +1,15 @@
 --[[
 ╔══════════════════════════════════════════════╗
-║           SeraphiCA v4.1                      ║
-║   MM2 Edition · Delta Android                 ║
-║   ChamsMurder · ChamsSherif · WallShot · Anti ║
+║           SeraphiCA v5.0                      ║
+║   MM2 Edition · WallShot · AntiFling · Chams  ║
+║   Delta Android · BloxStrike                  ║
 ╚══════════════════════════════════════════════╝--]]
 
 local Players            = game:GetService("Players")
 local TweenService       = game:GetService("TweenService")
 local UserInputService   = game:GetService("UserInputService")
 local RunService         = game:GetService("RunService")
+local StarterGui         = game:GetService("StarterGui")
 local LocalPlayer        = Players.LocalPlayer
 local Camera             = workspace.CurrentCamera
 
@@ -19,16 +20,16 @@ if not PlayerGui then PlayerGui = game:GetService("CoreGui") end
 -- ══════════════ КОНФИГ ══════════════
 local CFG = {
     MenuW = 720, MenuH = 520, Spd = 0.25,
-    BG      = Color3.fromRGB(13, 15, 26),
-    Panel   = Color3.fromRGB(19, 22, 41),
-    Card    = Color3.fromRGB(27, 31, 54),
-    Accent  = Color3.fromRGB(91, 110, 245),
-    WMColor = Color3.fromRGB(91, 110, 245),
-    TabOff  = Color3.fromRGB(27, 31, 54),
-    TxtPri  = Color3.fromRGB(234, 238, 255),
-    TxtSec  = Color3.fromRGB(122, 130, 176),
-    TxtMut  = Color3.fromRGB(69, 74, 110),
-    Sep     = Color3.fromRGB(35, 39, 66),
+    BG      = Color3.fromHex("#0D0F1A"),
+    Panel   = Color3.fromHex("#131629"),
+    Card    = Color3.fromHex("#1B1F36"),
+    Accent  = Color3.fromHex("#5B6EF5"),
+    WMColor = Color3.fromHex("#5B6EF5"),
+    TabOff  = Color3.fromHex("#1B1F36"),
+    TxtPri  = Color3.fromHex("#EAEEFF"),
+    TxtSec  = Color3.fromHex("#7A82B0"),
+    TxtMut  = Color3.fromHex("#454A6E"),
+    Sep     = Color3.fromHex("#232742"),
 }
 
 local LIVE = { Accents = {}, WM = {}, MenuStroke = nil, Tabs = {} }
@@ -64,6 +65,16 @@ local function Acc(obj, prop)
     return obj
 end
 
+local function Notify(title, text, duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = duration or 3
+        })
+    end)
+end
+
 -- ══════════════ SCREEN GUI ══════════════
 local old = PlayerGui:FindFirstChild("SeraphiCA"); if old then old:Destroy() end
 
@@ -80,202 +91,275 @@ local mmState = {
 
 local espState = {
     chamsMurder = false,
-    chamsSherif = false,
+    chamsSheriff = false,
 }
 
--- ══════════════ УВЕДОМЛЕНИЯ ══════════════
-local function ShowMessage(text)
-    local msg = Instance.new("TextLabel")
-    msg.Size = UDim2.new(0, 300, 0, 40)
-    msg.Position = UDim2.new(0.5, -150, 0.8, 0)
-    msg.BackgroundColor3 = CFG.Card
-    msg.BackgroundTransparency = 1
-    msg.TextColor3 = CFG.TxtPri
-    msg.Text = text
-    msg.Font = Enum.Font.GothamBold
-    msg.TextSize = 14
-    msg.Parent = GUI
-    Corner(msg, 8)
-    Stroke(msg, CFG.Accent, 1.5)
+-- ══════════════ MM2 ROLE DETECTION ══════════════
+local function getPlayerRole(player)
+    if not player or not player.Character then return "Innocent" end
     
-    Tw(msg, { Position = UDim2.new(0.5, -150, 0.75, 0), BackgroundTransparency = 0.2 }, 0.3):Play()
-    task.delay(2, function()
-        local t = Tw(msg, { Position = UDim2.new(0.5, -150, 0.85, 0), BackgroundTransparency = 1 }, 0.3)
-        t:Play()
-        t.Completed:Wait()
-        msg:Destroy()
-    end)
-end
-
--- ══════════════ ROLE DETECTION (MM2) ══════════════
-local function getRole(player)
-    if not player or not player.Character then return nil end
-    for _, tool in ipairs(player.Character:GetChildren()) do
-        if tool:IsA("Tool") then
-            local name = tool.Name:lower()
-            if name:find("knife") or name:find("blade") or name:find("dagger") then
-                return "Murderer"
-            elseif name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then
-                return "Sheriff"
+    local char = player.Character
+    
+    -- Проверяем оружие в руках
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool then
+        local toolName = tool.Name:lower()
+        if toolName:find("knife") or toolName:find("dagger") or toolName:find("blade") then
+            return "Murderer"
+        elseif toolName:find("gun") or toolName:find("pistol") or toolName:find("revolver") or toolName:find("revoler") then
+            return "Sheriff"
+        end
+    end
+    
+    -- Проверяем бэкпак
+    local backpack = player:FindFirstChildOfClass("Backpack")
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
+            if item:IsA("Tool") then
+                local itemName = item.Name:lower()
+                if itemName:find("knife") or itemName:find("dagger") or itemName:find("blade") then
+                    return "Murderer"
+                elseif itemName:find("gun") or itemName:find("pistol") or itemName:find("revolver") or itemName:find("revoler") then
+                    return "Sheriff"
+                end
             end
         end
     end
-    return nil
+    
+    -- Проверяем через значение роли (если есть на сервере)
+    for _, obj in ipairs(player:GetChildren()) do
+        if obj:IsA("StringValue") and obj.Name:lower():find("role") then
+            local val = obj.Value:lower()
+            if val:find("murder") then return "Murderer" end
+            if val:find("sheriff") or val:find("sherrif") then return "Sheriff" end
+        end
+        if obj:IsA("StringValue") and obj.Name:lower():find("team") then
+            local val = obj.Value:lower()
+            if val:find("murder") then return "Murderer" end
+            if val:find("sheriff") or val:find("sherrif") then return "Sheriff" end
+        end
+    end
+    
+    -- Проверка по чайилду сущности
+    if char:FindFirstChild("Knife") or char:FindFirstChild("Dagger") or char:FindFirstChild("Blade") then
+        return "Murderer"
+    end
+    if char:FindFirstChild("Gun") or char:FindFirstChild("Pistol") or char:FindFirstChild("Revolver") then
+        return "Sheriff"
+    end
+    
+    return "Innocent"
 end
 
--- ══════════════ ESP / CHAMS SYSTEM ══════════════
-local espObjects = {}
+-- ══════════════ CHAMS SYSTEM (MM2) ══════════════
+local chamsObjects = {}
 
-local function createEspForPlayer(player)
-    if espObjects[player] then return espObjects[player] end
-
+local function createChamsForPlayer(player)
+    if chamsObjects[player] then return chamsObjects[player] end
+    
     local highlight = Instance.new("Highlight")
-    highlight.Name = "Chams_" .. player.Name
+    highlight.Name = "MM2_Chams_" .. player.Name
     highlight.FillColor = Color3.new(1, 1, 1)
     highlight.OutlineColor = Color3.new(0, 0, 0)
     highlight.FillTransparency = 0.5
     highlight.OutlineTransparency = 0
     highlight.Enabled = false
     highlight.Parent = nil
-
-    espObjects[player] = {
+    
+    chamsObjects[player] = {
         highlight = highlight,
+        char = nil,
+        role = "Innocent",
     }
-    return espObjects[player]
+    
+    return chamsObjects[player]
 end
 
-local function removeEspForPlayer(player)
-    local data = espObjects[player]
+local function removeChamsForPlayer(player)
+    local data = chamsObjects[player]
     if data then
         if data.highlight then data.highlight:Destroy() end
-        espObjects[player] = nil
+        chamsObjects[player] = nil
     end
 end
 
-local function updateEspForPlayer(player)
-    local data = espObjects[player]
+local function updateChamsForPlayer(player)
+    local data = chamsObjects[player]
     if not data then return end
-
-    local role = getRole(player)
-    local shouldHighlight = false
-    local color = Color3.new(1, 1, 1)
-
-    if role == "Murderer" and espState.chamsMurder then
-        shouldHighlight = true
-        color = Color3.fromRGB(255, 0, 64) -- Красный
-    elseif role == "Sheriff" and espState.chamsSherif then
-        shouldHighlight = true
-        color = Color3.fromRGB(0, 170, 255) -- Синий
+    
+    local char = player.Character
+    if not char then
+        data.highlight.Enabled = false
+        return
     end
-
-    if shouldHighlight then
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            if data.highlight.Parent ~= player.Character then
-                data.highlight.Parent = player.Character
-            end
-            data.highlight.Enabled = true
-            data.highlight.FillColor = color
-        else
-            data.highlight.Enabled = false
+    
+    local role = getPlayerRole(player)
+    data.role = role
+    data.char = char
+    
+    local shouldShow = false
+    local color = Color3.new(1, 1, 1)
+    
+    if espState.chamsMurder and role == "Murderer" then
+        shouldShow = true
+        color = Color3.fromHex("#FF0000") -- Красный для Murder
+    elseif espState.chamsSheriff and role == "Sheriff" then
+        shouldShow = true
+        color = Color3.fromHex("#0000FF") -- Синий для Sheriff
+    end
+    
+    if shouldShow then
+        if data.highlight.Parent ~= char then
+            data.highlight.Parent = char
         end
+        data.highlight.Enabled = true
+        data.highlight.FillColor = color
+        data.highlight.OutlineColor = Color3.new(0, 0, 0)
+        data.highlight.FillTransparency = 0.5
+        data.highlight.OutlineTransparency = 0
     else
         data.highlight.Enabled = false
     end
 end
 
-local espLoop
-local function StartEspLoop()
-    if espLoop then espLoop:Disconnect() end
-    espLoop = RunService.RenderStepped:Connect(function()
+local chamsLoop
+local function StartChamsLoop()
+    if chamsLoop then chamsLoop:Disconnect() end
+    chamsLoop = RunService.RenderStepped:Connect(function()
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
-                if not espObjects[player] then
-                    createEspForPlayer(player)
+                if not chamsObjects[player] then
+                    createChamsForPlayer(player)
                 end
-                updateEspForPlayer(player)
+                updateChamsForPlayer(player)
             end
         end
-
-        for player, _ in pairs(espObjects) do
+        
+        for player, _ in pairs(chamsObjects) do
             if not Players:FindFirstChild(player.Name) then
-                removeEspForPlayer(player)
+                removeChamsForPlayer(player)
             end
         end
     end)
 end
 
 Players.PlayerRemoving:Connect(function(player)
-    removeEspForPlayer(player)
+    removeChamsForPlayer(player)
 end)
 
-StartEspLoop()
+StartChamsLoop()
 
--- ══════════════ WALLSHOT HOOK ══════════════
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    if method == "Raycast" and self == workspace and mmState.wallShot then
-        local args = {...}
-        local origin = args[1]
-        local direction = args[2]
-        local params = args[3] or RaycastParams.new()
+-- ══════════════ WALLSHOT SYSTEM ══════════════
+local wallShotHooked = false
+local originalRaycast = workspace.Raycast
+local originalFindPartOnRay = workspace.FindPartOnRay
+local originalFindPartOnRayWithIgnoreList = workspace.FindPartOnRayWithIgnoreList
+
+local function ApplyWallShot(state)
+    mmState.wallShot = state
+    
+    if state and not wallShotHooked then
+        -- Хук через метатаблицу workspace
+        local mt = getrawmetatable(game)
+        local oldNamecall = mt.__namecall
         
-        local newParams = RaycastParams.new()
-        newParams.FilterType = Enum.RaycastFilterType.Exclude
-        local filter = {}
-        if params.FilterDescendantsInstances then
-            for _, v in ipairs(params.FilterDescendantsInstances) do
-                table.insert(filter, v)
-            end
-        end
-        if LocalPlayer.Character then 
-            table.insert(filter, LocalPlayer.Character) 
-        end
-        newParams.FilterDescendantsInstances = filter
+        setreadonly(mt, false)
         
-        local currentOrigin = origin
-        local remainingDir = direction
-        
-        -- Идём сквозь стены до 15 раз
-        for i = 1, 15 do
-            local result = oldNamecall(self, currentOrigin, remainingDir, newParams)
-            if not result then return nil end
+        local originalNamecall = oldNamecall
+        mt.__namecall = newcclosure(function(self, ...)
+            local method = getnamecallmethod()
+            local args = {...}
             
-            local model = result.Instance:FindFirstAncestorOfClass("Model")
-            if model and model:FindFirstChildOfClass("Humanoid") then
-                return result
-            else
-                table.insert(filter, result.Instance)
-                currentOrigin = result.Position
-                remainingDir = origin + direction - currentOrigin
-                if remainingDir.Magnitude < 0.1 then return nil end
+            if mmState.wallShot then
+                if method == "Raycast" and self == workspace then
+                    local params = args[3]
+                    if params and params.FilterDescendantsInstances then
+                        -- Оставляем только игроков в фильтре (игнорируем стены)
+                        local newFilter = {}
+                        for _, inst in ipairs(params.FilterDescendantsInstances) do
+                            if inst:IsA("Model") and inst:FindFirstChildOfClass("Humanoid") then
+                                table.insert(newFilter, inst)
+                            elseif inst == LocalPlayer.Character then
+                                table.insert(newFilter, inst)
+                            end
+                        end
+                        params.FilterDescendantsInstances = newFilter
+                    end
+                elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
+                    -- Для старых методов
+                    if method == "FindPartOnRayWithIgnoreList" and args[2] then
+                        local newFilter = {}
+                        for _, inst in ipairs(args[2]) do
+                            if inst:IsA("Model") and inst:FindFirstChildOfClass("Humanoid") then
+                                table.insert(newFilter, inst)
+                            end
+                        end
+                        args[2] = newFilter
+                    end
+                end
             end
-        end
-        return oldNamecall(self, origin, direction, params)
+            
+            return originalNamecall(self, unpack(args))
+        end)
+        
+        setreadonly(mt, true)
+        wallShotHooked = true
     end
-    return oldNamecall(self, ...)
-end)
+end
 
 -- ══════════════ ANTI-FLING SYSTEM ══════════════
 local antiFlingLoop
+local lastGoodPositions = {}
+local lastGoodCFrames = {}
+
 local function ApplyAntiFling(state)
     mmState.antiFling = state
+    
     if antiFlingLoop then antiFlingLoop:Disconnect() end
+    
     if state then
         antiFlingLoop = RunService.Heartbeat:Connect(function()
             local char = LocalPlayer.Character
-            if char then
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hrp and hum and hum.Health > 0 then
-                    local linVel = hrp.AssemblyLinearVelocity
-                    local angVel = hrp.AssemblyAngularVelocity
+            if not char then return end
+            
+            local root = char:FindFirstChild("HumanoidRootPart")
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if not root or not hum or hum.Health <= 0 then return end
+            
+            -- Сохраняем последнюю хорошую позицию
+            local rootVel = root.AssemblyLinearVelocity
+            local rootAngVel = root.AssemblyAngularVelocity
+            
+            -- Если скорость аномально высокая (флинг)
+            local linearMag = rootVel.Magnitude
+            local angularMag = rootAngVel.Magnitude
+            
+            if linearMag > 500 or angularMag > 500 then
+                -- Восстанавливаем позицию
+                if lastGoodPositions[char] then
+                    root.CFrame = lastGoodPositions[char]
+                    root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                     
-                    -- Если скорость слишком высокая (нас флингают)
-                    if linVel.Magnitude > 200 or angVel.Magnitude > 100 then
-                        hrp.AssemblyLinearVelocity = Vector3.new(0, linVel.Y, 0)
-                        hrp.AssemblyAngularVelocity = Vector3.zero
+                    -- Деактивируем и реактивируем физику
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") and part:CanSetNetworkOwnership() then
+                            part:SetNetworkOwner(nil)
+                        end
                     end
+                end
+            else
+                -- Сохраняем хорошую позицию (только если не падаем)
+                if linearMag < 100 then
+                    lastGoodPositions[char] = root.CFrame
+                end
+            end
+            
+            -- Проверяем угловую скорость (вращение - частый метод флинга)
+            if angularMag > 300 then
+                root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                if lastGoodPositions[char] then
+                    root.CFrame = lastGoodPositions[char]
                 end
             end
         end)
@@ -419,7 +503,7 @@ wmDot.BorderSizePixel = 0; wmDot.Parent = WM
 Corner(wmDot, 4)
 LIVE.WM.Dot = wmDot; wmDot.BackgroundColor3 = CFG.WMColor
 
-local wmTxt = Lbl(WM, "SeraphiCA  <font color='#454A6E'>|</font>  v4.1 MM2",
+local wmTxt = Lbl(WM, "SeraphiCA  <font color='#454A6E'>|</font>  v5.0",
 UDim2.new(1, -32, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 13)
 wmTxt.Position = UDim2.new(0, 26, 0, 0)
 LIVE.WM.Text = wmTxt
@@ -444,7 +528,7 @@ logo.BorderSizePixel = 0; logo.Parent = Head
 Corner(logo, 3); Acc(logo)
 
 Lbl(Head, "SeraphiCA", UDim2.new(0, 200, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 16).Position = UDim2.new(0, 30, 0, 0)
-Lbl(Head, "v4.1 MM2", UDim2.new(0, 80, 1, 0), CFG.TxtMut, Enum.Font.GothamMedium, 12).Position = UDim2.new(0, 122, 0, 0)
+Lbl(Head, "v5.0", UDim2.new(0, 60, 1, 0), CFG.TxtMut, Enum.Font.GothamMedium, 12).Position = UDim2.new(0, 122, 0, 0)
 
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 28, 0, 28); closeBtn.Position = UDim2.new(1, -40, 0.5, -14)
@@ -492,13 +576,27 @@ local function Title(page, txt, sub)
     end
 end
 
--- ══════════════ СТРАНИЦА AA (ПУСТАЯ) ══════════════
-local pAA = NewPage("AA"); Title(pAA, "AA", "Not available")
+local COLL = 54
+
+-- ══════════════ СТРАНИЦА AA (ЗАБЛОКИРОВАНА) ══════════════
+local pAA = NewPage("AA"); Title(pAA, "AA", "Not available yet.")
+
+local lockCard = Instance.new("Frame")
+lockCard.Size = UDim2.new(1, 0, 0, 80)
+lockCard.BackgroundColor3 = CFG.Card; lockCard.BorderSizePixel = 0
+lockCard.Parent = pAA
+Corner(lockCard, 10); Stroke(lockCard, CFG.Sep, 1)
+
+local lockIcon = Lbl(lockCard, "[ LOCKED ]", UDim2.new(1, -28, 0, 24), CFG.TxtSec, Enum.Font.GothamBold, 18)
+lockIcon.Position = UDim2.new(0, 14, 0, 14)
+lockIcon.TextXAlignment = Enum.TextXAlignment.Center
+
+local lockMsg = Lbl(lockCard, "* not available yet. *", UDim2.new(1, -28, 0, 18), CFG.TxtMut, Enum.Font.Gotham, 13)
+lockMsg.Position = UDim2.new(0, 14, 0, 46)
+lockMsg.TextXAlignment = Enum.TextXAlignment.Center
 
 -- ══════════════ СТРАНИЦА MM ══════════════
 local pMM = NewPage("MM"); Title(pMM, "MM", "WallShot · AntiFling")
-
-local COLL = 54
 
 local mmCard = Instance.new("Frame")
 mmCard.Size = UDim2.new(1, 0, 0, COLL)
@@ -513,7 +611,7 @@ UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position = UDim2.new(0,
 
 local mmTrack = Instance.new("Frame")
 mmTrack.Size = UDim2.new(0,42,0,22); mmTrack.Position = UDim2.new(1,-56,0,16)
-mmTrack.BackgroundColor3 = CFG.Panel; mmTrack.BorderSizePixel = 0; mmTrack.Parent = mmCard
+mmTrack.BackgroundColor3 = CFG.Panel; mmTrack.BorderSizePixel = 0; mmCard.Parent = mmCard
 Corner(mmTrack, 11)
 local mmKnob = Instance.new("Frame")
 mmKnob.Size = UDim2.new(0,16,0,16); mmKnob.Position = UDim2.new(0,3,0.5,-8)
@@ -532,11 +630,11 @@ local mmSepLine = Instance.new("Frame")
 mmSepLine.Size = UDim2.new(1, 0, 0, 1); mmSepLine.BackgroundColor3 = CFG.Sep
 mmSepLine.BorderSizePixel = 0; mmSepLine.Parent = mmSub
 
-MiniToggle(mmSub, "WallShot (through walls)", function(v)
-    mmState.wallShot = v
+MiniToggle(mmSub, "WallShot (shoot/throw through walls)", function(v)
+    ApplyWallShot(v)
 end)
 
-MiniToggle(mmSub, "AntiFling (anti-velocity)", function(v)
+MiniToggle(mmSub, "AntiFling (anti-physical exploitation)", function(v)
     ApplyAntiFling(v)
 end)
 
@@ -553,8 +651,8 @@ mmBtn.MouseButton1Click:Connect(function()
     Tw(mmCard, { Size = UDim2.new(1, 0, 0, mmOn and MM_EXPD or COLL) }, 0.22):Play()
 end)
 
--- ══════════════ СТРАНИЦА EE (ESP) ══════════════
-local pEE = NewPage("EE"); Title(pEE, "EE", "ChamsMurder · ChamsSherif")
+-- ══════════════ СТРАНИЦА EE (Только чамсы) ══════════════
+local pEE = NewPage("EE"); Title(pEE, "EE", "ChamsMurder · ChamsSheriff")
 
 local espCard = Instance.new("Frame")
 espCard.Size = UDim2.new(1, 0, 0, COLL)
@@ -564,7 +662,7 @@ Corner(espCard, 10); Stroke(espCard, CFG.Sep, 1)
 
 Lbl(espCard, "Chams System",
 UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
-Lbl(espCard, "Murder (Red) · Sherif (Blue)",
+Lbl(espCard, "Auto-detect Murderer (Red) & Sheriff (Blue)",
 UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position = UDim2.new(0,14,0,30)
 
 local espTrack = Instance.new("Frame")
@@ -588,12 +686,12 @@ local espSepLine = Instance.new("Frame")
 espSepLine.Size = UDim2.new(1, 0, 0, 1); espSepLine.BackgroundColor3 = CFG.Sep
 espSepLine.BorderSizePixel = 0; espSepLine.Parent = espSub
 
-MiniToggle(espSub, "ChamsMurder (auto detect)", function(v)
+MiniToggle(espSub, "ChamsMurder (Red highlight)", function(v)
     espState.chamsMurder = v
 end)
 
-MiniToggle(espSub, "ChamsSherif (auto detect)", function(v)
-    espState.chamsSherif = v
+MiniToggle(espSub, "ChamsSheriff (Blue highlight)", function(v)
+    espState.chamsSheriff = v
 end)
 
 local espBtn = Instance.new("TextButton")
@@ -601,10 +699,6 @@ espBtn.Size = UDim2.new(1,0,1,0); espBtn.BackgroundTransparency = 1; espBtn.Text
 local espOn = false
 espBtn.MouseButton1Click:Connect(function()
     espOn = not espOn
-    if not espOn then
-        espState.chamsMurder = false
-        espState.chamsSherif = false
-    end
     Tw(espKnob, {
         Position = espOn and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
         BackgroundColor3 = espOn and Color3.new(1,1,1) or CFG.TxtMut
@@ -633,9 +727,9 @@ local function ApplyWM(col)
 end
 
 local PALETTE = {
-    { "Indigo",  Color3.fromRGB(91, 110, 245) }, { "Cyan",   Color3.fromRGB(57, 211, 224) }, { "Mint",   Color3.fromRGB(78, 204, 163) },
-    { "Lime",    Color3.fromRGB(168, 224, 99) }, { "Amber",  Color3.fromRGB(255, 179, 71) }, { "Coral",  Color3.fromRGB(255, 122, 89) },
-    { "Rose",    Color3.fromRGB(255, 95, 126) }, { "Purple", Color3.fromRGB(164, 107, 255) }, { "White",  Color3.fromRGB(234, 238, 255) },
+    { "Indigo", "#5B6EF5" }, { "Cyan", "#39D3E0" }, { "Mint", "#4ECCA3" },
+    { "Lime", "#A8E063" }, { "Amber", "#FFB347" }, { "Coral", "#FF7A59" },
+    { "Rose", "#FF5F7E" }, { "Purple", "#A46BFF" }, { "White", "#EAEEFF" },
 }
 
 local function ColorSection(titleTxt, applyFn, getCur)
@@ -657,12 +751,13 @@ local function ColorSection(titleTxt, applyFn, getCur)
     gl.CellSize = UDim2.new(0,34,0,34); gl.CellPadding = UDim2.new(0,8,0,8); gl.Parent = grid
 
     for _, c in ipairs(PALETTE) do
+        local col = Color3.fromHex(c[2])
         local sw = Instance.new("TextButton")
-        sw.BackgroundColor3 = c; sw.Text = ""; sw.AutoButtonColor = false
+        sw.BackgroundColor3 = col; sw.Text = ""; sw.AutoButtonColor = false
         sw.BorderSizePixel = 0; sw.Parent = grid
         Corner(sw, 8); Stroke(sw, CFG.Sep, 1)
         sw.MouseButton1Click:Connect(function()
-            applyFn(c); preview.BackgroundColor3 = c
+            applyFn(col); preview.BackgroundColor3 = col
         end)
     end
 
@@ -677,15 +772,9 @@ local function ColorSection(titleTxt, applyFn, getCur)
     box.FocusLost:Connect(function()
         local t = box.Text:gsub("%s","")
         if t:sub(1,1) ~= "#" then t = "#"..t end
-        local r = tonumber(t:sub(2,3), 16)
-        local g = tonumber(t:sub(4,5), 16)
-        local b = tonumber(t:sub(6,7), 16)
-        if r and g and b then
-            local col = Color3.fromRGB(r, g, b)
-            applyFn(col); preview.BackgroundColor3 = col; box.Text = t:upper()
-        else
-            box.Text = ""
-        end
+        local ok, col = pcall(Color3.fromHex, t)
+        if ok then applyFn(col); preview.BackgroundColor3 = col; box.Text = t:upper()
+        else box.Text = "" end
     end)
 end
 
@@ -694,6 +783,12 @@ ColorSection("Watermark Color", ApplyWM, function() return CFG.WMColor end)
 
 -- ══════════════ ВКЛАДКИ ══════════════
 local function SwitchTab(name)
+    -- Блокировка вкладки AA
+    if name == "AA" then
+        Notify("SeraphiCA", "* not available yet. *", 3)
+        return
+    end
+    
     for _, p in pairs(Pages) do p.Visible = false end
     Pages[name].Visible = true
     for _, t in ipairs(LIVE.Tabs) do
@@ -711,16 +806,18 @@ for _, name in ipairs({ "AA", "MM", "EE", "SS" }) do
     b.AutoButtonColor = false; b.Parent = TabBar
     Corner(b, 9)
     table.insert(LIVE.Tabs, { name = name, btn = b, active = false })
-    
-    b.MouseButton1Click:Connect(function()
-        if name == "AA" then
-            ShowMessage("*not available yet.*")
-        else
-            SwitchTab(name)
-        end
-    end)
+    b.MouseButton1Click:Connect(function() SwitchTab(name) end)
 end
-SwitchTab("MM")
+
+-- Открываем вкладку MM по умолчанию (AA заблокирована)
+Pages["MM"].Visible = true
+for _, t in ipairs(LIVE.Tabs) do
+    if t.name == "MM" then
+        t.active = true
+        Tw(t.btn, { BackgroundColor3 = CFG.Accent }, 0.18):Play()
+        Tw(t.btn, { TextColor3 = Color3.new(1,1,1) }, 0.18):Play()
+    end
+end
 
 -- ══════════════ ОТКРЫТИЕ / ЗАКРЫТИЕ ══════════════
 local isOpen = false
@@ -778,9 +875,11 @@ task.delay(0.4, OpenMenu)
 -- ══════════════ ОЧИСТКА ПРИ РЕСПАВНЕ ══════════════
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(1)
-    for player, data in pairs(espObjects) do
+    for player, data in pairs(chamsObjects) do
         if data.highlight then
             data.highlight.Enabled = false
         end
     end
 end)
+
+Notify("SeraphiCA", "Loaded! MM2 Edition v5.0", 4)

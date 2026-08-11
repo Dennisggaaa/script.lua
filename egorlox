@@ -1,5 +1,5 @@
--- // SeraphiCA | Absolute God Tier UI v8.2
--- // 800px | WallShot Fixed & FreezePlayer Added
+-- // SeraphiCA | Absolute God Tier UI v8.3
+-- // 800px | State Fix, Gun TP & Freeze Fix
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -86,6 +87,7 @@ end
 local mmState = {
     wallShot = false,
     antiFling = false,
+    autoPickUpGun = false,
     isFreezing = false,
     freezeTarget = nil,
     isFreezingAll = false,
@@ -207,7 +209,7 @@ end)
 
 Players.PlayerRemoving:Connect(removeEspForPlayer)
 
--- WALLSHOT HOOK (Raycast + FindPartOnRay)
+-- WALLSHOT HOOK
 local mt = getrawmetatable(game)
 local oldNamecall = mt.__namecall
 setreadonly(mt, false)
@@ -308,6 +310,79 @@ local function ApplyAntiFling(state)
     end
 end
 
+-- GUN FINDER & TP
+local function FindGun()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Tool") then
+            local name = obj.Name:lower()
+            if name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then
+                if obj.Parent == Workspace or obj.Parent:IsA("Model") then -- На земле или в modelling
+                    local handle = obj:FindFirstChild("Handle")
+                    if handle then
+                        return obj, handle
+                    end
+                end
+            end
+        end
+    end
+    return nil, nil
+end
+
+local function TpToGunAndPickUp()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
+
+    local tool, handle = FindGun()
+    if tool and handle then
+        local originalCFrame = hrp.CFrame
+        hrp.CFrame = handle.CFrame * CFrame.new(0, 0, -2)
+        task.wait(0.05)
+        -- Пытаемся подобрать
+        firetouchinterest(hrp, handle, 0)
+        task.wait(0.05)
+        firetouchinterest(hrp, handle, 1)
+        task.wait(0.05)
+        hrp.CFrame = originalCFrame
+        Notify("Gun picked up!", Theme.Success)
+    else
+        Notify("No gun found on the ground", Theme.RedNotif)
+    end
+end
+
+-- AutoPickUpGun Loop
+local autoPickUpConnection
+local function ApplyAutoPickUpGun(state)
+    mmState.autoPickUpGun = state
+    if autoPickUpConnection then autoPickUpConnection:Disconnect() end
+    if state then
+        autoPickUpConnection = Workspace.ChildAdded:Connect(function(child)
+            if child:IsA("Tool") then
+                local name = child.Name:lower()
+                if name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then
+                    local handle = child:WaitForChild("Handle", 1)
+                    local char = LocalPlayer.Character
+                    if handle and char then
+                        local hrp = char:FindFirstChild("HumanoidRootPart")
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hrp and hum and hum.Health > 0 then
+                            local originalCFrame = hrp.CFrame
+                            -- Instant TP, Touch, TP Back
+                            hrp.CFrame = handle.CFrame
+                            firetouchinterest(hrp, handle, 0)
+                            task.wait()
+                            firetouchinterest(hrp, handle, 1)
+                            hrp.CFrame = originalCFrame
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end
+
 -- FREEZE LOGIC
 local freezeConnections = {}
 
@@ -324,16 +399,23 @@ local function StartFreezingTarget(targetPlayer)
     freezeConnections[targetPlayer] = RunService.Heartbeat:Connect(function()
         if targetPlayer and targetPlayer.Character then
             local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
+            local hum = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.Health > 0 then
                 pcall(function()
                     hrp:SetNetworkOwner(LocalPlayer)
                 end)
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
+                
                 if not freezeConnections[targetPlayer].SavedCFrame then
                     freezeConnections[targetPlayer].SavedCFrame = hrp.CFrame
                 end
+                
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
                 hrp.CFrame = freezeConnections[targetPlayer].SavedCFrame
+            else
+                if freezeConnections[targetPlayer] then
+                    freezeConnections[targetPlayer].SavedCFrame = nil
+                end
             end
         else
             StopFreezingTarget(targetPlayer)
@@ -709,7 +791,7 @@ Create("TextLabel", {
     Size = UDim2.new(1, -30, 0, 15),
     Position = UDim2.new(0, 21, 0, 60),
     BackgroundTransparency = 1,
-    Text = "Ultimate Interface v8.2",
+    Text = "Ultimate Interface v8.3",
     Font = Enum.Font.Gotham,
     TextSize = 12,
     TextColor3 = Theme.Description,
@@ -892,7 +974,7 @@ local function CreateTab(name)
 end
 
 -- ========================================================================================
--- UI ELEMENTS WITH STATE (FIX)
+-- UI ELEMENTS WITH STATE FIX
 -- ========================================================================================
 local function CreateCategory(page, title)
     local Cat = Create("Frame", {
@@ -978,7 +1060,6 @@ local function CreateToggle(page, title, desc, defaultState, onToggle)
     AddRipple(ToggleBtn)
     local state = defaultState
     
-    -- Apply initial visual state
     if state then
         ToggleBtn.BackgroundColor3 = Theme.Accent
         TogStroke.Color = Theme.Accent
@@ -1180,7 +1261,6 @@ local function CreateExpandable(page, title, desc, subOptions)
         AddRipple(SubBtn)
         local subState = opt.Default or false
         
-        -- Apply initial visual state
         if subState then
             SubBtn.BackgroundColor3 = Theme.Accent
             SubStroke.Color = Theme.Accent
@@ -1307,6 +1387,60 @@ local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged
         if draggingSlider and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
             update(input)
         end
+    end)
+end
+
+local function CreateButton(page, title, desc, onClick)
+    local Container = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 65),
+        BackgroundColor3 = Theme.Element,
+        BorderSizePixel = 0,
+        Parent = page
+    })
+    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
+    Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = Container})
+
+    Create("TextLabel", {
+        Size = UDim2.new(1, -100, 0, 20),
+        Position = UDim2.new(0, 15, 0, 12),
+        BackgroundTransparency = 1,
+        Text = title,
+        Font = Enum.Font.GothamBold,
+        TextSize = 15,
+        TextColor3 = Theme.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Container
+    })
+    Create("TextLabel", {
+        Size = UDim2.new(1, -100, 0, 15),
+        Position = UDim2.new(0, 15, 0, 35),
+        BackgroundTransparency = 1,
+        Text = desc,
+        Font = Enum.Font.Gotham,
+        TextSize = 12,
+        TextColor3 = Theme.Description,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Container
+    })
+
+    local ActionBtn = Create("TextButton", {
+        Size = UDim2.new(0, 80, 0, 30),
+        Position = UDim2.new(1, -95, 0.5, -15),
+        BackgroundColor3 = Theme.Accent,
+        AutoButtonColor = false,
+        Text = "Execute",
+        Font = Enum.Font.GothamBold,
+        TextSize = 13,
+        TextColor3 = Theme.TextDark,
+        Active = true,
+        Parent = Container
+    })
+    Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = ActionBtn})
+    Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = ActionBtn})
+    AddRipple(ActionBtn)
+
+    ActionBtn.MouseButton1Click:Connect(function()
+        if onClick then onClick() end
     end)
 end
 
@@ -1474,7 +1608,6 @@ local function CreateFreezeModule(page)
             AllActionBtn.Text = "Stop!"
             AllActionBtn.Active = true
             
-            -- Disable individual freeze
             TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Disabled, TextColor3 = Theme.Description}):Play()
             ActionBtn.Text = "Freeze All Active"
             ActionBtn.Active = false
@@ -1576,7 +1709,6 @@ local function CreateFreezeModule(page)
             StopFreezeAll()
             Notify("Freeze All stopped", Theme.Success)
         else
-            -- Stop individual freeze if active
             if mmState.isFreezing then
                 mmState.isFreezing = false
                 StopFreezingTarget(mmState.freezeTarget)
@@ -1605,6 +1737,14 @@ Tabs["Misc"].Render = function()
     end)
     CreateToggle(PageContainer, "AntiFling", "Prevents other players from launching you.", mmState.antiFling, function(v)
         ApplyAntiFling(v)
+    end)
+    
+    CreateCategory(PageContainer, "Gun Features")
+    CreateToggle(PageContainer, "AutoPickUpGun", "Instantly teleports to gun when dropped and picks it up.", mmState.autoPickUpGun, function(v)
+        ApplyAutoPickUpGun(v)
+    end)
+    CreateButton(PageContainer, "TpToGun", "Teleport to gun and return to your position.", function()
+        TpToGunAndPickUp()
     end)
     
     CreateCategory(PageContainer, "Trolling")

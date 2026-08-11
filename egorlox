@@ -1,6 +1,5 @@
--- // SeraphiCA | Absolute God Tier UI v7
--- // 800px | Bug Fixed & Max Visuals
--- // MM2 Edition Integrated by Verity
+-- // SeraphiCA | Absolute God Tier UI v8
+-- // 800px | Fling System Added
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -12,7 +11,7 @@ local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 
 -- Очистка
-local oldUi = CoreGui:FindFirstChild("SeraphiCA_GodTier_v7")
+local oldUi = CoreGui:FindFirstChild("SeraphiCA_GodTier_v8")
 if oldUi then oldUi:Destroy() end
 local oldBlur = Lighting:FindFirstChild("SeraphiCA_Blur")
 if oldBlur then oldBlur:Destroy() end
@@ -30,11 +29,12 @@ local Theme = {
     Stroke = Color3.fromRGB(35, 35, 45),
     DarkStroke = Color3.fromRGB(18, 18, 22),
     RedNotif = Color3.fromRGB(255, 45, 45),
-    Success = Color3.fromRGB(45, 255, 100)
+    Success = Color3.fromRGB(45, 255, 100),
+    Disabled = Color3.fromRGB(40, 40, 48)
 }
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphiCA_GodTier_v7"
+ScreenGui.Name = "SeraphiCA_GodTier_v8"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
@@ -53,7 +53,6 @@ local function Create(className, props, children)
     return obj
 end
 
--- Функция Ripple Effect (Волна при клике)
 local function AddRipple(btn)
     btn.ClipsDescendants = true
     btn.MouseButton1Down:Connect(function(x, y)
@@ -79,236 +78,6 @@ local function AddRipple(btn)
         
         task.delay(0.6, function() ripple:Destroy() end)
     end)
-end
-
--- ========================================================================================
--- STATE & LOGIC
--- ========================================================================================
-local mmState = {
-    wallShot = false,
-    antiFling = false,
-}
-
-local espState = {
-    chamsMurder = false,
-    chamsSherif = false,
-}
-
--- ROLE DETECTION (MM2) с кэшированием
-local playerRoles = {}
-
-local function detectRole(player)
-    if not player then return nil end
-    
-    -- Проверяем руки (Character)
-    if player.Character then
-        for _, tool in ipairs(player.Character:GetChildren()) do
-            if tool:IsA("Tool") then
-                local name = tool.Name:lower()
-                if name:find("knife") or name:find("blade") or name:find("dagger") then return "Murderer" end
-                if name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then return "Sheriff" end
-            end
-        end
-    end
-    
-    -- Проверяем инвентарь (Backpack) - оружие, которое убрано
-    local backpack = player:FindFirstChildOfClass("Backpack")
-    if backpack then
-        for _, tool in ipairs(backpack:GetChildren()) do
-            if tool:IsA("Tool") then
-                local name = tool.Name:lower()
-                if name:find("knife") or name:find("blade") or name:find("dagger") then return "Murderer" end
-                if name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then return "Sheriff" end
-            end
-        end
-    end
-    
-    return nil
-end
-
--- Функция для сброса кэша ролей (при новом раунде)
-local function clearRoles()
-    playerRoles = {}
-end
-
--- Сбрасываем кэш при смерти/респавне любого игрока
-local function setupRoleReset(player)
-    player.CharacterAdded:Connect(function()
-        task.wait(1)
-        playerRoles[player] = nil
-    end)
-end
-
-for _, p in ipairs(Players:GetPlayers()) do
-    setupRoleReset(p)
-end
-Players.PlayerAdded:Connect(setupRoleReset)
-
--- ESP / CHAMS SYSTEM
-local espObjects = {}
-
-local function createEspForPlayer(player)
-    if espObjects[player] then return espObjects[player] end
-
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "Chams_" .. player.Name
-    highlight.FillColor = Color3.new(1, 1, 1)
-    highlight.OutlineColor = Color3.new(0, 0, 0)
-    highlight.FillTransparency = 0.5
-    highlight.OutlineTransparency = 0
-    highlight.Enabled = false
-    highlight.Parent = nil
-
-    espObjects[player] = { highlight = highlight }
-    return espObjects[player]
-end
-
-local function removeEspForPlayer(player)
-    local data = espObjects[player]
-    if data then
-        if data.highlight then data.highlight:Destroy() end
-        espObjects[player] = nil
-    end
-end
-
-local function updateEspForPlayer(player)
-    local data = espObjects[player]
-    if not data then return end
-
-    -- Кэшируем роль, если ещё не найдена
-    if not playerRoles[player] then
-        local role = detectRole(player)
-        if role then
-            playerRoles[player] = role
-        end
-    end
-
-    local role = playerRoles[player]
-    local shouldHighlight = false
-    local color = Color3.new(1, 1, 1)
-
-    if role == "Murderer" and espState.chamsMurder then
-        shouldHighlight = true
-        color = Color3.fromRGB(255, 0, 64)
-    elseif role == "Sheriff" and espState.chamsSherif then
-        shouldHighlight = true
-        color = Color3.fromRGB(0, 170, 255)
-    end
-
-    if shouldHighlight then
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            if data.highlight.Parent ~= player.Character then
-                data.highlight.Parent = player.Character
-            end
-            data.highlight.Enabled = true
-            data.highlight.FillColor = color
-        else
-            data.highlight.Enabled = false
-        end
-    else
-        data.highlight.Enabled = false
-    end
-end
-
-local espLoop
-local function StartEspLoop()
-    if espLoop then espLoop:Disconnect() end
-    espLoop = RunService.RenderStepped:Connect(function()
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                if not espObjects[player] then
-                    createEspForPlayer(player)
-                end
-                updateEspForPlayer(player)
-            end
-        end
-
-        for player, _ in pairs(espObjects) do
-            if not Players:FindFirstChild(player.Name) then
-                removeEspForPlayer(player)
-            end
-        end
-    end)
-end
-
-Players.PlayerRemoving:Connect(function(player)
-    removeEspForPlayer(player)
-end)
-
-StartEspLoop()
-
--- WALLSHOT HOOK
-local mt = getrawmetatable(game)
-local oldNamecall = mt.__namecall
-setreadonly(mt, false)
-
-mt.__namecall = function(self, ...)
-    local method = getnamecallmethod()
-    if method == "Raycast" and self == workspace and mmState.wallShot then
-        local args = {...}
-        local origin = args[1]
-        local direction = args[2]
-        local params = args[3] or RaycastParams.new()
-        
-        local newParams = RaycastParams.new()
-        newParams.FilterType = Enum.RaycastFilterType.Exclude
-        local filter = {}
-        if params.FilterDescendantsInstances then
-            for _, v in ipairs(params.FilterDescendantsInstances) do
-                table.insert(filter, v)
-            end
-        end
-        if LocalPlayer.Character then 
-            table.insert(filter, LocalPlayer.Character) 
-        end
-        newParams.FilterDescendantsInstances = filter
-        
-        local currentOrigin = origin
-        local remainingDir = direction
-        
-        for i = 1, 15 do
-            local result = oldNamecall(self, currentOrigin, remainingDir, newParams)
-            if not result then return nil end
-            
-            local model = result.Instance:FindFirstAncestorOfClass("Model")
-            if model and model:FindFirstChildOfClass("Humanoid") then
-                return result
-            else
-                table.insert(filter, result.Instance)
-                currentOrigin = result.Position
-                remainingDir = origin + direction - currentOrigin
-                if remainingDir.Magnitude < 0.1 then return nil end
-            end
-        end
-        return oldNamecall(self, origin, direction, params)
-    end
-    return oldNamecall(self, ...)
-end
-setreadonly(mt, true)
-
--- ANTI-FLING SYSTEM
-local antiFlingLoop
-local function ApplyAntiFling(state)
-    mmState.antiFling = state
-    if antiFlingLoop then antiFlingLoop:Disconnect() end
-    if state then
-        antiFlingLoop = RunService.Heartbeat:Connect(function()
-            local char = LocalPlayer.Character
-            if char then
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hrp and hum and hum.Health > 0 then
-                    local linVel = hrp.AssemblyLinearVelocity
-                    local angVel = hrp.AssemblyAngularVelocity
-                    
-                    if linVel.Magnitude > 200 or angVel.Magnitude > 100 then
-                        hrp.AssemblyLinearVelocity = Vector3.new(0, linVel.Y, 0)
-                        hrp.AssemblyAngularVelocity = Vector3.zero
-                    end
-                end
-            end
-        end)
-    end
 end
 
 -- ========================================================================================
@@ -403,16 +172,13 @@ task.delay(2.2, function()
 end)
 
 -- ========================================================================================
--- BLUR EFFECT
+-- BLUR & NOTIFICATIONS
 -- ========================================================================================
 local MenuBlur = Instance.new("BlurEffect")
 MenuBlur.Name = "SeraphiCA_Blur"
 MenuBlur.Size = 0
 MenuBlur.Parent = Lighting
 
--- ========================================================================================
--- NOTIFICATIONS
--- ========================================================================================
 local NotifHolder = Create("Frame", {
     Size = UDim2.new(0, 350, 1, 0),
     Position = UDim2.new(1, -370, 0, 0),
@@ -589,10 +355,7 @@ local function ToggleMenu()
 end
 
 Watermark.MouseButton1Click:Connect(ToggleMenu)
-
-task.delay(2.5, function()
-    ToggleMenu()
-end)
+task.delay(2.5, function() ToggleMenu() end)
 
 -- Drag
 local dragging, dragInput, dragStart, startPos
@@ -626,7 +389,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================================
--- SIDEBAR
+-- SIDEBAR & CONTENT
 -- ========================================================================================
 local Sidebar = Create("Frame", {
     Size = UDim2.new(0, 240, 1, 0),
@@ -666,7 +429,7 @@ Create("TextLabel", {
     Size = UDim2.new(1, -30, 0, 15),
     Position = UDim2.new(0, 21, 0, 60),
     BackgroundTransparency = 1,
-    Text = "Ultimate Interface v7.0",
+    Text = "Ultimate Interface v8.0",
     Font = Enum.Font.Gotham,
     TextSize = 12,
     TextColor3 = Theme.Description,
@@ -682,7 +445,6 @@ Create("Frame", {
     Parent = Sidebar
 })
 
--- Tabs
 local TabContainer = Create("Frame", {
     Size = UDim2.new(1, 0, 1, -160),
     Position = UDim2.new(0, 0, 0, 100),
@@ -692,7 +454,6 @@ local TabContainer = Create("Frame", {
 Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = TabContainer})
 Create("UIPadding", {PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), Parent = TabContainer})
 
--- Sliding Indicator
 local SlideIndicator = Create("Frame", {
     Size = UDim2.new(0, 4, 0, 25),
     Position = UDim2.new(0, 15, 0, 0),
@@ -702,7 +463,6 @@ local SlideIndicator = Create("Frame", {
     Parent = Sidebar
 }, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
 
--- User Info
 local UserInfo = Create("Frame", {
     Size = UDim2.new(1, -30, 0, 50),
     Position = UDim2.new(0, 15, 1, -60),
@@ -735,9 +495,6 @@ Create("TextLabel", {
     Parent = UserInfo
 })
 
--- ========================================================================================
--- CONTENT AREA
--- ========================================================================================
 local ContentArea = Create("Frame", {
     Size = UDim2.new(1, -240, 1, 0),
     Position = UDim2.new(0, 240, 0, 0),
@@ -855,7 +612,7 @@ local function CreateTab(name)
 end
 
 -- ========================================================================================
--- UI ELEMENTS WITH CALLBACKS
+-- UI ELEMENTS
 -- ========================================================================================
 local function CreateCategory(page, title)
     local Cat = Create("Frame", {
@@ -875,7 +632,7 @@ local function CreateCategory(page, title)
     })
 end
 
-local function CreateToggle(page, title, desc, onToggle)
+local function CreateToggle(page, title, desc)
     local Container = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 65),
         BackgroundColor3 = Theme.Element,
@@ -953,7 +710,6 @@ local function CreateToggle(page, title, desc, onToggle)
             TweenService:Create(Indicator, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -9), BackgroundColor3 = Theme.Text}):Play()
             TweenService:Create(TogGlow, TweenInfo.new(0.3), {ImageTransparency = 1}):Play()
         end
-        if onToggle then onToggle(state) end
     end)
 end
 
@@ -1145,7 +901,6 @@ local function CreateExpandable(page, title, desc, subOptions)
                 TweenService:Create(SubInd, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Theme.Text}):Play()
                 TweenService:Create(SubGlow, TweenInfo.new(0.3), {ImageTransparency = 1}):Play()
             end
-            if opt.Callback then opt.Callback(subState) end
         end)
     end
 end
@@ -1253,6 +1008,240 @@ local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged
     end)
 end
 
+-- НОВЫЙ МОДУЛЬ: FLING SYSTEM
+local function CreateFlingModule(page)
+    local Container = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 65),
+        BackgroundColor3 = Theme.Element,
+        BorderSizePixel = 0,
+        Parent = page
+    })
+    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
+    Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = Container})
+    Container.ClipsDescendants = true
+
+    local Header = Create("TextButton", {
+        Size = UDim2.new(1, 0, 0, 65),
+        BackgroundTransparency = 1,
+        AutoButtonColor = false,
+        Text = "",
+        Parent = Container
+    })
+    AddRipple(Header)
+
+    Create("TextLabel", {
+        Size = UDim2.new(1, -100, 0, 20),
+        Position = UDim2.new(0, 15, 0, 12),
+        BackgroundTransparency = 1,
+        Text = "Fling",
+        Font = Enum.Font.GothamBold,
+        TextSize = 15,
+        TextColor3 = Theme.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Header
+    })
+    Create("TextLabel", {
+        Size = UDim2.new(1, -100, 0, 15),
+        Position = UDim2.new(0, 15, 0, 35),
+        BackgroundTransparency = 1,
+        Text = "Select a player to fling them around.",
+        Font = Enum.Font.Gotham,
+        TextSize = 12,
+        TextColor3 = Theme.Description,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Header
+    })
+
+    local ToggleBtn = Create("TextButton", {
+        Size = UDim2.new(0, 50, 0, 24),
+        Position = UDim2.new(1, -65, 0.5, -12),
+        BackgroundColor3 = Color3.fromRGB(10, 10, 12),
+        AutoButtonColor = false,
+        Text = "",
+        Parent = Header
+    })
+    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = ToggleBtn})
+    local TogStroke = Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = ToggleBtn})
+    local Indicator = Create("Frame", {
+        Size = UDim2.new(0, 18, 0, 18),
+        Position = UDim2.new(0, 3, 0.5, -9),
+        BackgroundColor3 = Theme.Text,
+        BorderSizePixel = 0,
+        Parent = ToggleBtn
+    })
+    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Indicator})
+    
+    local TogGlow = Create("ImageLabel", {
+        Size = UDim2.new(1, 20, 1, 20),
+        Position = UDim2.new(0, -10, 0, -10),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://5028857084",
+        ImageColor3 = Theme.Accent,
+        ImageTransparency = 1,
+        Parent = ToggleBtn
+    })
+
+    local SubContainer = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 0),
+        Position = UDim2.new(0, 0, 0, 65),
+        BackgroundColor3 = Color3.fromRGB(16, 16, 20),
+        BorderSizePixel = 0,
+        Parent = Container
+    })
+    Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = SubContainer})
+    Create("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), Parent = SubContainer})
+
+    local state = false
+    local expanded = false
+
+    local function UpdateSize()
+        local baseHeight = 65
+        local subHeight = expanded and (SubContainer.UIListLayout.AbsoluteContentSize.Y + 20) or 0
+        TweenService:Create(Container, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, baseHeight + subHeight)}):Play()
+        TweenService:Create(SubContainer, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, subHeight)}):Play()
+    end
+
+    AddRipple(ToggleBtn)
+    ToggleBtn.MouseButton1Click:Connect(function()
+        state = not state
+        if state then
+            TweenService:Create(ToggleBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent}):Play()
+            TweenService:Create(TogStroke, TweenInfo.new(0.3), {Color = Theme.Accent}):Play()
+            TweenService:Create(Indicator, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -21, 0.5, -9), BackgroundColor3 = Theme.TextDark}):Play()
+            TweenService:Create(TogGlow, TweenInfo.new(0.3), {ImageTransparency = 0.5}):Play()
+            expanded = true
+        else
+            TweenService:Create(ToggleBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(10, 10, 12)}):Play()
+            TweenService:Create(TogStroke, TweenInfo.new(0.3), {Color = Theme.Stroke}):Play()
+            TweenService:Create(Indicator, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -9), BackgroundColor3 = Theme.Text}):Play()
+            TweenService:Create(TogGlow, TweenInfo.new(0.3), {ImageTransparency = 1}):Play()
+            expanded = false
+        end
+        UpdateSize()
+    end)
+
+    -- Список игроков
+    local PlayerList = Create("ScrollingFrame", {
+        Size = UDim2.new(1, 0, 0, 150),
+        BackgroundColor3 = Color3.fromRGB(12, 12, 16),
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Theme.Accent,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        Parent = SubContainer
+    })
+    Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = PlayerList})
+    Create("UIListLayout", {Padding = UDim.new(0, 5), Parent = PlayerList})
+    Create("UIPadding", {PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), Parent = PlayerList})
+    PlayerList.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        PlayerList.CanvasSize = UDim2.new(0, 0, 0, PlayerList.UIListLayout.AbsoluteContentSize.Y + 10)
+    end)
+
+    -- Кнопка действия
+    local ActionBtn = Create("TextButton", {
+        Size = UDim2.new(1, 0, 0, 35),
+        BackgroundColor3 = Theme.Disabled,
+        AutoButtonColor = false,
+        Text = "Fling!",
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        TextColor3 = Theme.Description,
+        Active = false,
+        Parent = SubContainer
+    })
+    Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = ActionBtn})
+    Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = ActionBtn})
+    AddRipple(ActionBtn)
+
+    local selectedPlayer = nil
+    local isFlinging = false
+
+    local function UpdateActionBtn()
+        if isFlinging then
+            TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.RedNotif, TextColor3 = Theme.Text}):Play()
+            ActionBtn.Text = "Stop!"
+            ActionBtn.Active = true
+        elseif selectedPlayer then
+            TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent, TextColor3 = Theme.TextDark}):Play()
+            ActionBtn.Text = "Fling!"
+            ActionBtn.Active = true
+        else
+            TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Disabled, TextColor3 = Theme.Description}):Play()
+            ActionBtn.Text = "Fling!"
+            ActionBtn.Active = false
+        end
+    end
+
+    local function PopulatePlayers()
+        for _, child in ipairs(PlayerList:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+        
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer then
+                local PlrBtn = Create("TextButton", {
+                    Size = UDim2.new(1, 0, 0, 30),
+                    BackgroundColor3 = Color3.fromRGB(20, 20, 26),
+                    AutoButtonColor = false,
+                    Text = "",
+                    Parent = PlayerList
+                })
+                Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = PlrBtn})
+                Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = PlrBtn})
+                
+                Create("TextLabel", {
+                    Size = UDim2.new(1, -20, 1, 0),
+                    Position = UDim2.new(0, 10, 0, 0),
+                    BackgroundTransparency = 1,
+                    Text = plr.Name,
+                    Font = Enum.Font.GothamSemibold,
+                    TextSize = 13,
+                    TextColor3 = Theme.Text,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = PlrBtn
+                })
+                
+                AddRipple(PlrBtn)
+                
+                PlrBtn.MouseButton1Click:Connect(function()
+                    if isFlinging then return end
+                    selectedPlayer = plr
+                    
+                    for _, btn in ipairs(PlayerList:GetChildren()) do
+                        if btn:IsA("TextButton") then
+                            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 20, 26)}):Play()
+                            btn.TextLabel.TextColor3 = Theme.Text
+                        end
+                    end
+                    
+                    TweenService:Create(PlrBtn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Accent}):Play()
+                    PlrBtn.TextLabel.TextColor3 = Theme.TextDark
+                    UpdateActionBtn()
+                end)
+            end
+        end
+    end
+
+    PopulatePlayers()
+    Players.PlayerAdded:Connect(PopulatePlayers)
+    Players.PlayerRemoving:Connect(PopulatePlayers)
+
+    ActionBtn.MouseButton1Click:Connect(function()
+        if not ActionBtn.Active then return end
+        
+        if isFlinging then
+            isFlinging = false
+            -- Здесь можно добавить логику остановки флинга
+            Notify("Fling stopped", Theme.Success)
+        else
+            isFlinging = true
+            -- Здесь можно добавить логику старта флинга для selectedPlayer
+            Notify("Flinging " .. (selectedPlayer and selectedPlayer.Name or "player") .. "!", Theme.Accent)
+        end
+        UpdateActionBtn()
+    end)
+end
+
 -- ========================================================================================
 -- INIT & RENDER
 -- ========================================================================================
@@ -1261,24 +1250,18 @@ CreateTab("Aim-Bot")
 local MiscTab = CreateTab("Misc")
 Tabs["Misc"].Render = function()
     CreateCategory(PageContainer, "General")
-    CreateToggle(PageContainer, "WallShot", "Allows you to shoot through walls and obstacles.", function(v)
-        mmState.wallShot = v
-    end)
-    CreateToggle(PageContainer, "AntiFling", "Prevents other players from launching you.", function(v)
-        ApplyAntiFling(v)
-    end)
+    CreateToggle(PageContainer, "WallShot", "Allows you to shoot through walls and obstacles.")
+    
+    CreateCategory(PageContainer, "Trolling")
+    CreateFlingModule(PageContainer)
 end
 
 local EspTab = CreateTab("Esp")
 Tabs["Esp"].Render = function()
     CreateCategory(PageContainer, "Player Visuals")
     CreateExpandable(PageContainer, "Chams", "Highlight players through walls.", {
-        {Name = "ChamsMurder", Desc = "Highlight only the murderer role.", Callback = function(v)
-            espState.chamsMurder = v
-        end},
-        {Name = "ChamsSherrif", Desc = "Highlight only the sheriff role.", Callback = function(v)
-            espState.chamsSherif = v
-        end}
+        {Name = "ChamsMurder", Desc = "Highlight only the murderer role."},
+        {Name = "ChamsSherrif", Desc = "Highlight only the sheriff role."}
     })
 end
 

@@ -1,8 +1,8 @@
 --[[
-    ╔══════════════════════════════════════╗
-    ║     SeraphiCA  Premium  Menu       ║
-    ║   Tablet Optimized | Delta Ready   ║
-    ╚══════════════════════════════════════╝
+    ╔══════════════════════════════════════════════════════════════╗
+    ║                    SeraphiCA  PREMIUM                        ║
+    ║              Tablet UI | Delta / Fluxus Ready               ║
+    ╚══════════════════════════════════════════════════════════════╝
 ]]
 
 --// Services
@@ -22,26 +22,27 @@ end
 local CFG = {
     Width = 780,
     Height = 540,
-    Radius = 18,
-    AnimSpeed = 0.45,
+    Radius = 20,
+    AnimSpeed = 0.4,
     IsOpen = false,
-    Accent = Color3.fromRGB(155, 105, 245),
-    WmColor = Color3.fromRGB(190, 160, 255)
+    Accent = Color3.fromRGB(160, 90, 255),
+    WmColor = Color3.fromRGB(200, 170, 255)
 }
 
 --// Theme
 local Theme = {
-    Bg = Color3.fromRGB(14, 14, 18),
-    BgPanel = Color3.fromRGB(22, 22, 28),
-    BgHover = Color3.fromRGB(32, 32, 40),
-    BgSlot = Color3.fromRGB(26, 26, 34),
-    BgSlotHover = Color3.fromRGB(34, 34, 44),
-    Text = Color3.fromRGB(248, 248, 252),
-    TextMuted = Color3.fromRGB(130, 130, 150),
-    Border = Color3.fromRGB(40, 40, 52),
-    Green = Color3.fromRGB(86, 210, 140),
-    Red = Color3.fromRGB(235, 90, 90),
-    Orange = Color3.fromRGB(255, 170, 80)
+    Deep = Color3.fromRGB(10, 10, 14),
+    Bg = Color3.fromRGB(16, 16, 22),
+    Panel = Color3.fromRGB(24, 24, 32),
+    PanelHover = Color3.fromRGB(32, 32, 44),
+    Slot = Color3.fromRGB(28, 28, 38),
+    SlotHover = Color3.fromRGB(36, 36, 50),
+    Text = Color3.fromRGB(255, 255, 255),
+    TextMuted = Color3.fromRGB(140, 140, 160),
+    Border = Color3.fromRGB(45, 45, 60),
+    Green = Color3.fromRGB(100, 230, 150),
+    Red = Color3.fromRGB(255, 80, 80),
+    Orange = Color3.fromRGB(255, 180, 80)
 }
 
 --// GUI
@@ -51,7 +52,7 @@ Hub.ResetOnSpawn = false
 Hub.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Hub.Parent = PlayerGui
 
---// Utils
+--// Utility
 local function Tween(obj, props, dur, style, dir)
     TweenService:Create(obj, TweenInfo.new(dur or 0.35, style or Enum.EasingStyle.Quart, dir or Enum.EasingDirection.Out), props):Play()
 end
@@ -73,98 +74,104 @@ local function Stroke(obj, col, thick, trans)
     return s
 end
 
-local function Glow(obj, col, thick)
-    local g = Instance.new("UIStroke")
-    g.Color = col or CFG.Accent
-    g.Thickness = thick or 2
-    g.Transparency = 0.85
-    g.Parent = obj
-    return g
-end
-
 --// NOTIFICATION SYSTEM
-local NotifFrame = Instance.new("Frame")
-NotifFrame.Name = "Notifications"
-NotifFrame.Size = UDim2.new(0, 400, 0, 60)
-NotifFrame.Position = UDim2.new(0.5, -200, 1, -80)
-NotifFrame.BackgroundTransparency = 1
-NotifFrame.ZIndex = 200
-NotifFrame.Parent = Hub
+local NotifContainer = Instance.new("Frame")
+NotifContainer.Name = "NotifContainer"
+NotifContainer.Size = UDim2.new(0, 420, 0, 50)
+NotifContainer.Position = UDim2.new(0.5, -210, 1, 20)
+NotifContainer.BackgroundTransparency = 1
+NotifContainer.ZIndex = 999
+NotifContainer.Parent = Hub
+
+local NotifBg = Instance.new("Frame")
+NotifBg.Size = UDim2.new(1, 0, 1, 0)
+NotifBg.BackgroundColor3 = Color3.fromRGB(30, 20, 20)
+NotifBg.BackgroundTransparency = 0.2
+NotifBg.BorderSizePixel = 0
+NotifBg.ZIndex = 999
+NotifBg.Parent = NotifContainer
+
+Corner(NotifBg, 12)
+Stroke(NotifBg, Theme.Red, 1.5, 0.3)
 
 local NotifText = Instance.new("TextLabel")
-NotifText.Size = UDim2.new(1, 0, 1, 0)
+NotifText.Size = UDim2.new(1, -20, 1, 0)
+NotifText.Position = UDim2.new(0, 10, 0, 0)
 NotifText.BackgroundTransparency = 1
 NotifText.Text = ""
 NotifText.TextColor3 = Theme.Red
 NotifText.TextSize = 15
 NotifText.Font = Enum.Font.GothamBold
-NotifText.ZIndex = 201
-NotifText.Parent = NotifFrame
+NotifText.ZIndex = 1000
+NotifText.Parent = NotifContainer
 
-local function ShowNotification(text, color)
-    NotifText.TextColor3 = color or Theme.Red
+local function Notify(text)
     NotifText.Text = text
-    NotifText.TextTransparency = 0
-    NotifFrame.Position = UDim2.new(0.5, -200, 1, -20)
-    
-    Tween(NotifFrame, {Position = UDim2.new(0.5, -200, 1, -80)}, 0.4, Enum.EasingStyle.Back)
-    
-    task.delay(2.5, function()
-        Tween(NotifText, {TextTransparency = 1}, 0.4)
-        task.wait(0.4)
-        NotifText.Text = ""
+    Tween(NotifContainer, {Position = UDim2.new(0.5, -210, 1, -70)}, 0.45, Enum.EasingStyle.Back)
+    task.delay(2.8, function()
+        Tween(NotifContainer, {Position = UDim2.new(0.5, -210, 1, 20)}, 0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
     end)
 end
 
---// WATERMARK (Top Center, Always Visible)
+--// WATERMARK (Solid, Premium, Top Center)
 local WmFrame = Instance.new("Frame")
 WmFrame.Name = "Watermark"
-WmFrame.Size = UDim2.new(0, 300, 0, 42)
-WmFrame.Position = UDim2.new(0.5, -150, 0, 10)
-WmFrame.BackgroundColor3 = Theme.BgPanel
-WmFrame.BackgroundTransparency = 0.1
+WmFrame.Size = UDim2.new(0, 320, 0, 44)
+WmFrame.Position = UDim2.new(0.5, -160, 0, 12)
+WmFrame.BackgroundColor3 = Theme.Panel
 WmFrame.BorderSizePixel = 0
 WmFrame.ZIndex = 100
 WmFrame.Parent = Hub
 
 Corner(WmFrame, 12)
-Stroke(WmFrame, Theme.Border, 1, 0.4)
-Glow(WmFrame, CFG.WmColor, 3)
+
+local WmStroke = Instance.new("UIStroke")
+WmStroke.Color = CFG.WmColor
+WmStroke.Thickness = 1.5
+WmStroke.Transparency = 0.4
+WmStroke.Parent = WmFrame
+
+local WmGlow = Instance.new("UIStroke")
+WmGlow.Color = CFG.WmColor
+WmGlow.Thickness = 4
+WmGlow.Transparency = 0.92
+WmGlow.Parent = WmFrame
 
 local WmGrad = Instance.new("UIGradient")
 WmGrad.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, CFG.Accent),
-    ColorSequenceKeypoint.new(1, CFG.WmColor)
+    ColorSequenceKeypoint.new(0.5, CFG.WmColor),
+    ColorSequenceKeypoint.new(1, CFG.Accent)
 })
-WmGrad.Transparency = NumberSequence.new(0.9)
+WmGrad.Rotation = 90
 WmGrad.Parent = WmFrame
 
-local WmLabel = Instance.new("TextLabel")
-WmLabel.Size = UDim2.new(1, 0, 1, 0)
-WmLabel.BackgroundTransparency = 1
-WmLabel.Text = "SeraphiCA | 00:00"
-WmLabel.TextColor3 = CFG.WmColor
-WmLabel.TextSize = 16
-WmLabel.Font = Enum.Font.GothamBold
-WmLabel.ZIndex = 101
-WmLabel.Parent = WmFrame
+local WmText = Instance.new("TextLabel")
+WmText.Size = UDim2.new(1, 0, 1, 0)
+WmText.BackgroundTransparency = 1
+WmText.Text = "SeraphiCA | 00:00"
+WmText.TextColor3 = CFG.WmColor
+WmText.TextSize = 17
+WmText.Font = Enum.Font.GothamBold
+WmText.ZIndex = 101
+WmText.Parent = WmFrame
 
 local WmSub = Instance.new("TextLabel")
 WmSub.Size = UDim2.new(1, 0, 0, 14)
-WmSub.Position = UDim2.new(0, 0, 1, 3)
+WmSub.Position = UDim2.new(0, 0, 1, 4)
 WmSub.BackgroundTransparency = 1
 WmSub.Text = "TAP TO TOGGLE MENU"
 WmSub.TextColor3 = Theme.TextMuted
 WmSub.TextSize = 10
 WmSub.Font = Enum.Font.Gotham
-WmSub.TextTransparency = 0.6
+WmSub.TextTransparency = 0.5
 WmSub.ZIndex = 100
 WmSub.Parent = WmFrame
 
--- Time
+-- Time updater
 task.spawn(function()
     while true do
-        WmLabel.Text = "SeraphiCA | " .. os.date("%H:%M")
+        WmText.Text = "SeraphiCA | " .. os.date("%H:%M")
         task.wait(1)
     end
 end)
@@ -173,7 +180,7 @@ end)
 local Menu = Instance.new("Frame")
 Menu.Name = "Menu"
 Menu.Size = UDim2.new(0, CFG.Width, 0, CFG.Height)
-Menu.Position = UDim2.new(0.5, -CFG.Width/2, 0, -CFG.Height - 80)
+Menu.Position = UDim2.new(0.5, -CFG.Width/2, 0, -CFG.Height - 100)
 Menu.BackgroundColor3 = Theme.Bg
 Menu.BorderSizePixel = 0
 Menu.ClipsDescendants = true
@@ -182,92 +189,93 @@ Menu.Parent = Hub
 Corner(Menu, CFG.Radius)
 Stroke(Menu, Theme.Border, 1.5, 0.15)
 
--- Glow border
+-- Outer glow
 local MenuGlow = Instance.new("UIStroke")
 MenuGlow.Color = CFG.Accent
 MenuGlow.Thickness = 1
-MenuGlow.Transparency = 0.92
+MenuGlow.Transparency = 0.9
 MenuGlow.Parent = Menu
 
--- Top gradient line
+-- Top accent line
 local TopLine = Instance.new("Frame")
 TopLine.Size = UDim2.new(1, 0, 0, 3)
 TopLine.BackgroundColor3 = CFG.Accent
 TopLine.BorderSizePixel = 0
 TopLine.Parent = Menu
 
-local TopLineGrad = Instance.new("UIGradient")
-TopLineGrad.Color = ColorSequence.new(CFG.Accent, CFG.WmColor)
-TopLineGrad.Parent = TopLine
+local TopGrad = Instance.new("UIGradient")
+TopGrad.Color = ColorSequence.new(CFG.Accent, CFG.WmColor)
+TopGrad.Parent = TopLine
 
--- Header
+--// HEADER
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 60)
+Header.Size = UDim2.new(1, 0, 0, 64)
 Header.Position = UDim2.new(0, 0, 0, 3)
-Header.BackgroundColor3 = Theme.BgPanel
+Header.BackgroundColor3 = Theme.Panel
 Header.BorderSizePixel = 0
 Header.Parent = Menu
 
 local HeaderFade = Instance.new("UIGradient")
-HeaderFade.Color = ColorSequence.new(Theme.BgPanel, Theme.Bg)
+HeaderFade.Color = ColorSequence.new(Theme.Panel, Theme.Bg)
 HeaderFade.Rotation = 90
 HeaderFade.Parent = Header
 
-local HeaderTitle = Instance.new("TextLabel")
-HeaderTitle.Size = UDim2.new(0, 250, 0, 28)
-HeaderTitle.Position = UDim2.new(0, 26, 0, 8)
-HeaderTitle.BackgroundTransparency = 1
-HeaderTitle.Text = "SeraphiCA"
-HeaderTitle.TextColor3 = Theme.Text
-HeaderTitle.TextSize = 24
-HeaderTitle.Font = Enum.Font.GothamBold
-HeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
-HeaderTitle.Parent = Header
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0, 300, 0, 30)
+Title.Position = UDim2.new(0, 28, 0, 10)
+Title.BackgroundTransparency = 1
+Title.Text = "SeraphiCA"
+Title.TextColor3 = Theme.Text
+Title.TextSize = 26
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Header
 
-local HeaderVer = Instance.new("TextLabel")
-HeaderVer.Size = UDim2.new(0, 200, 0, 16)
-HeaderVer.Position = UDim2.new(0, 26, 0, 36)
-HeaderVer.BackgroundTransparency = 1
-HeaderVer.Text = "PREMIUM EDITION v2.0"
-HeaderVer.TextColor3 = CFG.Accent
-HeaderVer.TextSize = 11
-HeaderVer.Font = Enum.Font.GothamBold
-HeaderVer.TextXAlignment = Enum.TextXAlignment.Left
-HeaderVer.Parent = Header
+local Sub = Instance.new("TextLabel")
+Sub.Size = UDim2.new(0, 300, 0, 18)
+Sub.Position = UDim2.new(0, 28, 0, 38)
+Sub.BackgroundTransparency = 1
+Sub.Text = "PREMIUM EDITION v2.0"
+Sub.TextColor3 = CFG.Accent
+Sub.TextSize = 12
+Sub.Font = Enum.Font.GothamBold
+Sub.TextXAlignment = Enum.TextXAlignment.Left
+Sub.Parent = Header
 
-local CloseX = Instance.new("TextButton")
-CloseX.Size = UDim2.new(0, 38, 0, 38)
-CloseX.Position = UDim2.new(1, -52, 0, 11)
-CloseX.BackgroundColor3 = Theme.BgSlot
-CloseX.Text = ""
-CloseX.AutoButtonColor = false
-CloseX.Parent = Header
+-- Close button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 40, 0, 40)
+CloseBtn.Position = UDim2.new(1, -56, 0, 12)
+CloseBtn.BackgroundColor3 = Theme.Slot
+CloseBtn.Text = ""
+CloseBtn.AutoButtonColor = false
+CloseBtn.Parent = Header
 
-Corner(CloseX, 10)
-Stroke(CloseX, Theme.Border, 1, 0.5)
+Corner(CloseBtn, 10)
+Stroke(CloseBtn, Theme.Border, 1, 0.5)
 
 local CloseIcon = Instance.new("TextLabel")
 CloseIcon.Size = UDim2.new(1, 0, 1, 0)
 CloseIcon.BackgroundTransparency = 1
 CloseIcon.Text = "x"
 CloseIcon.TextColor3 = Theme.TextMuted
-CloseIcon.TextSize = 20
+CloseIcon.TextSize = 22
 CloseIcon.Font = Enum.Font.GothamBold
-CloseIcon.Parent = CloseX
+CloseIcon.Parent = CloseBtn
 
-CloseX.MouseEnter:Connect(function()
-    Tween(CloseX, {BackgroundColor3 = Theme.Red}, 0.2)
+CloseBtn.MouseEnter:Connect(function()
+    Tween(CloseBtn, {BackgroundColor3 = Theme.Red}, 0.2)
     Tween(CloseIcon, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
 end)
-CloseX.MouseLeave:Connect(function()
-    Tween(CloseX, {BackgroundColor3 = Theme.BgSlot}, 0.2)
+CloseBtn.MouseLeave:Connect(function()
+    Tween(CloseBtn, {BackgroundColor3 = Theme.Slot}, 0.2)
     Tween(CloseIcon, {TextColor3 = Theme.TextMuted}, 0.2)
 end)
 
 --// SIDEBAR
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 175, 1, -63)
-Sidebar.Position = UDim2.new(0, 0, 0, 63)
+Sidebar.Size = UDim2.new(0, 180, 1, -67)
+Sidebar.Position = UDim2.new(0, 0, 0, 67)
 Sidebar.BackgroundTransparency = 1
 Sidebar.Parent = Menu
 
@@ -285,13 +293,13 @@ TabList.SortOrder = Enum.SortOrder.LayoutOrder
 TabList.Parent = Sidebar
 
 local TabPad = Instance.new("UIPadding")
-TabPad.PaddingTop = UDim.new(0, 10)
+TabPad.PaddingTop = UDim.new(0, 12)
 TabPad.Parent = Sidebar
 
 --// CONTENT
 local Content = Instance.new("Frame")
-Content.Size = UDim2.new(1, -190, 1, -78)
-Content.Position = UDim2.new(0, 185, 0, 72)
+Content.Size = UDim2.new(1, -195, 1, -82)
+Content.Position = UDim2.new(0, 190, 0, 76)
 Content.BackgroundTransparency = 1
 Content.Parent = Menu
 
@@ -310,7 +318,7 @@ local ActiveTab = nil
 local function MakeTab(data)
     local btn = Instance.new("TextButton")
     btn.Name = data.Name .. "Tab"
-    btn.Size = UDim2.new(1, -22, 0, 50)
+    btn.Size = UDim2.new(1, -24, 0, 52)
     btn.BackgroundColor3 = Theme.Bg
     btn.Text = "  " .. data.Name
     btn.TextColor3 = Theme.TextMuted
@@ -336,17 +344,17 @@ local function MakeTab(data)
 
     if data.Locked then
         local lock = Instance.new("TextLabel")
-        lock.Size = UDim2.new(0, 30, 1, 0)
-        lock.Position = UDim2.new(1, -36, 0, 0)
+        lock.Size = UDim2.new(0, 40, 1, 0)
+        lock.Position = UDim2.new(1, -44, 0, 0)
         lock.BackgroundTransparency = 1
-        lock.Text = ""
+        lock.Text = "[!]"
         lock.TextColor3 = Theme.Red
         lock.TextSize = 14
         lock.Font = Enum.Font.GothamBold
         lock.Parent = btn
     end
 
-    -- Content
+    -- Content frame
     local frame = Instance.new("ScrollingFrame")
     frame.Name = data.Name .. "Frame"
     frame.Size = UDim2.new(1, 0, 1, 0)
@@ -376,22 +384,23 @@ local function MakeTab(data)
     TabBtns[data.Name] = btn
     TabFrames[data.Name] = frame
 
-    -- Click
+    -- Click handler
     btn.MouseButton1Click:Connect(function()
         if data.Locked then
-            ShowNotification("not available yet", Theme.Red)
+            Notify("not available yet")
             -- Shake animation
-            local orig = btn.Position
-            Tween(btn, {Position = UDim2.new(0, 6, 0, btn.Position.Y.Offset)}, 0.05)
-            task.wait(0.05)
-            Tween(btn, {Position = UDim2.new(0, -6, 0, btn.Position.Y.Offset)}, 0.05)
-            task.wait(0.05)
-            Tween(btn, {Position = orig}, 0.1, Enum.EasingStyle.Quart)
+            local base = btn.Position
+            Tween(btn, {Position = base + UDim2.new(0, 8, 0, 0)}, 0.06)
+            task.wait(0.06)
+            Tween(btn, {Position = base + UDim2.new(0, -8, 0, 0)}, 0.06)
+            task.wait(0.06)
+            Tween(btn, {Position = base}, 0.12)
             return
         end
 
         if ActiveTab == data.Name then return end
 
+        -- Deactivate old
         if ActiveTab then
             local old = TabBtns[ActiveTab]
             Tween(old, {BackgroundColor3 = Theme.Bg, TextColor3 = Theme.TextMuted}, 0.25)
@@ -399,24 +408,29 @@ local function MakeTab(data)
             TabFrames[ActiveTab].Visible = false
         end
 
+        -- Activate new
         ActiveTab = data.Name
-        Tween(btn, {BackgroundColor3 = Theme.BgHover, TextColor3 = Theme.Text}, 0.25)
-        Tween(ind, {Size = UDim2.new(0, 4, 0, 28)}, 0.3, Enum.EasingStyle.Back)
+        Tween(btn, {BackgroundColor3 = Theme.PanelHover, TextColor3 = Theme.Text}, 0.25)
+        Tween(ind, {Size = UDim2.new(0, 4, 0, 30)}, 0.3, Enum.EasingStyle.Back)
 
-        -- Staggered slot animation
         frame.Visible = true
-        for _, child in ipairs(frame:GetChildren()) do
+
+        -- Stagger animation for slots
+        for i, child in ipairs(frame:GetChildren()) do
             if child:IsA("Frame") or child:IsA("TextButton") then
-                child.Position = child.Position + UDim2.new(0, 0, 0, 15)
-                child.BackgroundTransparency = 0.3
-                Tween(child, {Position = child.Position - UDim2.new(0, 0, 0, 15), BackgroundTransparency = 0}, 0.35)
+                child.Position = child.Position + UDim2.new(0, 0, 0, 20)
+                child.BackgroundTransparency = 0.4
+                Tween(child, {
+                    Position = child.Position - UDim2.new(0, 0, 0, 20),
+                    BackgroundTransparency = 0
+                }, 0.35 + (i * 0.03))
             end
         end
     end)
 
     btn.MouseEnter:Connect(function()
         if ActiveTab ~= data.Name and not data.Locked then
-            Tween(btn, {BackgroundColor3 = Theme.BgSlot}, 0.2)
+            Tween(btn, {BackgroundColor3 = Theme.Slot}, 0.2)
         end
     end)
     btn.MouseLeave:Connect(function()
@@ -428,31 +442,31 @@ local function MakeTab(data)
     return frame
 end
 
---// SLOT CREATOR
+--// SLOT COMPONENT
 local function CreateSlot(parent, title, description)
     local slot = Instance.new("Frame")
-    slot.Size = UDim2.new(1, -12, 0, 86)
-    slot.BackgroundColor3 = Theme.BgSlot
+    slot.Size = UDim2.new(1, -12, 0, 90)
+    slot.BackgroundColor3 = Theme.Slot
     slot.BorderSizePixel = 0
     slot.Parent = parent
 
     Corner(slot, 14)
-    Stroke(slot, Theme.Border, 1, 0.35)
+    Stroke(slot, Theme.Border, 1, 0.3)
 
     local t = Instance.new("TextLabel")
-    t.Size = UDim2.new(1, -110, 0, 24)
-    t.Position = UDim2.new(0, 18, 0, 14)
+    t.Size = UDim2.new(1, -120, 0, 26)
+    t.Position = UDim2.new(0, 20, 0, 14)
     t.BackgroundTransparency = 1
     t.Text = title
     t.TextColor3 = Theme.Text
-    t.TextSize = 16
+    t.TextSize = 17
     t.Font = Enum.Font.GothamBold
     t.TextXAlignment = Enum.TextXAlignment.Left
     t.Parent = slot
 
     local d = Instance.new("TextLabel")
-    d.Size = UDim2.new(1, -110, 0, 20)
-    d.Position = UDim2.new(0, 18, 0, 40)
+    d.Size = UDim2.new(1, -120, 0, 20)
+    d.Position = UDim2.new(0, 20, 0, 42)
     d.BackgroundTransparency = 1
     d.Text = description
     d.TextColor3 = Theme.TextMuted
@@ -464,151 +478,147 @@ local function CreateSlot(parent, title, description)
 
     -- Toggle
     local tgBg = Instance.new("TextButton")
-    tgBg.Size = UDim2.new(0, 56, 0, 30)
-    tgBg.Position = UDim2.new(1, -72, 0.5, -15)
-    tgBg.BackgroundColor3 = Color3.fromRGB(50, 50, 62)
+    tgBg.Size = UDim2.new(0, 58, 0, 32)
+    tgBg.Position = UDim2.new(1, -76, 0.5, -16)
+    tgBg.BackgroundColor3 = Color3.fromRGB(50, 50, 64)
     tgBg.Text = ""
     tgBg.AutoButtonColor = false
     tgBg.Parent = slot
 
-    Corner(tgBg, 15)
+    Corner(tgBg, 16)
 
     local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 24, 0, 24)
-    knob.Position = UDim2.new(0, 3, 0.5, -12)
+    knob.Size = UDim2.new(0, 26, 0, 26)
+    knob.Position = UDim2.new(0, 3, 0.5, -13)
     knob.BackgroundColor3 = Color3.fromRGB(210, 210, 220)
     knob.BorderSizePixel = 0
     knob.Parent = tgBg
 
-    Corner(knob, 12)
+    Corner(knob, 13)
 
     local on = false
     tgBg.MouseButton1Click:Connect(function()
         on = not on
         if on then
             Tween(tgBg, {BackgroundColor3 = Theme.Green}, 0.25)
-            Tween(knob, {Position = UDim2.new(0, 29, 0.5, -12), BackgroundColor3 = Color3.fromRGB(255,255,255)}, 0.25)
-            Stroke(slot, Theme.Green, 1, 0.5)
+            Tween(knob, {Position = UDim2.new(0, 29, 0.5, -13), BackgroundColor3 = Color3.fromRGB(255,255,255)}, 0.25)
+            Stroke(slot, Theme.Green, 1.5, 0.4)
         else
-            Tween(tgBg, {BackgroundColor3 = Color3.fromRGB(50, 50, 62)}, 0.25)
-            Tween(knob, {Position = UDim2.new(0, 3, 0.5, -12), BackgroundColor3 = Color3.fromRGB(210, 210, 220)}, 0.25)
-            Stroke(slot, Theme.Border, 1, 0.35)
+            Tween(tgBg, {BackgroundColor3 = Color3.fromRGB(50, 50, 64)}, 0.25)
+            Tween(knob, {Position = UDim2.new(0, 3, 0.5, -13), BackgroundColor3 = Color3.fromRGB(210, 210, 220)}, 0.25)
+            Stroke(slot, Theme.Border, 1, 0.3)
         end
     end)
 
     slot.MouseEnter:Connect(function()
-        if not on then
-            Tween(slot, {BackgroundColor3 = Theme.BgSlotHover}, 0.2)
-        end
+        if not on then Tween(slot, {BackgroundColor3 = Theme.SlotHover}, 0.2) end
     end)
     slot.MouseLeave:Connect(function()
-        if not on then
-            Tween(slot, {BackgroundColor3 = Theme.BgSlot}, 0.2)
-        end
+        if not on then Tween(slot, {BackgroundColor3 = Theme.Slot}, 0.2) end
     end)
 
-    return slot, tgBg
+    return slot
 end
 
---// ACCORDION (Expandable)
-local function CreateAccordion(parent, title, desc)
+--// ACCORDION COMPONENT
+local function CreateAccordion(parent, title, description)
     local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, -12, 0, 86)
+    container.Size = UDim2.new(1, -12, 0, 90)
     container.BackgroundTransparency = 1
     container.ClipsDescendants = true
     container.Parent = parent
 
-    local mainSlot = Instance.new("Frame")
-    mainSlot.Size = UDim2.new(1, 0, 0, 86)
-    mainSlot.BackgroundColor3 = Theme.BgSlot
-    mainSlot.BorderSizePixel = 0
-    mainSlot.Parent = container
+    local main = Instance.new("Frame")
+    main.Size = UDim2.new(1, 0, 0, 90)
+    main.BackgroundColor3 = Theme.Slot
+    main.BorderSizePixel = 0
+    main.Parent = container
 
-    Corner(mainSlot, 14)
-    Stroke(mainSlot, Theme.Border, 1, 0.35)
+    Corner(main, 14)
+    Stroke(main, Theme.Border, 1, 0.3)
 
     local t = Instance.new("TextLabel")
-    t.Size = UDim2.new(1, -110, 0, 24)
-    t.Position = UDim2.new(0, 18, 0, 14)
+    t.Size = UDim2.new(1, -120, 0, 26)
+    t.Position = UDim2.new(0, 20, 0, 14)
     t.BackgroundTransparency = 1
     t.Text = title
     t.TextColor3 = Theme.Text
-    t.TextSize = 16
+    t.TextSize = 17
     t.Font = Enum.Font.GothamBold
     t.TextXAlignment = Enum.TextXAlignment.Left
-    t.Parent = mainSlot
+    t.Parent = main
 
     local d = Instance.new("TextLabel")
-    d.Size = UDim2.new(1, -110, 0, 20)
-    d.Position = UDim2.new(0, 18, 0, 40)
+    d.Size = UDim2.new(1, -120, 0, 20)
+    d.Position = UDim2.new(0, 20, 0, 42)
     d.BackgroundTransparency = 1
-    d.Text = desc
+    d.Text = description
     d.TextColor3 = Theme.TextMuted
     d.TextSize = 12
     d.Font = Enum.Font.Gotham
     d.TextXAlignment = Enum.TextXAlignment.Left
-    d.Parent = mainSlot
+    d.Parent = main
 
     -- Toggle
     local tgBg = Instance.new("TextButton")
-    tgBg.Size = UDim2.new(0, 56, 0, 30)
-    tgBg.Position = UDim2.new(1, -72, 0.5, -15)
-    tgBg.BackgroundColor3 = Color3.fromRGB(50, 50, 62)
+    tgBg.Size = UDim2.new(0, 58, 0, 32)
+    tgBg.Position = UDim2.new(1, -76, 0.5, -16)
+    tgBg.BackgroundColor3 = Color3.fromRGB(50, 50, 64)
     tgBg.Text = ""
     tgBg.AutoButtonColor = false
-    tgBg.Parent = mainSlot
+    tgBg.Parent = main
 
-    Corner(tgBg, 15)
+    Corner(tgBg, 16)
 
     local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 24, 0, 24)
-    knob.Position = UDim2.new(0, 3, 0.5, -12)
+    knob.Size = UDim2.new(0, 26, 0, 26)
+    knob.Position = UDim2.new(0, 3, 0.5, -13)
     knob.BackgroundColor3 = Color3.fromRGB(210, 210, 220)
     knob.BorderSizePixel = 0
     knob.Parent = tgBg
 
-    Corner(knob, 12)
+    Corner(knob, 13)
 
-    -- Sub-options container
-    local subContainer = Instance.new("Frame")
-    subContainer.Size = UDim2.new(1, 0, 0, 0)
-    subContainer.Position = UDim2.new(0, 0, 0, 92)
-    subContainer.BackgroundTransparency = 1
-    subContainer.ClipsDescendants = true
-    subContainer.Parent = container
+    -- Sub container
+    local sub = Instance.new("Frame")
+    sub.Size = UDim2.new(1, 0, 0, 0)
+    sub.Position = UDim2.new(0, 0, 0, 96)
+    sub.BackgroundTransparency = 1
+    sub.ClipsDescendants = true
+    sub.Parent = container
 
     local subList = Instance.new("UIListLayout")
     subList.Padding = UDim.new(0, 10)
     subList.HorizontalAlignment = Enum.HorizontalAlignment.Center
     subList.SortOrder = Enum.SortOrder.LayoutOrder
-    subList.Parent = subContainer
+    subList.Parent = sub
 
-    local function CreateSubOption(name, description)
+    local function AddSub(name, desc)
         local s = Instance.new("Frame")
-        s.Size = UDim2.new(1, -30, 0, 64)
-        s.BackgroundColor3 = Theme.BgPanel
+        s.Size = UDim2.new(1, -30, 0, 68)
+        s.BackgroundColor3 = Theme.Panel
         s.BorderSizePixel = 0
-        s.Parent = subContainer
+        s.Parent = sub
 
         Corner(s, 12)
-        Stroke(s, Theme.Border, 1, 0.3)
+        Stroke(s, Theme.Border, 1, 0.25)
 
         local st = Instance.new("TextLabel")
-        st.Size = UDim2.new(1, -90, 0, 20)
+        st.Size = UDim2.new(1, -90, 0, 22)
         st.Position = UDim2.new(0, 16, 0, 10)
         st.BackgroundTransparency = 1
         st.Text = name
         st.TextColor3 = Theme.Text
-        st.TextSize = 14
+        st.TextSize = 15
         st.Font = Enum.Font.GothamBold
         st.TextXAlignment = Enum.TextXAlignment.Left
         st.Parent = s
 
         local sd = Instance.new("TextLabel")
-        sd.Size = UDim2.new(1, -90, 0, 16)
-        sd.Position = UDim2.new(0, 16, 0, 32)
+        sd.Size = UDim2.new(1, -90, 0, 18)
+        sd.Position = UDim2.new(0, 16, 0, 34)
         sd.BackgroundTransparency = 1
-        sd.Text = description
+        sd.Text = desc
         sd.TextColor3 = Theme.TextMuted
         sd.TextSize = 11
         sd.Font = Enum.Font.Gotham
@@ -616,71 +626,68 @@ local function CreateAccordion(parent, title, desc)
         sd.Parent = s
 
         local stg = Instance.new("TextButton")
-        stg.Size = UDim2.new(0, 48, 0, 26)
-        stg.Position = UDim2.new(1, -62, 0.5, -13)
-        stg.BackgroundColor3 = Color3.fromRGB(50, 50, 62)
+        stg.Size = UDim2.new(0, 50, 0, 28)
+        stg.Position = UDim2.new(1, -64, 0.5, -14)
+        stg.BackgroundColor3 = Color3.fromRGB(50, 50, 64)
         stg.Text = ""
         stg.AutoButtonColor = false
         stg.Parent = s
 
-        Corner(stg, 13)
+        Corner(stg, 14)
 
         local sk = Instance.new("Frame")
-        sk.Size = UDim2.new(0, 20, 0, 20)
-        sk.Position = UDim2.new(0, 3, 0.5, -10)
+        sk.Size = UDim2.new(0, 22, 0, 22)
+        sk.Position = UDim2.new(0, 3, 0.5, -11)
         sk.BackgroundColor3 = Color3.fromRGB(210, 210, 220)
         sk.BorderSizePixel = 0
         sk.Parent = stg
 
-        Corner(sk, 10)
+        Corner(sk, 11)
 
         local son = false
         stg.MouseButton1Click:Connect(function()
             son = not son
             if son then
                 Tween(stg, {BackgroundColor3 = Theme.Green}, 0.2)
-                Tween(sk, {Position = UDim2.new(0, 25, 0.5, -10), BackgroundColor3 = Color3.fromRGB(255,255,255)}, 0.2)
+                Tween(sk, {Position = UDim2.new(0, 25, 0.5, -11), BackgroundColor3 = Color3.fromRGB(255,255,255)}, 0.2)
             else
-                Tween(stg, {BackgroundColor3 = Color3.fromRGB(50, 50, 62)}, 0.2)
-                Tween(sk, {Position = UDim2.new(0, 3, 0.5, -10), BackgroundColor3 = Color3.fromRGB(210, 210, 220)}, 0.2)
+                Tween(stg, {BackgroundColor3 = Color3.fromRGB(50, 50, 64)}, 0.2)
+                Tween(sk, {Position = UDim2.new(0, 3, 0.5, -11), BackgroundColor3 = Color3.fromRGB(210, 210, 220)}, 0.2)
             end
         end)
 
         return s
     end
 
-    local on = false
+    local expanded = false
     tgBg.MouseButton1Click:Connect(function()
-        on = not on
-        if on then
+        expanded = not expanded
+        if expanded then
             Tween(tgBg, {BackgroundColor3 = Theme.Green}, 0.25)
-            Tween(knob, {Position = UDim2.new(0, 29, 0.5, -12), BackgroundColor3 = Color3.fromRGB(255,255,255)}, 0.25)
-            Stroke(mainSlot, Theme.Green, 1, 0.5)
-            Tween(container, {Size = UDim2.new(1, -12, 0, 86 + subContainer.AbsoluteSize.Y + 10)}, 0.4, Enum.EasingStyle.Quart)
-            task.delay(0.1, function()
-                Tween(subContainer, {Size = UDim2.new(1, 0, 0, subList.AbsoluteContentSize.Y)}, 0.35)
-            end)
+            Tween(knob, {Position = UDim2.new(0, 29, 0.5, -13), BackgroundColor3 = Color3.fromRGB(255,255,255)}, 0.25)
+            Stroke(main, Theme.Green, 1.5, 0.4)
+
+            local subHeight = subList.AbsoluteContentSize.Y
+            Tween(sub, {Size = UDim2.new(1, 0, 0, subHeight)}, 0.35, Enum.EasingStyle.Quart)
+            Tween(container, {Size = UDim2.new(1, -12, 0, 90 + subHeight + 10)}, 0.4, Enum.EasingStyle.Quart)
         else
-            Tween(tgBg, {BackgroundColor3 = Color3.fromRGB(50, 50, 62)}, 0.25)
-            Tween(knob, {Position = UDim2.new(0, 3, 0.5, -12), BackgroundColor3 = Color3.fromRGB(210, 210, 220)}, 0.25)
-            Stroke(mainSlot, Theme.Border, 1, 0.35)
-            Tween(subContainer, {Size = UDim2.new(1, 0, 0, 0)}, 0.3)
-            Tween(container, {Size = UDim2.new(1, -12, 0, 86)}, 0.35, Enum.EasingStyle.Quart)
+            Tween(tgBg, {BackgroundColor3 = Color3.fromRGB(50, 50, 64)}, 0.25)
+            Tween(knob, {Position = UDim2.new(0, 3, 0.5, -13), BackgroundColor3 = Color3.fromRGB(210, 210, 220)}, 0.25)
+            Stroke(main, Theme.Border, 1, 0.3)
+
+            Tween(sub, {Size = UDim2.new(1, 0, 0, 0)}, 0.3)
+            Tween(container, {Size = UDim2.new(1, -12, 0, 90)}, 0.35, Enum.EasingStyle.Quart)
         end
     end)
 
-    mainSlot.MouseEnter:Connect(function()
-        if not on then
-            Tween(mainSlot, {BackgroundColor3 = Theme.BgSlotHover}, 0.2)
-        end
+    main.MouseEnter:Connect(function()
+        if not expanded then Tween(main, {BackgroundColor3 = Theme.SlotHover}, 0.2) end
     end)
-    mainSlot.MouseLeave:Connect(function()
-        if not on then
-            Tween(mainSlot, {BackgroundColor3 = Theme.BgSlot}, 0.2)
-        end
+    main.MouseLeave:Connect(function()
+        if not expanded then Tween(main, {BackgroundColor3 = Theme.Slot}, 0.2) end
     end)
 
-    return container, CreateSubOption
+    return container, AddSub
 end
 
 --// BUILD TABS
@@ -688,61 +695,62 @@ for _, tab in ipairs(Tabs) do
     local frame = MakeTab(tab)
 
     if tab.Name == "Aim-Bot" then
-        -- Locked, nothing here. Notification on click handled in MakeTab.
+        -- EMPTY — locked tab, no content
 
     elseif tab.Name == "Misc" then
-        CreateSlot(frame, "WallShot", "Shoot through walls with penetration enabled")
+        CreateSlot(frame, "WallShot", "Fire projectiles through solid walls and obstacles")
 
     elseif tab.Name == "Esp" then
-        local acc, MakeSub = CreateAccordion(frame, "Chams", "Render colored highlights through walls")
-        MakeSub("ChamsMurder", "Highlight Murderer role in bright red")
-        MakeSub("ChamsSherrif", "Highlight Sheriff role in bright blue")
+        local acc, AddSub = CreateAccordion(frame, "Chams", "Render colored silhouettes visible through walls")
+        AddSub("ChamsMurder", "Highlight the Murderer role in intense red glow")
+        AddSub("ChamsSherrif", "Highlight the Sheriff role in bright blue glow")
 
     elseif tab.Name == "Settings" then
-        -- Menu Accent
+        -- Menu Accent Color
         local cSlot = Instance.new("Frame")
-        cSlot.Size = UDim2.new(1, -12, 0, 100)
-        cSlot.BackgroundColor3 = Theme.BgSlot
+        cSlot.Size = UDim2.new(1, -12, 0, 110)
+        cSlot.BackgroundColor3 = Theme.Slot
         cSlot.Parent = frame
 
         Corner(cSlot, 14)
-        Stroke(cSlot, Theme.Border, 1, 0.35)
+        Stroke(cSlot, Theme.Border, 1, 0.3)
 
         local ct = Instance.new("TextLabel")
-        ct.Size = UDim2.new(1, -20, 0, 24)
-        ct.Position = UDim2.new(0, 18, 0, 14)
+        ct.Size = UDim2.new(1, -20, 0, 26)
+        ct.Position = UDim2.new(0, 20, 0, 14)
         ct.BackgroundTransparency = 1
         ct.Text = "Menu Accent"
         ct.TextColor3 = Theme.Text
-        ct.TextSize = 16
+        ct.TextSize = 17
         ct.Font = Enum.Font.GothamBold
         ct.TextXAlignment = Enum.TextXAlignment.Left
         ct.Parent = cSlot
 
         local presets = {
-            {Color3.fromRGB(155, 105, 245), "Violet"},
-            {Color3.fromRGB(235, 80, 100), "Crimson"},
-            {Color3.fromRGB(70, 160, 230), "Azure"},
-            {Color3.fromRGB(70, 210, 130), "Emerald"},
-            {Color3.fromRGB(240, 185, 60), "Gold"},
-            {Color3.fromRGB(240, 110, 210), "Rose"}
+            {Color3.fromRGB(160, 90, 255), "Violet"},
+            {Color3.fromRGB(240, 70, 90), "Crimson"},
+            {Color3.fromRGB(70, 150, 240), "Azure"},
+            {Color3.fromRGB(70, 220, 130), "Emerald"},
+            {Color3.fromRGB(245, 175, 60), "Gold"},
+            {Color3.fromRGB(240, 100, 200), "Rose"}
         }
 
         for i, p in ipairs(presets) do
             local cb = Instance.new("TextButton")
-            cb.Size = UDim2.new(0, 40, 0, 40)
-            cb.Position = UDim2.new(0, 18 + (i-1)*50, 0, 50)
+            cb.Size = UDim2.new(0, 42, 0, 42)
+            cb.Position = UDim2.new(0, 20 + (i-1)*52, 0, 56)
             cb.BackgroundColor3 = p[1]
             cb.Text = ""
             cb.AutoButtonColor = false
             cb.Parent = cSlot
 
             Corner(cb, 10)
-            Stroke(cb, Theme.Border, 1, 0.5)
+            Stroke(cb, Theme.Border, 1, 0.4)
 
             cb.MouseButton1Click:Connect(function()
                 CFG.Accent = p[1]
-                TopLineGrad.Color = ColorSequence.new(p[1], CFG.WmColor)
+                TopLine.BackgroundColor3 = p[1]
+                TopGrad.Color = ColorSequence.new(p[1], CFG.WmColor)
                 MenuGlow.Color = p[1]
                 for _, b in pairs(TabBtns) do
                     b.Indicator.BackgroundColor3 = p[1]
@@ -755,26 +763,26 @@ for _, tab in ipairs(Tabs) do
 
         -- Watermark Color
         local wSlot = Instance.new("Frame")
-        wSlot.Size = UDim2.new(1, -12, 0, 100)
-        wSlot.BackgroundColor3 = Theme.BgSlot
+        wSlot.Size = UDim2.new(1, -12, 0, 110)
+        wSlot.BackgroundColor3 = Theme.Slot
         wSlot.Parent = frame
 
         Corner(wSlot, 14)
-        Stroke(wSlot, Theme.Border, 1, 0.35)
+        Stroke(wSlot, Theme.Border, 1, 0.3)
 
         local wt = Instance.new("TextLabel")
-        wt.Size = UDim2.new(1, -20, 0, 24)
-        wt.Position = UDim2.new(0, 18, 0, 14)
+        wt.Size = UDim2.new(1, -20, 0, 26)
+        wt.Position = UDim2.new(0, 20, 0, 14)
         wt.BackgroundTransparency = 1
         wt.Text = "Watermark Color"
         wt.TextColor3 = Theme.Text
-        wt.TextSize = 16
+        wt.TextSize = 17
         wt.Font = Enum.Font.GothamBold
         wt.TextXAlignment = Enum.TextXAlignment.Left
         wt.Parent = wSlot
 
         local wp = {
-            Color3.fromRGB(190, 160, 255),
+            Color3.fromRGB(200, 170, 255),
             Color3.fromRGB(255, 255, 255),
             Color3.fromRGB(255, 100, 100),
             Color3.fromRGB(100, 255, 150),
@@ -784,34 +792,36 @@ for _, tab in ipairs(Tabs) do
 
         for i, col in ipairs(wp) do
             local cb = Instance.new("TextButton")
-            cb.Size = UDim2.new(0, 40, 0, 40)
-            cb.Position = UDim2.new(0, 18 + (i-1)*50, 0, 50)
+            cb.Size = UDim2.new(0, 42, 0, 42)
+            cb.Position = UDim2.new(0, 20 + (i-1)*52, 0, 56)
             cb.BackgroundColor3 = col
             cb.Text = ""
             cb.AutoButtonColor = false
             cb.Parent = wSlot
 
             Corner(cb, 10)
-            Stroke(cb, Theme.Border, 1, 0.5)
+            Stroke(cb, Theme.Border, 1, 0.4)
 
             cb.MouseButton1Click:Connect(function()
                 CFG.WmColor = col
-                WmLabel.TextColor3 = col
-                TopLineGrad.Color = ColorSequence.new(CFG.Accent, col)
+                WmText.TextColor3 = col
+                TopGrad.Color = ColorSequence.new(CFG.Accent, col)
             end)
         end
     end
 end
 
---// TOGGLE
+--// TOGGLE MENU
 local function ToggleMenu()
     CFG.IsOpen = not CFG.IsOpen
     if CFG.IsOpen then
         Tween(Menu, {Position = UDim2.new(0.5, -CFG.Width/2, 0.5, -CFG.Height/2)}, CFG.AnimSpeed, Enum.EasingStyle.Back)
-        Tween(WmFrame, {BackgroundTransparency = 0.05}, 0.3)
+        Tween(WmFrame, {BackgroundTransparency = 0}, 0.3)
+        Tween(WmStroke, {Transparency = 0.2}, 0.3)
     else
-        Tween(Menu, {Position = UDim2.new(0.5, -CFG.Width/2, 0, -CFG.Height - 80)}, CFG.AnimSpeed, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-        Tween(WmFrame, {BackgroundTransparency = 0.1}, 0.3)
+        Tween(Menu, {Position = UDim2.new(0.5, -CFG.Width/2, 0, -CFG.Height - 100)}, CFG.AnimSpeed, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+        Tween(WmFrame, {BackgroundTransparency = 0}, 0.3)
+        Tween(WmStroke, {Transparency = 0.4}, 0.3)
     end
 end
 
@@ -821,9 +831,9 @@ WmFrame.InputBegan:Connect(function(input)
     end
 end)
 
-CloseX.MouseButton1Click:Connect(ToggleMenu)
+CloseBtn.MouseButton1Click:Connect(ToggleMenu)
 
---// DRAG (Header only)
+--// DRAG (Header)
 local dragging = false
 local dragOffset
 
@@ -848,8 +858,8 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
---// INIT: Open Settings by default
-task.delay(0.3, function()
+--// INIT: Default to Settings
+task.delay(0.4, function()
     TabBtns["Settings"].MouseButton1Click:Fire()
 end)
 

@@ -1,5 +1,5 @@
--- // SeraphiCA | God Tier UI v6
--- // 800px | Ultimate Effects & Architecture
+-- // SeraphiCA | Absolute God Tier UI v7
+-- // 800px | Bug Fixed & Max Visuals
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -11,7 +11,7 @@ local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 
 -- Очистка
-local oldUi = CoreGui:FindFirstChild("SeraphiCA_GodTier")
+local oldUi = CoreGui:FindFirstChild("SeraphiCA_GodTier_v7")
 if oldUi then oldUi:Destroy() end
 local oldBlur = Lighting:FindFirstChild("SeraphiCA_Blur")
 if oldBlur then oldBlur:Destroy() end
@@ -33,7 +33,7 @@ local Theme = {
 }
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphiCA_GodTier"
+ScreenGui.Name = "SeraphiCA_GodTier_v7"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
@@ -58,7 +58,7 @@ local function AddRipple(btn)
     btn.MouseButton1Down:Connect(function(x, y)
         local ripple = Create("Frame", {
             BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 0.7,
+            BackgroundTransparency = 0.8,
             BorderSizePixel = 0,
             Parent = btn
         })
@@ -71,30 +71,13 @@ local function AddRipple(btn)
         ripple.Position = UDim2.new(0, (x - btnPos.X) - maxSize/2, 0, (y - btnPos.Y) - maxSize/2)
         ripple.Size = UDim2.new(0, 0, 0, 0)
         
-        TweenService:Create(ripple, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        TweenService:Create(ripple, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, maxSize, 0, maxSize),
             BackgroundTransparency = 1
         }):Play()
         
-        task.delay(0.5, function()
-            ripple:Destroy()
-        end)
+        task.delay(0.6, function() ripple:Destroy() end)
     end)
-end
-
--- Функция Мягкой Тени
-local function AddShadow(parent, size, transparency)
-    local shadow = Create("Frame", {
-        Size = UDim2.new(1, size, 1, size),
-        Position = UDim2.new(0, -size/2, 0, -size/2),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = transparency or 0.5,
-        BorderSizePixel = 0,
-        ZIndex = parent.ZIndex - 1,
-        Parent = parent
-    })
-    Create("UICorner", {CornerRadius = UDim.new(0, 16), Parent = shadow})
-    return shadow
 end
 
 -- ========================================================================================
@@ -176,16 +159,16 @@ local LoadBarFill = Create("Frame", {
 })
 Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = LoadBarFill})
 
-TweenService:Create(LoadBarFill, TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+TweenService:Create(LoadBarFill, TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
 
-task.delay(2.8, function()
-    TweenService:Create(IntroLogo, TweenInfo.new(0.6), {TextTransparency = 1}):Play()
-    TweenService:Create(IntroGlow, TweenInfo.new(0.6), {Transparency = 1}):Play()
-    TweenService:Create(IntroSub, TweenInfo.new(0.6), {TextTransparency = 1}):Play()
-    TweenService:Create(LoadBarBg, TweenInfo.new(0.6), {BackgroundTransparency = 1}):Play()
-    TweenService:Create(LoadBarFill, TweenInfo.new(0.6), {BackgroundTransparency = 1}):Play()
-    TweenService:Create(Intro, TweenInfo.new(0.8), {BackgroundTransparency = 1}):Play()
-    task.wait(0.8)
+task.delay(2.2, function()
+    TweenService:Create(IntroLogo, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+    TweenService:Create(IntroGlow, TweenInfo.new(0.5), {Transparency = 1}):Play()
+    TweenService:Create(IntroSub, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+    TweenService:Create(LoadBarBg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(LoadBarFill, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(Intro, TweenInfo.new(0.7), {BackgroundTransparency = 1}):Play()
+    task.wait(0.7)
     Intro.Visible = false
 end)
 
@@ -220,7 +203,6 @@ local function Notify(text, color)
         BorderSizePixel = 0,
         Parent = NotifHolder
     })
-    AddShadow(Notif, 20, 0.6)
     Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Notif})
     Create("UIStroke", {Color = color, Thickness = 1.5, Transparency = 0.3, Parent = Notif})
     Create("UIGradient", {
@@ -352,32 +334,6 @@ Create("UIGradient", {
     Parent = MainFrame
 })
 
--- Анимированный фон меню (Вращающийся градиент)
-local BgGradient = Create("Frame", {
-    Size = UDim2.new(2, 0, 2, 0),
-    Position = UDim2.new(-0.5, 0, -0.5, 0),
-    BackgroundTransparency = 0.95,
-    BorderSizePixel = 0,
-    Parent = MainFrame
-})
-Create("UIGradient", {
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Theme.Accent),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 0, 0)),
-        ColorSequenceKeypoint.new(1, Theme.Accent)
-    }),
-    Rotation = 0,
-    Parent = BgGradient
-})
-
-task.spawn(function()
-    local rot = 0
-    while task.wait(0.01) do
-        rot = (rot + 0.5) % 360
-        TweenService:Create(BgGradient.UIGradient, TweenInfo.new(0.1), {Rotation = rot}):Play()
-    end
-end)
-
 local MenuOpen = false
 local function ToggleMenu()
     MenuOpen = not MenuOpen
@@ -404,7 +360,7 @@ end
 
 Watermark.MouseButton1Click:Connect(ToggleMenu)
 
-task.delay(3.3, function()
+task.delay(2.5, function()
     ToggleMenu()
 end)
 
@@ -464,7 +420,6 @@ Create("Frame", {
     Parent = Sidebar
 })
 
--- Logo
 Create("TextLabel", {
     Size = UDim2.new(1, -30, 0, 35),
     Position = UDim2.new(0, 20, 0, 25),
@@ -481,7 +436,7 @@ Create("TextLabel", {
     Size = UDim2.new(1, -30, 0, 15),
     Position = UDim2.new(0, 21, 0, 60),
     BackgroundTransparency = 1,
-    Text = "Ultimate Interface v6.0",
+    Text = "Ultimate Interface v7.0",
     Font = Enum.Font.Gotham,
     TextSize = 12,
     TextColor3 = Theme.Description,
@@ -560,7 +515,8 @@ local ContentArea = Create("Frame", {
     Parent = MainFrame
 })
 
-Create("TextLabel", {
+-- ИСПРАВЛЕНИЕ: Сохраняем переменную заголовка
+local PageTitle = Create("TextLabel", {
     Size = UDim2.new(1, -40, 0, 40),
     Position = UDim2.new(0, 25, 0, 20),
     BackgroundTransparency = 1,
@@ -570,6 +526,15 @@ Create("TextLabel", {
     TextColor3 = Theme.Text,
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = ContentArea
+})
+
+-- Градиент для заголовка
+Create("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Theme.Accent),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 100, 255))
+    }),
+    Parent = PageTitle
 })
 
 local PageContainer = Create("ScrollingFrame", {
@@ -582,7 +547,7 @@ local PageContainer = Create("ScrollingFrame", {
     CanvasSize = UDim2.new(0, 0, 0, 0),
     Parent = ContentArea
 })
-Create("UIListLayout", {Padding = UDim.new(0, 12), Parent = PageContainer}):GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+Create("UIListLayout", {Padding = UDim.new(0, 10), Parent = PageContainer}):GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     PageContainer.CanvasSize = UDim2.new(0, 0, 0, PageContainer.UIListLayout.AbsoluteContentSize.Y + 20)
 end)
 
@@ -603,7 +568,6 @@ local function SelectTab(name)
         if tabName == name then
             TweenService:Create(tabData.Button, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent}):Play()
             TweenService:Create(tabData.Button.Title, TweenInfo.new(0.3), {TextColor3 = Theme.TextDark}):Play()
-            -- Sliding Indicator
             SlideIndicator.Visible = true
             TweenService:Create(SlideIndicator, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
                 Position = UDim2.new(0, 15, 0, tabData.Button.AbsolutePosition.Y - Sidebar.AbsolutePosition.Y + 7.5)
@@ -615,6 +579,9 @@ local function SelectTab(name)
     end
 
     PageTitle.Text = name
+    -- Возвращаем градиент, так как TextColor3 мог сбросить его
+    PageTitle.TextColor3 = Theme.Text 
+
     ActiveTab = name
 
     if Tabs[name].Render then
@@ -633,7 +600,7 @@ local function CreateTab(name)
     Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = Btn})
     Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = Btn})
 
-    Create("TextLabel", {
+    local Title = Create("TextLabel", {
         Name = "Title",
         Size = UDim2.new(1, -20, 1, 0),
         Position = UDim2.new(0, 15, 0, 0),
@@ -663,6 +630,24 @@ end
 -- ========================================================================================
 -- UI ELEMENTS
 -- ========================================================================================
+local function CreateCategory(page, title)
+    local Cat = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 25),
+        BackgroundTransparency = 1,
+        Parent = page
+    })
+    Create("TextLabel", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = string.upper(title),
+        Font = Enum.Font.GothamBold,
+        TextSize = 12,
+        TextColor3 = Theme.Description,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Cat
+    })
+end
+
 local function CreateToggle(page, title, desc)
     local Container = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 65),
@@ -716,7 +701,6 @@ local function CreateToggle(page, title, desc)
     })
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Indicator})
     
-    -- Glow для переключателя
     local TogGlow = Create("ImageLabel", {
         Size = UDim2.new(1, 20, 1, 20),
         Position = UDim2.new(0, -10, 0, -10),
@@ -980,6 +964,20 @@ local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged
     })
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Bar})
 
+    -- RGB Rainbow Gradient для полоски цвета
+    Create("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+            ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 255, 0)),
+            ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+            ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),
+            ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+        }),
+        Parent = Bar
+    })
+
     local Knob = Create("Frame", {
         Size = UDim2.new(0, 20, 0, 20),
         Position = UDim2.new(0, 0, 0.5, -10),
@@ -1004,7 +1002,6 @@ local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged
     local function update(input)
         local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
         local color = Color3.fromHSV(pos, 0.8, 1)
-        Bar.BackgroundColor3 = color
         Knob.Position = UDim2.new(pos, -10, 0.5, -10)
         KnobGlow.ImageColor3 = color
         onColorChanged(color)
@@ -1029,17 +1026,19 @@ local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged
 end
 
 -- ========================================================================================
--- INIT
+-- INIT & RENDER
 -- ========================================================================================
 CreateTab("Aim-Bot")
 
 local MiscTab = CreateTab("Misc")
 Tabs["Misc"].Render = function()
+    CreateCategory(PageContainer, "General")
     CreateToggle(PageContainer, "WallShot", "Allows you to shoot through walls and obstacles.")
 end
 
 local EspTab = CreateTab("Esp")
 Tabs["Esp"].Render = function()
+    CreateCategory(PageContainer, "Player Visuals")
     CreateExpandable(PageContainer, "Chams", "Highlight players through walls.", {
         {Name = "ChamsMurder", Desc = "Highlight only the murderer role."},
         {Name = "ChamsSherrif", Desc = "Highlight only the sheriff role."}
@@ -1048,12 +1047,17 @@ end
 
 local SettingsTab = CreateTab("Settings")
 Tabs["Settings"].Render = function()
+    CreateCategory(PageContainer, "Theme Customization")
     CreateColorSlider(PageContainer, "Accent Color", "Change the main menu and UI accent color.", Theme.Accent, function(color)
         Theme.Accent = color
         MainStroke.Color = color
         WmStroke.Color = color
         WmIndicator.BackgroundColor3 = color
         PageContainer.ScrollBarImageColor3 = color
+        PageTitle.UIGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, color),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(math.clamp(color.R*255+50, 0, 255), math.clamp(color.G*255+50, 0, 255), math.clamp(color.B*255+50, 0, 255)))
+        })
         
         for name, tab in pairs(Tabs) do
             if name == ActiveTab then
@@ -1068,6 +1072,5 @@ Tabs["Settings"].Render = function()
     end)
 end
 
-task.delay(3.5, function()
-    SelectTab("Settings")
-end)
+-- ИСПРАВЛЕНИЕ: Мгновенный рендер вкладки по умолчанию без задержек
+SelectTab("Settings")

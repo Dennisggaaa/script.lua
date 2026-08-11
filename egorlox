@@ -94,21 +94,55 @@ local espState = {
     chamsSherif = false,
 }
 
--- ROLE DETECTION (MM2)
-local function getRole(player)
-    if not player or not player.Character then return nil end
-    for _, tool in ipairs(player.Character:GetChildren()) do
-        if tool:IsA("Tool") then
-            local name = tool.Name:lower()
-            if name:find("knife") or name:find("blade") or name:find("dagger") then
-                return "Murderer"
-            elseif name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then
-                return "Sheriff"
+-- ROLE DETECTION (MM2) с кэшированием
+local playerRoles = {}
+
+local function detectRole(player)
+    if not player then return nil end
+    
+    -- Проверяем руки (Character)
+    if player.Character then
+        for _, tool in ipairs(player.Character:GetChildren()) do
+            if tool:IsA("Tool") then
+                local name = tool.Name:lower()
+                if name:find("knife") or name:find("blade") or name:find("dagger") then return "Murderer" end
+                if name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then return "Sheriff" end
             end
         end
     end
+    
+    -- Проверяем инвентарь (Backpack) - оружие, которое убрано
+    local backpack = player:FindFirstChildOfClass("Backpack")
+    if backpack then
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                local name = tool.Name:lower()
+                if name:find("knife") or name:find("blade") or name:find("dagger") then return "Murderer" end
+                if name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then return "Sheriff" end
+            end
+        end
+    end
+    
     return nil
 end
+
+-- Функция для сброса кэша ролей (при новом раунде)
+local function clearRoles()
+    playerRoles = {}
+end
+
+-- Сбрасываем кэш при смерти/респавне любого игрока
+local function setupRoleReset(player)
+    player.CharacterAdded:Connect(function()
+        task.wait(1)
+        playerRoles[player] = nil
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    setupRoleReset(p)
+end
+Players.PlayerAdded:Connect(setupRoleReset)
 
 -- ESP / CHAMS SYSTEM
 local espObjects = {}
@@ -141,7 +175,15 @@ local function updateEspForPlayer(player)
     local data = espObjects[player]
     if not data then return end
 
-    local role = getRole(player)
+    -- Кэшируем роль, если ещё не найдена
+    if not playerRoles[player] then
+        local role = detectRole(player)
+        if role then
+            playerRoles[player] = role
+        end
+    end
+
+    local role = playerRoles[player]
     local shouldHighlight = false
     local color = Color3.new(1, 1, 1)
 
@@ -307,7 +349,6 @@ local IntroGlow = Create("UIStroke", {
     Parent = IntroLogo
 })
 
--- Пульсация логотипа
 task.spawn(function()
     while Intro.Parent do
         TweenService:Create(IntroGlow, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.8, Thickness = 3}):Play()

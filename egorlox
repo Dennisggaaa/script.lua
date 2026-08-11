@@ -1,5 +1,5 @@
--- // SeraphiCA | Absolute God Tier UI v8
--- // 800px | Fling System Added & MM2 Integrated
+-- // SeraphiCA | Absolute God Tier UI v8.1
+-- // 800px | State Fixed & Fling Working
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -81,11 +81,13 @@ local function AddRipple(btn)
 end
 
 -- ========================================================================================
--- STATE & LOGIC (MM2)
+-- GLOBAL STATE (Не сбрасывается при переключении вкладок)
 -- ========================================================================================
 local mmState = {
     wallShot = false,
     antiFling = false,
+    flingTarget = nil,
+    isFlinging = false,
 }
 
 local espState = {
@@ -129,6 +131,7 @@ end
 for _, p in ipairs(Players:GetPlayers()) do setupRoleReset(p) end
 Players.PlayerAdded:Connect(setupRoleReset)
 
+-- ESP SYSTEM
 local espObjects = {}
 
 local function createEspForPlayer(player)
@@ -203,7 +206,7 @@ end)
 
 Players.PlayerRemoving:Connect(removeEspForPlayer)
 
--- WallShot Hook
+-- WALLSHOT HOOK
 local mt = getrawmetatable(game)
 local oldNamecall = mt.__namecall
 setreadonly(mt, false)
@@ -247,7 +250,7 @@ mt.__namecall = function(self, ...)
 end
 setreadonly(mt, true)
 
--- AntiFling Logic
+-- ANTI-FLING LOGIC
 local antiFlingLoop
 local function ApplyAntiFling(state)
     mmState.antiFling = state
@@ -271,38 +274,43 @@ local function ApplyAntiFling(state)
     end
 end
 
--- Fling Logic
+-- FLING LOGIC
 local flingConnection
-local flingTarget = nil
-
-local function StartFlinging(target)
-    if flingConnection then flingConnection:Disconnect() end
-    flingTarget = target
-    flingConnection = RunService.Heartbeat:Connect(function()
-        if flingTarget and flingTarget.Character then
-            local hrp = flingTarget.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                pcall(function()
-                    if flingTarget ~= LocalPlayer then
-                        hrp:SetNetworkOwner(LocalPlayer)
-                    end
-                end)
-                hrp.AssemblyLinearVelocity = Vector3.new(99999, 99999, 99999)
-                hrp.AssemblyAngularVelocity = Vector3.new(99999, 99999, 99999)
-                hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(9999), math.rad(9999), math.rad(9999))
-            end
-        else
-            return -- Player left or died
-        end
-    end)
-end
 
 local function StopFlinging()
     if flingConnection then
         flingConnection:Disconnect()
         flingConnection = nil
     end
-    flingTarget = nil
+    mmState.isFlinging = false
+    mmState.flingTarget = nil
+end
+
+local function StartFlinging(target)
+    if flingConnection then flingConnection:Disconnect() end
+    
+    mmState.flingTarget = target
+    mmState.isFlinging = true
+    
+    flingConnection = RunService.Heartbeat:Connect(function()
+        if mmState.flingTarget and mmState.flingTarget.Character then
+            local hrp = mmState.flingTarget.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                pcall(function()
+                    if mmState.flingTarget ~= LocalPlayer then
+                        hrp:SetNetworkOwner(LocalPlayer)
+                    end
+                end)
+                hrp.AssemblyLinearVelocity = Vector3.new(99999, 99999, 99999)
+                hrp.AssemblyAngularVelocity = Vector3.new(99999, 99999, 99999)
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(9999), math.rad(9999), math.rad(9999))
+            else
+                StopFlinging()
+            end
+        else
+            StopFlinging()
+        end
+    end)
 end
 
 -- ========================================================================================
@@ -654,7 +662,7 @@ Create("TextLabel", {
     Size = UDim2.new(1, -30, 0, 15),
     Position = UDim2.new(0, 21, 0, 60),
     BackgroundTransparency = 1,
-    Text = "Ultimate Interface v8.0",
+    Text = "Ultimate Interface v8.1",
     Font = Enum.Font.Gotham,
     TextSize = 12,
     TextColor3 = Theme.Description,
@@ -762,7 +770,7 @@ Create("UIListLayout", {Padding = UDim.new(0, 10), Parent = PageContainer}):GetP
 end)
 
 -- ========================================================================================
--- LOGIC
+-- TAB LOGIC
 -- ========================================================================================
 local Tabs = {}
 local ActiveTab = nil
@@ -837,7 +845,7 @@ local function CreateTab(name)
 end
 
 -- ========================================================================================
--- UI ELEMENTS WITH CALLBACKS
+-- UI ELEMENTS WITH STATE
 -- ========================================================================================
 local function CreateCategory(page, title)
     local Cat = Create("Frame", {
@@ -857,7 +865,7 @@ local function CreateCategory(page, title)
     })
 end
 
-local function CreateToggle(page, title, desc, onToggle)
+local function CreateToggle(page, title, desc, defaultState, onToggle)
     local Container = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 65),
         BackgroundColor3 = Theme.Element,
@@ -921,7 +929,23 @@ local function CreateToggle(page, title, desc, onToggle)
     })
 
     AddRipple(ToggleBtn)
-    local state = false
+    local state = defaultState
+    
+    -- Apply initial visual state
+    if state then
+        ToggleBtn.BackgroundColor3 = Theme.Accent
+        TogStroke.Color = Theme.Accent
+        Indicator.Position = UDim2.new(1, -21, 0.5, -9)
+        Indicator.BackgroundColor3 = Theme.TextDark
+        TogGlow.ImageTransparency = 0.5
+    else
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+        TogStroke.Color = Theme.Stroke
+        Indicator.Position = UDim2.new(0, 3, 0.5, -9)
+        Indicator.BackgroundColor3 = Theme.Text
+        TogGlow.ImageTransparency = 1
+    end
+
     ToggleBtn.MouseButton1Click:Connect(function()
         state = not state
         if state then
@@ -1113,7 +1137,23 @@ local function CreateExpandable(page, title, desc, subOptions)
         })
 
         AddRipple(SubBtn)
-        local subState = false
+        local subState = opt.Default or false
+        
+        -- Apply initial visual state
+        if subState then
+            SubBtn.BackgroundColor3 = Theme.Accent
+            SubStroke.Color = Theme.Accent
+            SubInd.Position = UDim2.new(1, -17, 0.5, -7)
+            SubInd.BackgroundColor3 = Theme.TextDark
+            SubGlow.ImageTransparency = 0.5
+        else
+            SubBtn.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+            SubStroke.Color = Theme.Stroke
+            SubInd.Position = UDim2.new(0, 3, 0.5, -7)
+            SubInd.BackgroundColor3 = Theme.Text
+            SubGlow.ImageTransparency = 1
+        end
+
         SubBtn.MouseButton1Click:Connect(function()
             subState = not subState
             if subState then
@@ -1343,12 +1383,6 @@ local function CreateFlingModule(page)
             TweenService:Create(Indicator, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -9), BackgroundColor3 = Theme.Text}):Play()
             TweenService:Create(TogGlow, TweenInfo.new(0.3), {ImageTransparency = 1}):Play()
             expanded = false
-            -- Auto stop fling if collapsed
-            if isFlinging then
-                isFlinging = false
-                StopFlinging()
-                UpdateActionBtn()
-            end
         end
         UpdateSize()
     end)
@@ -1384,15 +1418,12 @@ local function CreateFlingModule(page)
     Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = ActionBtn})
     AddRipple(ActionBtn)
 
-    local selectedPlayer = nil
-    local isFlinging = false
-
     local function UpdateActionBtn()
-        if isFlinging then
+        if mmState.isFlinging then
             TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.RedNotif, TextColor3 = Theme.Text}):Play()
             ActionBtn.Text = "Stop!"
             ActionBtn.Active = true
-        elseif selectedPlayer then
+        elseif mmState.flingTarget then
             TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent, TextColor3 = Theme.TextDark}):Play()
             ActionBtn.Text = "Fling!"
             ActionBtn.Active = true
@@ -1410,9 +1441,10 @@ local function CreateFlingModule(page)
         
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer then
+                local isSelected = (mmState.flingTarget == plr)
                 local PlrBtn = Create("TextButton", {
                     Size = UDim2.new(1, 0, 0, 30),
-                    BackgroundColor3 = Color3.fromRGB(20, 20, 26),
+                    BackgroundColor3 = isSelected and Theme.Accent or Color3.fromRGB(20, 20, 26),
                     AutoButtonColor = false,
                     Text = "",
                     Parent = PlayerList
@@ -1427,7 +1459,7 @@ local function CreateFlingModule(page)
                     Text = plr.Name,
                     Font = Enum.Font.GothamSemibold,
                     TextSize = 13,
-                    TextColor3 = Theme.Text,
+                    TextColor3 = isSelected and Theme.TextDark or Theme.Text,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Parent = PlrBtn
                 })
@@ -1435,18 +1467,9 @@ local function CreateFlingModule(page)
                 AddRipple(PlrBtn)
                 
                 PlrBtn.MouseButton1Click:Connect(function()
-                    if isFlinging then return end
-                    selectedPlayer = plr
-                    
-                    for _, btn in ipairs(PlayerList:GetChildren()) do
-                        if btn:IsA("TextButton") then
-                            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 20, 26)}):Play()
-                            btn.TextLabel.TextColor3 = Theme.Text
-                        end
-                    end
-                    
-                    TweenService:Create(PlrBtn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Accent}):Play()
-                    PlrBtn.TextLabel.TextColor3 = Theme.TextDark
+                    if mmState.isFlinging then return end
+                    mmState.flingTarget = plr
+                    PopulatePlayers() -- Refresh to show highlight
                     UpdateActionBtn()
                 end)
             end
@@ -1456,30 +1479,30 @@ local function CreateFlingModule(page)
     PopulatePlayers()
     Players.PlayerAdded:Connect(PopulatePlayers)
     Players.PlayerRemoving:Connect(function(p)
-        if selectedPlayer == p and isFlinging then
-            isFlinging = false
+        if mmState.flingTarget == p and mmState.isFlinging then
             StopFlinging()
-            UpdateActionBtn()
         end
         PopulatePlayers()
+        UpdateActionBtn()
     end)
 
     ActionBtn.MouseButton1Click:Connect(function()
         if not ActionBtn.Active then return end
         
-        if isFlinging then
-            isFlinging = false
+        if mmState.isFlinging then
             StopFlinging()
             Notify("Fling stopped", Theme.Success)
         else
-            if selectedPlayer then
-                isFlinging = true
-                StartFlinging(selectedPlayer)
-                Notify("Flinging " .. selectedPlayer.Name .. "!", Theme.Accent)
+            if mmState.flingTarget then
+                StartFlinging(mmState.flingTarget)
+                Notify("Flinging " .. mmState.flingTarget.Name .. "!", Theme.Accent)
             end
         end
         UpdateActionBtn()
     end)
+    
+    -- Init UI
+    UpdateActionBtn()
 end
 
 -- ========================================================================================
@@ -1490,10 +1513,10 @@ CreateTab("Aim-Bot")
 local MiscTab = CreateTab("Misc")
 Tabs["Misc"].Render = function()
     CreateCategory(PageContainer, "General")
-    CreateToggle(PageContainer, "WallShot", "Allows you to shoot through walls and obstacles.", function(v)
+    CreateToggle(PageContainer, "WallShot", "Allows you to shoot through walls and obstacles.", mmState.wallShot, function(v)
         mmState.wallShot = v
     end)
-    CreateToggle(PageContainer, "AntiFling", "Prevents other players from launching you.", function(v)
+    CreateToggle(PageContainer, "AntiFling", "Prevents other players from launching you.", mmState.antiFling, function(v)
         ApplyAntiFling(v)
     end)
     
@@ -1505,10 +1528,10 @@ local EspTab = CreateTab("Esp")
 Tabs["Esp"].Render = function()
     CreateCategory(PageContainer, "Player Visuals")
     CreateExpandable(PageContainer, "Chams", "Highlight players through walls.", {
-        {Name = "ChamsMurder", Desc = "Highlight only the murderer role.", Callback = function(v)
+        {Name = "ChamsMurder", Desc = "Highlight only the murderer role.", Default = espState.chamsMurder, Callback = function(v)
             espState.chamsMurder = v
         end},
-        {Name = "ChamsSherrif", Desc = "Highlight only the sheriff role.", Callback = function(v)
+        {Name = "ChamsSherrif", Desc = "Highlight only the sheriff role.", Default = espState.chamsSherif, Callback = function(v)
             espState.chamsSherif = v
         end}
     })

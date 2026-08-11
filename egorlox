@@ -1,890 +1,580 @@
 --[[
-╔══════════════════════════════════════════════╗
-║           SeraphiCA v5.0 (Hotfix)             ║
-║   MM2 Edition · WallShot · AntiFling · Chams  ║
-║   Delta Android · BloxStrike                  ║
-╚══════════════════════════════════════════════╝--]]
+    SeraphiCA UI Menu
+    UI-only LocalScript using standard Roblox APIs.
+    Recommended location: StarterPlayer > StarterPlayerScripts
+    or StarterGui as a LocalScript.
+]]
 
-local Players            = game:GetService("Players")
-local TweenService       = game:GetService("TweenService")
-local UserInputService   = game:GetService("UserInputService")
-local RunService         = game:GetService("RunService")
-local StarterGui         = game:GetService("StarterGui")
-local LocalPlayer        = Players.LocalPlayer
-local Camera             = workspace.CurrentCamera
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
-local PlayerGui
-pcall(function() PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 5) end)
-if not PlayerGui then PlayerGui = game:GetService("CoreGui") end
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
--- ══════════════ КОНФИГ ══════════════
-local CFG = {
-    MenuW = 720, MenuH = 520, Spd = 0.25,
-    BG      = Color3.fromHex("#0D0F1A"),
-    Panel   = Color3.fromHex("#131629"),
-    Card    = Color3.fromHex("#1B1F36"),
-    Accent  = Color3.fromHex("#5B6EF5"),
-    WMColor = Color3.fromHex("#5B6EF5"),
-    TabOff  = Color3.fromHex("#1B1F36"),
-    TxtPri  = Color3.fromHex("#EAEEFF"),
-    TxtSec  = Color3.fromHex("#7A82B0"),
-    TxtMut  = Color3.fromHex("#454A6E"),
-    Sep     = Color3.fromHex("#232742"),
+local oldGui = playerGui:FindFirstChild("SeraphiCA_UI")
+if oldGui then
+    oldGui:Destroy()
+end
+
+local COLORS = {
+    Background = Color3.fromRGB(14, 16, 23),
+    Surface = Color3.fromRGB(22, 25, 35),
+    SurfaceHover = Color3.fromRGB(30, 34, 47),
+    Text = Color3.fromRGB(239, 242, 255),
+    Muted = Color3.fromRGB(137, 145, 170),
+    Accent = Color3.fromRGB(142, 92, 255),
+    Outline = Color3.fromRGB(53, 58, 78),
 }
 
-local LIVE = { Accents = {}, WM = {}, MenuStroke = nil, Tabs = {} }
-
--- ══════════════ УТИЛИТЫ UI ══════════════
-local function Tw(o, p, d)
-    return TweenService:Create(o, TweenInfo.new(d or CFG.Spd, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), p)
-end
-local function Corner(p, r)
-    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r or 10); c.Parent = p; return c
-end
-local function Stroke(p, col, th)
-    local s = Instance.new("UIStroke"); s.Color = col or CFG.Sep; s.Thickness = th or 1
-    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; s.Parent = p; return s
-end
-local function Pad(p, t, b, l, r)
-    local u = Instance.new("UIPadding")
-    u.PaddingTop = UDim.new(0, t or 10); u.PaddingBottom = UDim.new(0, b or 10)
-    u.PaddingLeft = UDim.new(0, l or 12); u.PaddingRight = UDim.new(0, r or 12)
-    u.Parent = p; return u
-end
-local function Lbl(parent, text, sz, col, font, size)
-    local l = Instance.new("TextLabel")
-    l.BackgroundTransparency = 1; l.Size = sz or UDim2.new(1, 0, 0, 20)
-    l.Text = text or ""; l.TextColor3 = col or CFG.TxtPri
-    l.TextSize = size or 14; l.Font = font or Enum.Font.GothamMedium
-    l.TextXAlignment = Enum.TextXAlignment.Left; l.RichText = true; l.Parent = parent
-    return l
-end
-local function Acc(obj, prop)
-    table.insert(LIVE.Accents, { o = obj, p = prop or "BackgroundColor3" })
-    obj[prop or "BackgroundColor3"] = CFG.Accent
-    return obj
+local function create(className, properties, parent)
+    local instance = Instance.new(className)
+    for property, value in pairs(properties or {}) do
+        instance[property] = value
+    end
+    instance.Parent = parent
+    return instance
 end
 
-local function Notify(title, text, duration)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = title,
-            Text = text,
-            Duration = duration or 3
-        })
-    end)
+local function corner(parent, radius)
+    return create("UICorner", {CornerRadius = UDim.new(0, radius)}, parent)
 end
 
--- ══════════════ SCREEN GUI ══════════════
-local old = PlayerGui:FindFirstChild("SeraphiCA"); if old then old:Destroy() end
+local function stroke(parent, color, thickness, transparency)
+    return create("UIStroke", {
+        Color = color,
+        Thickness = thickness or 1,
+        Transparency = transparency or 0,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, parent)
+end
 
-local GUI = Instance.new("ScreenGui")
-GUI.Name = "SeraphiCA"; GUI.ResetOnSpawn = false
-GUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-GUI.IgnoreGuiInset = true; GUI.Parent = PlayerGui
+local screenGui = create("ScreenGui", {
+    Name = "SeraphiCA_UI",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+}, playerGui)
 
--- ══════════════ STATE ══════════════
-local mmState = {
-    wallShot = false,
-    antiFling = false,
+-- Soft screen tint behind the main window.
+local dim = create("Frame", {
+    Name = "Dim",
+    Size = UDim2.fromScale(1, 1),
+    BackgroundColor3 = Color3.fromRGB(4, 5, 9),
+    BackgroundTransparency = 0.62,
+    BorderSizePixel = 0,
+    ZIndex = 0,
+}, screenGui)
+
+-- Top-centred watermark.
+local watermark = create("TextLabel", {
+    Name = "Watermark",
+    AnchorPoint = Vector2.new(0.5, 0),
+    Position = UDim2.new(0.5, 0, 0, 10),
+    Size = UDim2.fromOffset(220, 34),
+    BackgroundColor3 = COLORS.Surface,
+    BackgroundTransparency = 0.05,
+    BorderSizePixel = 0,
+    Text = "SeraphiCA | 00:00",
+    TextColor3 = COLORS.Text,
+    Font = Enum.Font.GothamSemibold,
+    TextSize = 14,
+    ZIndex = 20,
+}, screenGui)
+corner(watermark, 10)
+local watermarkStroke = stroke(watermark, COLORS.Accent, 1.2, 0.15)
+
+local watermarkGradient = create("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 35, 49)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(19, 21, 30)),
+    }),
+    Rotation = 90,
+}, watermark)
+
+-- Main window: 700 px wide on larger displays and responsive on phones.
+local main = create("Frame", {
+    Name = "Main",
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.fromScale(0.5, 0.52),
+    Size = UDim2.fromOffset(700, 420),
+    BackgroundColor3 = COLORS.Background,
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+    ZIndex = 2,
+}, screenGui)
+corner(main, 18)
+local mainStroke = stroke(main, COLORS.Outline, 1.2, 0.08)
+
+create("UISizeConstraint", {
+    MaxSize = Vector2.new(700, 420),
+    MinSize = Vector2.new(330, 300),
+}, main)
+
+local function fitToViewport()
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local viewport = camera.ViewportSize
+    local width = math.min(700, math.max(330, viewport.X - 24))
+    local height = math.min(420, math.max(300, viewport.Y - 100))
+    main.Size = UDim2.fromOffset(width, height)
+end
+
+fitToViewport()
+if workspace.CurrentCamera then
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitToViewport)
+end
+
+-- Header.
+local header = create("Frame", {
+    Name = "Header",
+    Size = UDim2.new(1, 0, 0, 68),
+    BackgroundColor3 = COLORS.Surface,
+    BorderSizePixel = 0,
+    ZIndex = 3,
+}, main)
+
+create("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 31, 44)),
+        ColorSequenceKeypoint.new(1, COLORS.Surface),
+    }),
+    Rotation = 10,
+}, header)
+
+local title = create("TextLabel", {
+    Position = UDim2.fromOffset(22, 12),
+    Size = UDim2.new(1, -80, 0, 24),
+    BackgroundTransparency = 1,
+    Text = "SERAPHICA",
+    TextColor3 = COLORS.Text,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Font = Enum.Font.GothamBold,
+    TextSize = 20,
+    ZIndex = 4,
+}, header)
+
+local subtitle = create("TextLabel", {
+    Position = UDim2.fromOffset(23, 36),
+    Size = UDim2.new(1, -90, 0, 18),
+    BackgroundTransparency = 1,
+    Text = "clean interface  •  mobile ready",
+    TextColor3 = COLORS.Muted,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Font = Enum.Font.Gotham,
+    TextSize = 11,
+    ZIndex = 4,
+}, header)
+
+local accentDot = create("Frame", {
+    AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.new(1, -24, 0.5, 0),
+    Size = UDim2.fromOffset(11, 11),
+    BackgroundColor3 = COLORS.Accent,
+    BorderSizePixel = 0,
+    ZIndex = 4,
+}, header)
+corner(accentDot, 99)
+stroke(accentDot, COLORS.Text, 1, 0.55)
+
+-- Sidebar and content.
+local sidebar = create("Frame", {
+    Position = UDim2.fromOffset(0, 68),
+    Size = UDim2.new(0, 170, 1, -68),
+    BackgroundColor3 = Color3.fromRGB(17, 19, 28),
+    BorderSizePixel = 0,
+    ZIndex = 3,
+}, main)
+
+create("UIListLayout", {
+    Padding = UDim.new(0, 8),
+    HorizontalAlignment = Enum.HorizontalAlignment.Center,
+    SortOrder = Enum.SortOrder.LayoutOrder,
+}, sidebar)
+create("UIPadding", {
+    PaddingTop = UDim.new(0, 18),
+    PaddingLeft = UDim.new(0, 12),
+    PaddingRight = UDim.new(0, 12),
+}, sidebar)
+
+local content = create("Frame", {
+    Position = UDim2.fromOffset(170, 68),
+    Size = UDim2.new(1, -170, 1, -68),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ZIndex = 3,
+}, main)
+
+-- Keep sidebar usable on very narrow Android screens.
+local function updateLayout()
+    local narrow = main.AbsoluteSize.X < 500
+    sidebar.Size = UDim2.new(0, narrow and 120 or 170, 1, -68)
+    content.Position = UDim2.fromOffset(narrow and 120 or 170, 68)
+    content.Size = UDim2.new(1, narrow and -120 or -170, 1, -68)
+end
+main:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLayout)
+task.defer(updateLayout)
+
+local pages = {}
+local tabButtons = {}
+local currentPage
+
+local function makePage(name, description)
+    local page = create("Frame", {
+        Name = name .. "Page",
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        Visible = false,
+        ZIndex = 4,
+    }, content)
+
+    create("UIPadding", {
+        PaddingTop = UDim.new(0, 22),
+        PaddingLeft = UDim.new(0, 24),
+        PaddingRight = UDim.new(0, 24),
+        PaddingBottom = UDim.new(0, 20),
+    }, page)
+
+    create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 28),
+        BackgroundTransparency = 1,
+        Text = name,
+        TextColor3 = COLORS.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.GothamBold,
+        TextSize = 22,
+        ZIndex = 5,
+    }, page)
+
+    create("TextLabel", {
+        Position = UDim2.fromOffset(0, 31),
+        Size = UDim2.new(1, 0, 0, 20),
+        BackgroundTransparency = 1,
+        Text = description,
+        TextColor3 = COLORS.Muted,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.Gotham,
+        TextSize = 12,
+        ZIndex = 5,
+    }, page)
+
+    local slot = create("Frame", {
+        Name = "PlaceholderSlot",
+        Position = UDim2.fromOffset(0, 70),
+        Size = UDim2.new(1, 0, 0, 76),
+        BackgroundColor3 = COLORS.Surface,
+        BorderSizePixel = 0,
+        ZIndex = 5,
+    }, page)
+    corner(slot, 12)
+    stroke(slot, COLORS.Outline, 1, 0.15)
+
+    create("TextLabel", {
+        Position = UDim2.fromOffset(16, 12),
+        Size = UDim2.new(1, -32, 0, 22),
+        BackgroundTransparency = 1,
+        Text = "Empty slot",
+        TextColor3 = COLORS.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.GothamSemibold,
+        TextSize = 14,
+        ZIndex = 6,
+    }, slot)
+
+    create("TextLabel", {
+        Position = UDim2.fromOffset(16, 37),
+        Size = UDim2.new(1, -32, 0, 20),
+        BackgroundTransparency = 1,
+        Text = "Your future control can be placed here.",
+        TextColor3 = COLORS.Muted,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.Gotham,
+        TextSize = 11,
+        ZIndex = 6,
+    }, slot)
+
+    pages[name] = page
+    return page, slot
+end
+
+local tabNames = {"Aim-Bot", "Misc", "Esp", "Settings"}
+local descriptions = {
+    ["Aim-Bot"] = "Interface placeholder — no gameplay logic attached.",
+    Misc = "Additional interface options.",
+    Esp = "Visual interface placeholder.",
+    Settings = "Personalise the menu and watermark colours.",
 }
 
-local espState = {
-    chamsMurder = false,
-    chamsSheriff = false,
+for index, name in ipairs(tabNames) do
+    local button = create("TextButton", {
+        Name = name .. "Tab",
+        LayoutOrder = index,
+        Size = UDim2.new(1, 0, 0, 42),
+        BackgroundColor3 = COLORS.Surface,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Text = "  " .. name,
+        TextColor3 = COLORS.Muted,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.GothamSemibold,
+        TextSize = 13,
+        ZIndex = 4,
+    }, sidebar)
+    corner(button, 10)
+
+    local marker = create("Frame", {
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 2, 0.5, 0),
+        Size = UDim2.fromOffset(3, 18),
+        BackgroundColor3 = COLORS.Accent,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 5,
+    }, button)
+    corner(marker, 10)
+
+    tabButtons[name] = {Button = button, Marker = marker}
+    makePage(name, descriptions[name])
+end
+
+local function switchPage(name)
+    currentPage = name
+    for pageName, page in pairs(pages) do
+        page.Visible = pageName == name
+    end
+    for tabName, objects in pairs(tabButtons) do
+        local active = tabName == name
+        TweenService:Create(objects.Button, TweenInfo.new(0.18), {
+            BackgroundTransparency = active and 0 or 1,
+            TextColor3 = active and COLORS.Text or COLORS.Muted,
+        }):Play()
+        TweenService:Create(objects.Marker, TweenInfo.new(0.18), {
+            BackgroundTransparency = active and 0 or 1,
+        }):Play()
+    end
+end
+
+for name, objects in pairs(tabButtons) do
+    objects.Button.MouseButton1Click:Connect(function()
+        switchPage(name)
+    end)
+    objects.Button.MouseEnter:Connect(function()
+        if currentPage ~= name then
+            TweenService:Create(objects.Button, TweenInfo.new(0.12), {
+                BackgroundTransparency = 0.55,
+            }):Play()
+        end
+    end)
+    objects.Button.MouseLeave:Connect(function()
+        if currentPage ~= name then
+            TweenService:Create(objects.Button, TweenInfo.new(0.12), {
+                BackgroundTransparency = 1,
+            }):Play()
+        end
+    end)
+end
+
+-- Settings: preset colour controls.
+local settingsPage = pages.Settings
+local placeholder = settingsPage:FindFirstChild("PlaceholderSlot")
+placeholder.Visible = false
+
+local settingsCard = create("Frame", {
+    Position = UDim2.fromOffset(0, 70),
+    Size = UDim2.new(1, 0, 0, 158),
+    BackgroundColor3 = COLORS.Surface,
+    BorderSizePixel = 0,
+    ZIndex = 5,
+}, settingsPage)
+corner(settingsCard, 12)
+stroke(settingsCard, COLORS.Outline, 1, 0.15)
+
+create("TextLabel", {
+    Position = UDim2.fromOffset(16, 12),
+    Size = UDim2.new(1, -32, 0, 22),
+    BackgroundTransparency = 1,
+    Text = "Colour theme",
+    TextColor3 = COLORS.Text,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Font = Enum.Font.GothamSemibold,
+    TextSize = 14,
+    ZIndex = 6,
+}, settingsCard)
+
+create("TextLabel", {
+    Position = UDim2.fromOffset(16, 34),
+    Size = UDim2.new(1, -32, 0, 18),
+    BackgroundTransparency = 1,
+    Text = "Tap a colour to update the menu and watermark.",
+    TextColor3 = COLORS.Muted,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Font = Enum.Font.Gotham,
+    TextSize = 11,
+    ZIndex = 6,
+}, settingsCard)
+
+local palette = {
+    Color3.fromRGB(142, 92, 255),
+    Color3.fromRGB(40, 191, 255),
+    Color3.fromRGB(255, 84, 145),
+    Color3.fromRGB(54, 214, 142),
+    Color3.fromRGB(255, 173, 59),
 }
 
--- ══════════════ MM2 ROLE DETECTION ══════════════
-local function getPlayerRole(player)
-    if not player or not player.Character then return "Innocent" end
-    
-    local char = player.Character
-    
-    local tool = char:FindFirstChildOfClass("Tool")
-    if tool then
-        local toolName = tool.Name:lower()
-        if toolName:find("knife") or toolName:find("dagger") or toolName:find("blade") then
-            return "Murderer"
-        elseif toolName:find("gun") or toolName:find("pistol") or toolName:find("revolver") or toolName:find("revoler") then
-            return "Sheriff"
-        end
-    end
-    
-    local backpack = player:FindFirstChildOfClass("Backpack")
-    if backpack then
-        for _, item in ipairs(backpack:GetChildren()) do
-            if item:IsA("Tool") then
-                local itemName = item.Name:lower()
-                if itemName:find("knife") or itemName:find("dagger") or itemName:find("blade") then
-                    return "Murderer"
-                elseif itemName:find("gun") or itemName:find("pistol") or itemName:find("revolver") or itemName:find("revoler") then
-                    return "Sheriff"
-                end
-            end
-        end
-    end
-    
-    for _, obj in ipairs(player:GetChildren()) do
-        if obj:IsA("StringValue") and obj.Name:lower():find("role") then
-            local val = obj.Value:lower()
-            if val:find("murder") then return "Murderer" end
-            if val:find("sheriff") or val:find("sherrif") then return "Sheriff" end
-        end
-        if obj:IsA("StringValue") and obj.Name:lower():find("team") then
-            local val = obj.Value:lower()
-            if val:find("murder") then return "Murderer" end
-            if val:find("sheriff") or val:find("sherrif") then return "Sheriff" end
-        end
-    end
-    
-    if char:FindFirstChild("Knife") or char:FindFirstChild("Dagger") or char:FindFirstChild("Blade") then
-        return "Murderer"
-    end
-    if char:FindFirstChild("Gun") or char:FindFirstChild("Pistol") or char:FindFirstChild("Revolver") then
-        return "Sheriff"
-    end
-    
-    return "Innocent"
-end
+local paletteHolder = create("Frame", {
+    Position = UDim2.fromOffset(16, 67),
+    Size = UDim2.new(1, -32, 0, 38),
+    BackgroundTransparency = 1,
+    ZIndex = 6,
+}, settingsCard)
 
--- ══════════════ CHAMS SYSTEM (MM2) ══════════════
-local chamsObjects = {}
+create("UIListLayout", {
+    FillDirection = Enum.FillDirection.Horizontal,
+    Padding = UDim.new(0, 10),
+    VerticalAlignment = Enum.VerticalAlignment.Center,
+    SortOrder = Enum.SortOrder.LayoutOrder,
+}, paletteHolder)
 
-local function createChamsForPlayer(player)
-    if chamsObjects[player] then return chamsObjects[player] end
-    
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "MM2_Chams_" .. player.Name
-    highlight.FillColor = Color3.new(1, 1, 1)
-    highlight.OutlineColor = Color3.new(0, 0, 0)
-    highlight.FillTransparency = 0.5
-    highlight.OutlineTransparency = 0
-    highlight.Enabled = false
-    highlight.Parent = nil
-    
-    chamsObjects[player] = {
-        highlight = highlight,
-        char = nil,
-        role = "Innocent",
-    }
-    
-    return chamsObjects[player]
-end
-
-local function removeChamsForPlayer(player)
-    local data = chamsObjects[player]
-    if data then
-        if data.highlight then data.highlight:Destroy() end
-        chamsObjects[player] = nil
+local function setAccent(color)
+    COLORS.Accent = color
+    watermarkStroke.Color = color
+    accentDot.BackgroundColor3 = color
+    for _, objects in pairs(tabButtons) do
+        objects.Marker.BackgroundColor3 = color
     end
 end
 
-local function updateChamsForPlayer(player)
-    local data = chamsObjects[player]
-    if not data then return end
-    
-    local char = player.Character
-    if not char then
-        data.highlight.Enabled = false
-        return
-    end
-    
-    local role = getPlayerRole(player)
-    data.role = role
-    data.char = char
-    
-    local shouldShow = false
-    local color = Color3.new(1, 1, 1)
-    
-    if espState.chamsMurder and role == "Murderer" then
-        shouldShow = true
-        color = Color3.fromHex("#FF0000")
-    elseif espState.chamsSheriff and role == "Sheriff" then
-        shouldShow = true
-        color = Color3.fromHex("#0000FF")
-    end
-    
-    if shouldShow then
-        if data.highlight.Parent ~= char then
-            data.highlight.Parent = char
-        end
-        data.highlight.Enabled = true
-        data.highlight.FillColor = color
-        data.highlight.OutlineColor = Color3.new(0, 0, 0)
-        data.highlight.FillTransparency = 0.5
-        data.highlight.OutlineTransparency = 0
-    else
-        data.highlight.Enabled = false
-    end
-end
-
-local chamsLoop
-local function StartChamsLoop()
-    if chamsLoop then chamsLoop:Disconnect() end
-    chamsLoop = RunService.RenderStepped:Connect(function()
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                if not chamsObjects[player] then
-                    createChamsForPlayer(player)
-                end
-                updateChamsForPlayer(player)
-            end
-        end
-        
-        for player, _ in pairs(chamsObjects) do
-            if not Players:FindFirstChild(player.Name) then
-                removeChamsForPlayer(player)
-            end
-        end
+for index, color in ipairs(palette) do
+    local colourButton = create("TextButton", {
+        LayoutOrder = index,
+        Size = UDim2.fromOffset(34, 34),
+        BackgroundColor3 = color,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+        ZIndex = 7,
+    }, paletteHolder)
+    corner(colourButton, 99)
+    stroke(colourButton, COLORS.Text, 1, 0.55)
+    colourButton.MouseButton1Click:Connect(function()
+        setAccent(color)
     end)
 end
 
-Players.PlayerRemoving:Connect(function(player)
-    removeChamsForPlayer(player)
+local darkButton = create("TextButton", {
+    AnchorPoint = Vector2.new(0, 1),
+    Position = UDim2.new(0, 16, 1, -12),
+    Size = UDim2.new(0.5, -21, 0, 32),
+    BackgroundColor3 = Color3.fromRGB(14, 16, 23),
+    BorderSizePixel = 0,
+    Text = "Dark menu",
+    TextColor3 = COLORS.Text,
+    Font = Enum.Font.GothamSemibold,
+    TextSize = 11,
+    ZIndex = 7,
+}, settingsCard)
+corner(darkButton, 8)
+stroke(darkButton, COLORS.Outline, 1, 0)
+
+local lightButton = create("TextButton", {
+    AnchorPoint = Vector2.new(1, 1),
+    Position = UDim2.new(1, -16, 1, -12),
+    Size = UDim2.new(0.5, -21, 0, 32),
+    BackgroundColor3 = Color3.fromRGB(43, 47, 63),
+    BorderSizePixel = 0,
+    Text = "Slate menu",
+    TextColor3 = COLORS.Text,
+    Font = Enum.Font.GothamSemibold,
+    TextSize = 11,
+    ZIndex = 7,
+}, settingsCard)
+corner(lightButton, 8)
+stroke(lightButton, COLORS.Outline, 1, 0)
+
+local function setMenuColour(background, surface)
+    COLORS.Background = background
+    COLORS.Surface = surface
+    main.BackgroundColor3 = background
+    header.BackgroundColor3 = surface
+    watermark.BackgroundColor3 = surface
+    settingsCard.BackgroundColor3 = surface
+    for pageName, page in pairs(pages) do
+        local slot = page:FindFirstChild("PlaceholderSlot")
+        if slot then slot.BackgroundColor3 = surface end
+    end
+    for _, objects in pairs(tabButtons) do
+        objects.Button.BackgroundColor3 = surface
+    end
+end
+
+darkButton.MouseButton1Click:Connect(function()
+    setMenuColour(Color3.fromRGB(14, 16, 23), Color3.fromRGB(22, 25, 35))
 end)
 
-StartChamsLoop()
-
--- ══════════════ WALLSHOT SYSTEM ══════════════
-local wallShotHooked = false
-
-local function ApplyWallShot(state)
-    mmState.wallShot = state
-    
-    if state and not wallShotHooked then
-        local mt = getrawmetatable(game)
-        local oldNamecall = mt.__namecall
-        
-        setreadonly(mt, false)
-        
-        local originalNamecall = oldNamecall
-        mt.__namecall = newcclosure(function(self, ...)
-            local method = getnamecallmethod()
-            local args = {...}
-            
-            if mmState.wallShot then
-                if method == "Raycast" and self == workspace then
-                    local params = args[3]
-                    if params and params.FilterDescendantsInstances then
-                        local newFilter = {}
-                        for _, inst in ipairs(params.FilterDescendantsInstances) do
-                            if inst:IsA("Model") and inst:FindFirstChildOfClass("Humanoid") then
-                                table.insert(newFilter, inst)
-                            elseif inst == LocalPlayer.Character then
-                                table.insert(newFilter, inst)
-                            end
-                        end
-                        params.FilterDescendantsInstances = newFilter
-                    end
-                elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
-                    if method == "FindPartOnRayWithIgnoreList" and args[2] then
-                        local newFilter = {}
-                        for _, inst in ipairs(args[2]) do
-                            if inst:IsA("Model") and inst:FindFirstChildOfClass("Humanoid") then
-                                table.insert(newFilter, inst)
-                            end
-                        end
-                        args[2] = newFilter
-                    end
-                end
-            end
-            
-            return originalNamecall(self, unpack(args))
-        end)
-        
-        setreadonly(mt, true)
-        wallShotHooked = true
-    end
-end
-
--- ══════════════ ANTI-FLING SYSTEM ══════════════
-local antiFlingLoop
-local lastGoodPositions = {}
-
-local function ApplyAntiFling(state)
-    mmState.antiFling = state
-    
-    if antiFlingLoop then antiFlingLoop:Disconnect() end
-    
-    if state then
-        antiFlingLoop = RunService.Heartbeat:Connect(function()
-            local char = LocalPlayer.Character
-            if not char then return end
-            
-            local root = char:FindFirstChild("HumanoidRootPart")
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if not root or not hum or hum.Health <= 0 then return end
-            
-            local rootVel = root.AssemblyLinearVelocity
-            local rootAngVel = root.AssemblyAngularVelocity
-            
-            local linearMag = rootVel.Magnitude
-            local angularMag = rootAngVel.Magnitude
-            
-            if linearMag > 500 or angularMag > 500 then
-                if lastGoodPositions[char] then
-                    root.CFrame = lastGoodPositions[char]
-                    root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                    
-                    for _, part in ipairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") and part:CanSetNetworkOwnership() then
-                            part:SetNetworkOwner(nil)
-                        end
-                    end
-                end
-            else
-                if linearMag < 100 then
-                    lastGoodPositions[char] = root.CFrame
-                end
-            end
-            
-            if angularMag > 300 then
-                root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                if lastGoodPositions[char] then
-                    root.CFrame = lastGoodPositions[char]
-                end
-            end
-        end)
-    end
-end
-
--- ══════════════ UI ВИДЖЕТЫ ══════════════
-local function MakeSlider(parent, label, maxVal, initVal, onChange)
-    local c = Instance.new("Frame")
-    c.Size = UDim2.new(1, 0, 0, 46)
-    c.BackgroundTransparency = 1
-    c.Parent = parent
-
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 16); row.BackgroundTransparency = 1; row.Parent = c
-
-    Lbl(row, label, UDim2.new(1, 0, 1, 0), CFG.TxtSec, Enum.Font.Gotham, 11)
-    local valLbl = Lbl(row, tostring(initVal), UDim2.new(1, 0, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 11)
-    valLbl.TextXAlignment = Enum.TextXAlignment.Right
-
-    local track = Instance.new("Frame")
-    track.Size = UDim2.new(1, 0, 0, 5)
-    track.Position = UDim2.new(0, 0, 0, 24)
-    track.BackgroundColor3 = CFG.Panel; track.BorderSizePixel = 0; track.Parent = c
-    Corner(track, 3)
-
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new(initVal / maxVal, 0, 1, 0)
-    fill.BackgroundColor3 = CFG.Accent; fill.BorderSizePixel = 0; fill.Parent = track
-    Corner(fill, 3)
-    table.insert(LIVE.Accents, { o = fill, p = "BackgroundColor3" })
-
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 14, 0, 14)
-    knob.Position = UDim2.new(initVal / maxVal, -7, 0.5, -7)
-    knob.BackgroundColor3 = Color3.new(1, 1, 1); knob.BorderSizePixel = 0; knob.Parent = track
-    Corner(knob, 7)
-
-    local hitbox = Instance.new("TextButton")
-    hitbox.Size = UDim2.new(1, 0, 0, 28)
-    hitbox.Position = UDim2.new(0, 0, 0, 14)
-    hitbox.BackgroundTransparency = 1; hitbox.Text = ""; hitbox.ZIndex = 8; hitbox.Parent = c
-
-    local val = initVal
-    local dragging = false
-
-    local function Upd(sx)
-        local ap = track.AbsolutePosition
-        local as = track.AbsoluteSize
-        local ratio = math.clamp((sx - ap.X) / as.X, 0, 1)
-        local newVal = math.floor(ratio * maxVal + 0.5)
-        if newVal == val then return end
-        val = newVal
-        valLbl.Text = tostring(val)
-        TweenService:Create(fill, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            { Size = UDim2.new(ratio, 0, 1, 0) }):Play()
-        TweenService:Create(knob, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            { Position = UDim2.new(ratio, -7, 0.5, -7) }):Play()
-        if onChange then onChange(val) end
-    end
-
-    hitbox.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then
-            dragging = true; Upd(i.Position.X)
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
-        or i.UserInputType == Enum.UserInputType.Touch) then
-            Upd(i.Position.X)
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-
-    return c
-end
-
-local function MiniToggle(parent, label, onChange)
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 28); row.BackgroundTransparency = 1; row.Parent = parent
-
-    Lbl(row, label, UDim2.new(1, -48, 1, 0), CFG.TxtSec, Enum.Font.Gotham, 12)
-
-    local track = Instance.new("Frame")
-    track.Size = UDim2.new(0, 36, 0, 18); track.Position = UDim2.new(1, -38, 0.5, -9)
-    track.BackgroundColor3 = CFG.Panel; track.BorderSizePixel = 0; track.Parent = row
-    Corner(track, 9)
-
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 12, 0, 12); knob.Position = UDim2.new(0, 3, 0.5, -6)
-    knob.BackgroundColor3 = CFG.TxtMut; knob.BorderSizePixel = 0; knob.Parent = track
-    Corner(knob, 6)
-
-    local on = false
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1,0,1,0); btn.BackgroundTransparency = 1; btn.Text = ""; btn.Parent = track
-    btn.MouseButton1Click:Connect(function()
-        on = not on
-        Tw(knob, {
-            Position = on and UDim2.new(1,-15,0.5,-6) or UDim2.new(0,3,0.5,-6),
-            BackgroundColor3 = on and Color3.new(1,1,1) or CFG.TxtMut
-        }, 0.15):Play()
-        Tw(track, { BackgroundColor3 = on and CFG.Accent or CFG.Panel }, 0.15):Play()
-        if onChange then onChange(on) end
-    end)
-    return row
-end
-
--- ══════════════ МЕНЮ ══════════════
-local oldMenu = PlayerGui:FindFirstChild("SeraphiCA_Menu")
-if oldMenu then oldMenu:Destroy() end
-
-local Menu = Instance.new("Frame")
-Menu.Name = "SeraphiCA_Menu"
-Menu.Size = UDim2.new(0, CFG.MenuW, 0, CFG.MenuH)
-Menu.Position = UDim2.new(0.5, -CFG.MenuW/2, 0.5, -CFG.MenuH/2)
-Menu.BackgroundColor3 = CFG.BG
-Menu.Visible = false; Menu.Parent = GUI
-Corner(Menu, 14)
-LIVE.MenuStroke = Stroke(Menu, CFG.Accent, 1.5)
-
--- ══════════════ ВОДЯНОЙ ЗНАК (FIXED) ══════════════
-local WM = Instance.new("Frame")
-WM.Name = "SeraphiCA_Watermark"
-WM.Size = UDim2.new(0, 210, 0, 34)
-WM.Position = UDim2.new(0.5, -105, 0, 14)
-WM.BackgroundColor3 = CFG.Panel
-WM.BackgroundTransparency = 0.15  -- ФИКС: сразу видимая, без анимации
-WM.BorderSizePixel = 0
-WM.Active = true  -- ФИКС: перехватывает клики
-WM.Parent = GUI
-Corner(WM, 9)
-LIVE.WM.Stroke = Stroke(WM, CFG.WMColor, 1.4)
-
--- Кнопка-обёртка (поверх всего в WM, ZIndex = 5)
-local wmBtn = Instance.new("TextButton")
-wmBtn.Name = "WM_ClickArea"
-wmBtn.Size = UDim2.new(1, 0, 1, 0)
-wmBtn.Position = UDim2.new(0, 0, 0, 0)
-wmBtn.BackgroundColor3 = CFG.Panel
-wmBtn.BackgroundTransparency = 1  -- Прозрачная, но кликабельная
-wmBtn.Text = ""
-wmBtn.AutoButtonColor = false
-wmBtn.ZIndex = 5  -- ФИКС: поверх всех элементов внутри WM
-wmBtn.Parent = WM
-
--- Точка (ZIndex = 2, под кнопкой по клику но видна)
-local wmDot = Instance.new("Frame")
-wmDot.Name = "WM_Dot"
-wmDot.Size = UDim2.new(0, 7, 0, 7)
-wmDot.Position = UDim2.new(0, 11, 0.5, -3.5)
-wmDot.BorderSizePixel = 0
-wmDot.ZIndex = 2
-wmDot.Parent = WM
-Corner(wmDot, 4)
-LIVE.WM.Dot = wmDot
-wmDot.BackgroundColor3 = CFG.WMColor
-
--- Текст (ZIndex = 2, под кнопкой по клику но виден)
-local wmTxt = Lbl(WM, "SeraphiCA  <font color='#454A6E'>|</font>  v5.0",
-UDim2.new(1, -32, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 13)
-wmTxt.Position = UDim2.new(0, 26, 0, 0)
-wmTxt.ZIndex = 2
-LIVE.WM.Text = wmTxt
-
--- ══════════════ ШАПКА МЕНЮ ══════════════
-local Head = Instance.new("Frame")
-Head.Size = UDim2.new(1, 0, 0, 50); Head.BackgroundColor3 = CFG.Panel
-Head.BorderSizePixel = 0; Head.Parent = Menu
-Corner(Head, 14)
-
-local headFix = Instance.new("Frame")
-headFix.Size = UDim2.new(1, 0, 0, 14); headFix.Position = UDim2.new(0, 0, 1, -14)
-headFix.BackgroundColor3 = CFG.Panel; headFix.BorderSizePixel = 0; headFix.Parent = Head
-
-local logo = Instance.new("Frame")
-logo.Size = UDim2.new(0, 5, 0, 22); logo.Position = UDim2.new(0, 16, 0.5, -11)
-logo.BorderSizePixel = 0; logo.Parent = Head
-Corner(logo, 3); Acc(logo)
-
-Lbl(Head, "SeraphiCA", UDim2.new(0, 200, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 16).Position = UDim2.new(0, 30, 0, 0)
-Lbl(Head, "v5.0", UDim2.new(0, 60, 1, 0), CFG.TxtMut, Enum.Font.GothamMedium, 12).Position = UDim2.new(0, 122, 0, 0)
-
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 28, 0, 28); closeBtn.Position = UDim2.new(1, -40, 0.5, -14)
-closeBtn.BackgroundColor3 = CFG.Card; closeBtn.Text = "X"
-closeBtn.TextColor3 = CFG.TxtSec; closeBtn.Font = Enum.Font.GothamBold; closeBtn.TextSize = 14
-closeBtn.AutoButtonColor = false; closeBtn.Parent = Head
-Corner(closeBtn, 8)
-
--- Панель вкладок
-local TabBar = Instance.new("Frame")
-TabBar.Size = UDim2.new(0, 130, 1, -50); TabBar.Position = UDim2.new(0, 0, 0, 50)
-TabBar.BackgroundColor3 = CFG.Panel; TabBar.BorderSizePixel = 0; TabBar.Parent = Menu
-Pad(TabBar, 12, 12, 10, 10)
-local tabList = Instance.new("UIListLayout")
-tabList.Padding = UDim.new(0, 8); tabList.Parent = TabBar
-
--- Контент
-local Content = Instance.new("Frame")
-Content.Size = UDim2.new(1, -130, 1, -50); Content.Position = UDim2.new(0, 130, 0, 50)
-Content.BackgroundTransparency = 1; Content.Parent = Menu
-
-local Pages = {}
-
-local function NewPage(name)
-    local p = Instance.new("ScrollingFrame")
-    p.Name = name; p.Size = UDim2.new(1, 0, 1, 0)
-    p.BackgroundTransparency = 1; p.BorderSizePixel = 0
-    p.ScrollBarThickness = 3; p.ScrollBarImageColor3 = CFG.Sep
-    p.CanvasSize = UDim2.new(0, 0, 0, 0)
-    p.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    p.Visible = false; p.Parent = Content
-    Pad(p, 16, 16, 16, 16)
-    local ll = Instance.new("UIListLayout"); ll.Padding = UDim.new(0, 10); ll.Parent = p
-    Pages[name] = p; return p
-end
-
-local function Title(page, txt, sub)
-    local h = Instance.new("Frame")
-    h.Size = UDim2.new(1, 0, 0, sub and 40 or 26)
-    h.BackgroundTransparency = 1; h.Parent = page
-    Lbl(h, txt, UDim2.new(1, 0, 0, 20), CFG.TxtPri, Enum.Font.GothamBold, 16)
-    if sub then
-        local s = Lbl(h, sub, UDim2.new(1, 0, 0, 16), CFG.TxtMut, Enum.Font.Gotham, 12)
-        s.Position = UDim2.new(0, 0, 0, 22)
-    end
-end
-
-local COLL = 54
-
--- ══════════════ СТРАНИЦА AA (ЗАБЛОКИРОВАНА) ══════════════
-local pAA = NewPage("AA"); Title(pAA, "AA", "Not available yet.")
-
-local lockCard = Instance.new("Frame")
-lockCard.Size = UDim2.new(1, 0, 0, 80)
-lockCard.BackgroundColor3 = CFG.Card; lockCard.BorderSizePixel = 0
-lockCard.Parent = pAA
-Corner(lockCard, 10); Stroke(lockCard, CFG.Sep, 1)
-
-local lockIcon = Lbl(lockCard, "[ LOCKED ]", UDim2.new(1, -28, 0, 24), CFG.TxtSec, Enum.Font.GothamBold, 18)
-lockIcon.Position = UDim2.new(0, 14, 0, 14)
-lockIcon.TextXAlignment = Enum.TextXAlignment.Center
-
-local lockMsg = Lbl(lockCard, "* not available yet. *", UDim2.new(1, -28, 0, 18), CFG.TxtMut, Enum.Font.Gotham, 13)
-lockMsg.Position = UDim2.new(0, 14, 0, 46)
-lockMsg.TextXAlignment = Enum.TextXAlignment.Center
-
--- ══════════════ СТРАНИЦА MM ══════════════
-local pMM = NewPage("MM"); Title(pMM, "MM", "WallShot · AntiFling")
-
-local mmCard = Instance.new("Frame")
-mmCard.Size = UDim2.new(1, 0, 0, COLL)
-mmCard.BackgroundColor3 = CFG.Card; mmCard.BorderSizePixel = 0
-mmCard.ClipsDescendants = true; mmCard.Parent = pMM
-Corner(mmCard, 10); Stroke(mmCard, CFG.Sep, 1)
-
-Lbl(mmCard, "MM2 Features",
-UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
-Lbl(mmCard, "WallShot · AntiFling",
-UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position = UDim2.new(0,14,0,30)
-
-local mmTrack = Instance.new("Frame")
-mmTrack.Size = UDim2.new(0,42,0,22); mmTrack.Position = UDim2.new(1,-56,0,16)
-mmTrack.BackgroundColor3 = CFG.Panel; mmTrack.BorderSizePixel = 0
-mmTrack.Parent = mmCard  -- ФИКС: было mmCard.Parent = mmCard (опечатка!)
-Corner(mmTrack, 11)
-
-local mmKnob = Instance.new("Frame")
-mmKnob.Size = UDim2.new(0,16,0,16); mmKnob.Position = UDim2.new(0,3,0.5,-8)
-mmKnob.BackgroundColor3 = CFG.TxtMut; mmKnob.BorderSizePixel = 0; mmKnob.Parent = mmTrack
-Corner(mmKnob, 8)
-
-local MM_EXPD = COLL + 8 + 1 + 28 + 6 + 28 + 14
-
-local mmSub = Instance.new("Frame")
-mmSub.Size = UDim2.new(1, -28, 0, MM_EXPD - COLL - 8)
-mmSub.Position = UDim2.new(0, 14, 0, COLL + 8)
-mmSub.BackgroundTransparency = 1; mmSub.Parent = mmCard
-local mmSubList = Instance.new("UIListLayout"); mmSubList.Padding = UDim.new(0, 6); mmSubList.Parent = mmSub
-
-local mmSepLine = Instance.new("Frame")
-mmSepLine.Size = UDim2.new(1, 0, 0, 1); mmSepLine.BackgroundColor3 = CFG.Sep
-mmSepLine.BorderSizePixel = 0; mmSepLine.Parent = mmSub
-
-MiniToggle(mmSub, "WallShot (shoot/throw through walls)", function(v)
-    ApplyWallShot(v)
+lightButton.MouseButton1Click:Connect(function()
+    setMenuColour(Color3.fromRGB(31, 34, 46), Color3.fromRGB(43, 47, 63))
 end)
 
-MiniToggle(mmSub, "AntiFling (anti-physical exploitation)", function(v)
-    ApplyAntiFling(v)
-end)
+-- Drag support for mouse and touch.
+local dragging = false
+local dragStart
+local startPosition
+local activeInput
 
-local mmBtn = Instance.new("TextButton")
-mmBtn.Size = UDim2.new(1,0,1,0); mmBtn.BackgroundTransparency = 1; mmBtn.Text = ""; mmBtn.Parent = mmTrack
-local mmOn = false
-mmBtn.MouseButton1Click:Connect(function()
-    mmOn = not mmOn
-    Tw(mmKnob, {
-        Position = mmOn and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
-        BackgroundColor3 = mmOn and Color3.new(1,1,1) or CFG.TxtMut
-    }, 0.18):Play()
-    Tw(mmTrack, { BackgroundColor3 = mmOn and CFG.Accent or CFG.Panel }, 0.18):Play()
-    Tw(mmCard, { Size = UDim2.new(1, 0, 0, mmOn and MM_EXPD or COLL) }, 0.22):Play()
-end)
-
--- ══════════════ СТРАНИЦА EE ══════════════
-local pEE = NewPage("EE"); Title(pEE, "EE", "ChamsMurder · ChamsSheriff")
-
-local espCard = Instance.new("Frame")
-espCard.Size = UDim2.new(1, 0, 0, COLL)
-espCard.BackgroundColor3 = CFG.Card; espCard.BorderSizePixel = 0
-espCard.ClipsDescendants = true; espCard.Parent = pEE
-Corner(espCard, 10); Stroke(espCard, CFG.Sep, 1)
-
-Lbl(espCard, "Chams System",
-UDim2.new(1,-70,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,9)
-Lbl(espCard, "Auto-detect Murderer (Red) & Sheriff (Blue)",
-UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position = UDim2.new(0,14,0,30)
-
-local espTrack = Instance.new("Frame")
-espTrack.Size = UDim2.new(0,42,0,22); espTrack.Position = UDim2.new(1,-56,0,16)
-espTrack.BackgroundColor3 = CFG.Panel; espTrack.BorderSizePixel = 0; espTrack.Parent = espCard
-Corner(espTrack, 11)
-local espKnob = Instance.new("Frame")
-espKnob.Size = UDim2.new(0,16,0,16); espKnob.Position = UDim2.new(0,3,0.5,-8)
-espKnob.BackgroundColor3 = CFG.TxtMut; espKnob.BorderSizePixel = 0; espKnob.Parent = espTrack
-Corner(espKnob, 8)
-
-local ESP_EXPD = COLL + 8 + 1 + 28 + 6 + 28 + 14
-
-local espSub = Instance.new("Frame")
-espSub.Size = UDim2.new(1, -28, 0, ESP_EXPD - COLL - 8)
-espSub.Position = UDim2.new(0, 14, 0, COLL + 8)
-espSub.BackgroundTransparency = 1; espSub.Parent = espCard
-local espSubList = Instance.new("UIListLayout"); espSubList.Padding = UDim.new(0, 6); espSubList.Parent = espSub
-
-local espSepLine = Instance.new("Frame")
-espSepLine.Size = UDim2.new(1, 0, 0, 1); espSepLine.BackgroundColor3 = CFG.Sep
-espSepLine.BorderSizePixel = 0; espSepLine.Parent = espSub
-
-MiniToggle(espSub, "ChamsMurder (Red highlight)", function(v)
-    espState.chamsMurder = v
-end)
-
-MiniToggle(espSub, "ChamsSheriff (Blue highlight)", function(v)
-    espState.chamsSheriff = v
-end)
-
-local espBtn = Instance.new("TextButton")
-espBtn.Size = UDim2.new(1,0,1,0); espBtn.BackgroundTransparency = 1; espBtn.Text = ""; espBtn.Parent = espTrack
-local espOn = false
-espBtn.MouseButton1Click:Connect(function()
-    espOn = not espOn
-    Tw(espKnob, {
-        Position = espOn and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
-        BackgroundColor3 = espOn and Color3.new(1,1,1) or CFG.TxtMut
-    }, 0.18):Play()
-    Tw(espTrack, { BackgroundColor3 = espOn and CFG.Accent or CFG.Panel }, 0.18):Play()
-    Tw(espCard, { Size = UDim2.new(1, 0, 0, espOn and ESP_EXPD or COLL) }, 0.22):Play()
-end)
-
--- ══════════════ СТРАНИЦА SS ══════════════
-local pSS = NewPage("SS"); Title(pSS, "SS · Style", "Menu color + watermark color")
-
-local function ApplyAccent(col)
-    CFG.Accent = col
-    if LIVE.MenuStroke then Tw(LIVE.MenuStroke, { Color = col }, 0.2):Play() end
-    for _, e in ipairs(LIVE.Accents) do
-        pcall(function() Tw(e.o, { [e.p] = col }, 0.2):Play() end)
-    end
-    for _, t in ipairs(LIVE.Tabs) do
-        if t.active then Tw(t.btn, { BackgroundColor3 = col }, 0.2):Play() end
-    end
-end
-local function ApplyWM(col)
-    CFG.WMColor = col
-    Tw(LIVE.WM.Stroke, { Color = col }, 0.2):Play()
-    Tw(LIVE.WM.Dot, { BackgroundColor3 = col }, 0.2):Play()
-end
-
-local PALETTE = {
-    { "Indigo", "#5B6EF5" }, { "Cyan", "#39D3E0" }, { "Mint", "#4ECCA3" },
-    { "Lime", "#A8E063" }, { "Amber", "#FFB347" }, { "Coral", "#FF7A59" },
-    { "Rose", "#FF5F7E" }, { "Purple", "#A46BFF" }, { "White", "#EAEEFF" },
-}
-
-local function ColorSection(titleTxt, applyFn, getCur)
-    local wrap = Instance.new("Frame")
-    wrap.Size = UDim2.new(1, 0, 0, 132); wrap.BackgroundColor3 = CFG.Card
-    wrap.BorderSizePixel = 0; wrap.Parent = pSS
-    Corner(wrap, 10); Stroke(wrap, CFG.Sep, 1)
-    Lbl(wrap, titleTxt, UDim2.new(1,-20,0,18), CFG.TxtPri, Enum.Font.GothamBold, 14).Position = UDim2.new(0,14,0,10)
-
-    local preview = Instance.new("Frame")
-    preview.Size = UDim2.new(0,26,0,14); preview.Position = UDim2.new(1,-42,0,12)
-    preview.BackgroundColor3 = getCur(); preview.BorderSizePixel = 0; preview.Parent = wrap
-    Corner(preview, 5)
-
-    local grid = Instance.new("Frame")
-    grid.Size = UDim2.new(1,-28,0,40); grid.Position = UDim2.new(0,14,0,36)
-    grid.BackgroundTransparency = 1; grid.Parent = wrap
-    local gl = Instance.new("UIGridLayout")
-    gl.CellSize = UDim2.new(0,34,0,34); gl.CellPadding = UDim2.new(0,8,0,8); gl.Parent = grid
-
-    for _, c in ipairs(PALETTE) do
-        local col = Color3.fromHex(c[2])
-        local sw = Instance.new("TextButton")
-        sw.BackgroundColor3 = col; sw.Text = ""; sw.AutoButtonColor = false
-        sw.BorderSizePixel = 0; sw.Parent = grid
-        Corner(sw, 8); Stroke(sw, CFG.Sep, 1)
-        sw.MouseButton1Click:Connect(function()
-            applyFn(col); preview.BackgroundColor3 = col
-        end)
-    end
-
-    local box = Instance.new("TextBox")
-    box.Size = UDim2.new(1,-28,0,28); box.Position = UDim2.new(0,14,0,92)
-    box.BackgroundColor3 = CFG.Panel; box.BorderSizePixel = 0
-    box.PlaceholderText = "HEX (#5B6EF5)"; box.Text = ""
-    box.TextColor3 = CFG.TxtPri; box.PlaceholderColor3 = CFG.TxtMut
-    box.Font = Enum.Font.Gotham; box.TextSize = 12; box.ClearTextOnFocus = false
-    box.Parent = wrap
-    Corner(box, 7); Stroke(box, CFG.Sep, 1)
-    box.FocusLost:Connect(function()
-        local t = box.Text:gsub("%s","")
-        if t:sub(1,1) ~= "#" then t = "#"..t end
-        local ok, col = pcall(Color3.fromHex, t)
-        if ok then applyFn(col); preview.BackgroundColor3 = col; box.Text = t:upper()
-        else box.Text = "" end
-    end)
-end
-
-ColorSection("Menu Color", ApplyAccent, function() return CFG.Accent end)
-ColorSection("Watermark Color", ApplyWM, function() return CFG.WMColor end)
-
--- ══════════════ ВКЛАДКИ ══════════════
-local function SwitchTab(name)
-    if name == "AA" then
-        Notify("SeraphiCA", "* not available yet. *", 3)
-        return
-    end
-    
-    for _, p in pairs(Pages) do p.Visible = false end
-    Pages[name].Visible = true
-    for _, t in ipairs(LIVE.Tabs) do
-        t.active = (t.name == name)
-        Tw(t.btn, { BackgroundColor3 = t.active and CFG.Accent or CFG.TabOff }, 0.18):Play()
-        Tw(t.btn, { TextColor3 = t.active and Color3.new(1,1,1) or CFG.TxtSec }, 0.18):Play()
-    end
-end
-
-for _, name in ipairs({ "AA", "MM", "EE", "SS" }) do
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1,0,0,38); b.BackgroundColor3 = CFG.TabOff
-    b.Text = name; b.TextColor3 = CFG.TxtSec
-    b.Font = Enum.Font.GothamBold; b.TextSize = 14
-    b.AutoButtonColor = false; b.Parent = TabBar
-    Corner(b, 9)
-    table.insert(LIVE.Tabs, { name = name, btn = b, active = false })
-    b.MouseButton1Click:Connect(function() SwitchTab(name) end)
-end
-
--- Стартовая вкладка — MM
-Pages["MM"].Visible = true
-for _, t in ipairs(LIVE.Tabs) do
-    if t.name == "MM" then
-        t.active = true
-        Tw(t.btn, { BackgroundColor3 = CFG.Accent }, 0.18):Play()
-        Tw(t.btn, { TextColor3 = Color3.new(1,1,1) }, 0.18):Play()
-    end
-end
-
--- ══════════════ ОТКРЫТИЕ / ЗАКРЫТИЕ МЕНЮ ══════════════
-local isOpen = false
-local function OpenMenu()
-    isOpen = true; Menu.Visible = true
-    Menu.Size = UDim2.new(0, CFG.MenuW * 0.9, 0, CFG.MenuH * 0.9)
-    Menu.BackgroundTransparency = 1
-    Tw(Menu, { Size = UDim2.new(0,CFG.MenuW,0,CFG.MenuH), BackgroundTransparency = 0 }, 0.28):Play()
-end
-local function CloseMenu()
-    isOpen = false
-    local t = Tw(Menu, { Size = UDim2.new(0,CFG.MenuW*0.9,0,CFG.MenuH*0.9), BackgroundTransparency = 1 }, 0.2)
-    t:Play(); t.Completed:Wait(); Menu.Visible = false
-end
-
--- ФИКС: привязка клика по ватермарку
-wmBtn.MouseButton1Click:Connect(function()
-    if isOpen then task.spawn(CloseMenu) else OpenMenu() end
-end)
-
-closeBtn.MouseButton1Click:Connect(function() task.spawn(CloseMenu) end)
-UserInputService.InputBegan:Connect(function(i, gp)
-    if gp then return end
-    if i.KeyCode == Enum.KeyCode.RightShift then
-        if isOpen then task.spawn(CloseMenu) else OpenMenu() end
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPosition = main.Position
+        activeInput = input
     end
 end)
 
--- ══════════════ ПЕРЕТАСКИВАНИЕ ══════════════
-local function MakeDrag(frame, handle)
-    local dragging, startPos, startInput
-    handle.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then
-            dragging = true; startInput = i.Position; startPos = frame.Position
-            i.Changed:Connect(function()
-                if i.UserInputState == Enum.UserInputState.End then dragging = false end
-            end])
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
-        or i.UserInputType == Enum.UserInputType.Touch) then
-            local d = i.Position - startInput
-            frame.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + d.X,
-                startPos.Y.Scale, startPos.Y.Offset + d.Y)
-        end
-    end)
-end
-MakeDrag(Menu, Head)
-MakeDrag(WM, WM)
-
--- ══════════════ СТАРТ ══════════════
-task.delay(0.3, OpenMenu)
-
--- ══════════════ ОЧИСТКА ПРИ РЕСПАВНЕ ══════════════
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(1)
-    for player, data in pairs(chamsObjects) do
-        if data.highlight then
-            data.highlight.Enabled = false
-        end
+header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+        activeInput = input
     end
 end)
 
-Notify("SeraphiCA", "Loaded! MM2 Edition v5.0 (Hotfix)", 4)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input == activeInput and dragStart and startPosition then
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(
+            startPosition.X.Scale,
+            startPosition.X.Offset + delta.X,
+            startPosition.Y.Scale,
+            startPosition.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+        activeInput = nil
+    end
+end)
+
+-- Local client time. DateTime:ToLocalTime() reflects the device/client locale.
+task.spawn(function()
+    while screenGui.Parent do
+        local localTime = DateTime.now():ToLocalTime()
+        watermark.Text = string.format("SeraphiCA | %02d:%02d", localTime.Hour, localTime.Minute)
+        task.wait(1)
+    end
+end)
+
+switchPage("Aim-Bot")
+
+-- Small opening animation.
+local finalSize = main.Size
+main.Size = UDim2.fromOffset(math.max(330, finalSize.X.Offset - 35), math.max(300, finalSize.Y.Offset - 25))
+main.BackgroundTransparency = 1
+TweenService:Create(main, TweenInfo.new(0.32, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+    Size = finalSize,
+    BackgroundTransparency = 0,
+}):Play()

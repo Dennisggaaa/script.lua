@@ -1,5 +1,5 @@
 -- // SeraphiCA | Absolute God Tier UI v8
--- // 800px | Fling System Added
+-- // 800px | Fling System Added & MM2 Integrated
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -78,6 +78,231 @@ local function AddRipple(btn)
         
         task.delay(0.6, function() ripple:Destroy() end)
     end)
+end
+
+-- ========================================================================================
+-- STATE & LOGIC (MM2)
+-- ========================================================================================
+local mmState = {
+    wallShot = false,
+    antiFling = false,
+}
+
+local espState = {
+    chamsMurder = false,
+    chamsSherif = false,
+}
+
+local playerRoles = {}
+
+local function detectRole(player)
+    if not player then return nil end
+    if player.Character then
+        for _, tool in ipairs(player.Character:GetChildren()) do
+            if tool:IsA("Tool") then
+                local name = tool.Name:lower()
+                if name:find("knife") or name:find("blade") or name:find("dagger") then return "Murderer" end
+                if name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then return "Sheriff" end
+            end
+        end
+    end
+    local backpack = player:FindFirstChildOfClass("Backpack")
+    if backpack then
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                local name = tool.Name:lower()
+                if name:find("knife") or name:find("blade") or name:find("dagger") then return "Murderer" end
+                if name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then return "Sheriff" end
+            end
+        end
+    end
+    return nil
+end
+
+local function setupRoleReset(player)
+    player.CharacterAdded:Connect(function()
+        task.wait(1)
+        playerRoles[player] = nil
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do setupRoleReset(p) end
+Players.PlayerAdded:Connect(setupRoleReset)
+
+local espObjects = {}
+
+local function createEspForPlayer(player)
+    if espObjects[player] then return espObjects[player] end
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "Chams_" .. player.Name
+    highlight.FillColor = Color3.new(1, 1, 1)
+    highlight.OutlineColor = Color3.new(0, 0, 0)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Enabled = false
+    highlight.Parent = nil
+    espObjects[player] = { highlight = highlight }
+    return espObjects[player]
+end
+
+local function removeEspForPlayer(player)
+    local data = espObjects[player]
+    if data and data.highlight then
+        data.highlight:Destroy()
+        espObjects[player] = nil
+    end
+end
+
+local function updateEspForPlayer(player)
+    local data = espObjects[player]
+    if not data then return end
+
+    if not playerRoles[player] then
+        local role = detectRole(player)
+        if role then playerRoles[player] = role end
+    end
+
+    local role = playerRoles[player]
+    local shouldHighlight = false
+    local color = Color3.new(1, 1, 1)
+
+    if role == "Murderer" and espState.chamsMurder then
+        shouldHighlight = true
+        color = Color3.fromRGB(255, 0, 64)
+    elseif role == "Sheriff" and espState.chamsSherif then
+        shouldHighlight = true
+        color = Color3.fromRGB(0, 170, 255)
+    end
+
+    if shouldHighlight then
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if data.highlight.Parent ~= player.Character then
+                data.highlight.Parent = player.Character
+            end
+            data.highlight.Enabled = true
+            data.highlight.FillColor = color
+        else
+            data.highlight.Enabled = false
+        end
+    else
+        data.highlight.Enabled = false
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            if not espObjects[player] then createEspForPlayer(player) end
+            updateEspForPlayer(player)
+        end
+    end
+    for player, _ in pairs(espObjects) do
+        if not Players:FindFirstChild(player.Name) then removeEspForPlayer(player) end
+    end
+end)
+
+Players.PlayerRemoving:Connect(removeEspForPlayer)
+
+-- WallShot Hook
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+setreadonly(mt, false)
+
+mt.__namecall = function(self, ...)
+    local method = getnamecallmethod()
+    if method == "Raycast" and self == workspace and mmState.wallShot then
+        local args = {...}
+        local origin = args[1]
+        local direction = args[2]
+        local params = args[3] or RaycastParams.new()
+        
+        local newParams = RaycastParams.new()
+        newParams.FilterType = Enum.RaycastFilterType.Exclude
+        local filter = {}
+        if params.FilterDescendantsInstances then
+            for _, v in ipairs(params.FilterDescendantsInstances) do table.insert(filter, v) end
+        end
+        if LocalPlayer.Character then table.insert(filter, LocalPlayer.Character) end
+        newParams.FilterDescendantsInstances = filter
+        
+        local currentOrigin = origin
+        local remainingDir = direction
+        
+        for i = 1, 15 do
+            local result = oldNamecall(self, currentOrigin, remainingDir, newParams)
+            if not result then return nil end
+            local model = result.Instance:FindFirstAncestorOfClass("Model")
+            if model and model:FindFirstChildOfClass("Humanoid") then
+                return result
+            else
+                table.insert(filter, result.Instance)
+                currentOrigin = result.Position
+                remainingDir = origin + direction - currentOrigin
+                if remainingDir.Magnitude < 0.1 then return nil end
+            end
+        end
+        return oldNamecall(self, origin, direction, params)
+    end
+    return oldNamecall(self, ...)
+end
+setreadonly(mt, true)
+
+-- AntiFling Logic
+local antiFlingLoop
+local function ApplyAntiFling(state)
+    mmState.antiFling = state
+    if antiFlingLoop then antiFlingLoop:Disconnect() end
+    if state then
+        antiFlingLoop = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            if char then
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hrp and hum and hum.Health > 0 then
+                    local linVel = hrp.AssemblyLinearVelocity
+                    local angVel = hrp.AssemblyAngularVelocity
+                    if linVel.Magnitude > 200 or angVel.Magnitude > 100 then
+                        hrp.AssemblyLinearVelocity = Vector3.new(0, linVel.Y, 0)
+                        hrp.AssemblyAngularVelocity = Vector3.zero
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- Fling Logic
+local flingConnection
+local flingTarget = nil
+
+local function StartFlinging(target)
+    if flingConnection then flingConnection:Disconnect() end
+    flingTarget = target
+    flingConnection = RunService.Heartbeat:Connect(function()
+        if flingTarget and flingTarget.Character then
+            local hrp = flingTarget.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                pcall(function()
+                    if flingTarget ~= LocalPlayer then
+                        hrp:SetNetworkOwner(LocalPlayer)
+                    end
+                end)
+                hrp.AssemblyLinearVelocity = Vector3.new(99999, 99999, 99999)
+                hrp.AssemblyAngularVelocity = Vector3.new(99999, 99999, 99999)
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(9999), math.rad(9999), math.rad(9999))
+            end
+        else
+            return -- Player left or died
+        end
+    end)
+end
+
+local function StopFlinging()
+    if flingConnection then
+        flingConnection:Disconnect()
+        flingConnection = nil
+    end
+    flingTarget = nil
 end
 
 -- ========================================================================================
@@ -612,7 +837,7 @@ local function CreateTab(name)
 end
 
 -- ========================================================================================
--- UI ELEMENTS
+-- UI ELEMENTS WITH CALLBACKS
 -- ========================================================================================
 local function CreateCategory(page, title)
     local Cat = Create("Frame", {
@@ -632,7 +857,7 @@ local function CreateCategory(page, title)
     })
 end
 
-local function CreateToggle(page, title, desc)
+local function CreateToggle(page, title, desc, onToggle)
     local Container = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 65),
         BackgroundColor3 = Theme.Element,
@@ -710,6 +935,7 @@ local function CreateToggle(page, title, desc)
             TweenService:Create(Indicator, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -9), BackgroundColor3 = Theme.Text}):Play()
             TweenService:Create(TogGlow, TweenInfo.new(0.3), {ImageTransparency = 1}):Play()
         end
+        if onToggle then onToggle(state) end
     end)
 end
 
@@ -901,6 +1127,7 @@ local function CreateExpandable(page, title, desc, subOptions)
                 TweenService:Create(SubInd, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Theme.Text}):Play()
                 TweenService:Create(SubGlow, TweenInfo.new(0.3), {ImageTransparency = 1}):Play()
             end
+            if opt.Callback then opt.Callback(subState) end
         end)
     end
 end
@@ -1008,7 +1235,7 @@ local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged
     end)
 end
 
--- НОВЫЙ МОДУЛЬ: FLING SYSTEM
+-- FLING MODULE
 local function CreateFlingModule(page)
     local Container = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 65),
@@ -1116,11 +1343,16 @@ local function CreateFlingModule(page)
             TweenService:Create(Indicator, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -9), BackgroundColor3 = Theme.Text}):Play()
             TweenService:Create(TogGlow, TweenInfo.new(0.3), {ImageTransparency = 1}):Play()
             expanded = false
+            -- Auto stop fling if collapsed
+            if isFlinging then
+                isFlinging = false
+                StopFlinging()
+                UpdateActionBtn()
+            end
         end
         UpdateSize()
     end)
 
-    -- Список игроков
     local PlayerList = Create("ScrollingFrame", {
         Size = UDim2.new(1, 0, 0, 150),
         BackgroundColor3 = Color3.fromRGB(12, 12, 16),
@@ -1137,7 +1369,6 @@ local function CreateFlingModule(page)
         PlayerList.CanvasSize = UDim2.new(0, 0, 0, PlayerList.UIListLayout.AbsoluteContentSize.Y + 10)
     end)
 
-    -- Кнопка действия
     local ActionBtn = Create("TextButton", {
         Size = UDim2.new(1, 0, 0, 35),
         BackgroundColor3 = Theme.Disabled,
@@ -1224,19 +1455,28 @@ local function CreateFlingModule(page)
 
     PopulatePlayers()
     Players.PlayerAdded:Connect(PopulatePlayers)
-    Players.PlayerRemoving:Connect(PopulatePlayers)
+    Players.PlayerRemoving:Connect(function(p)
+        if selectedPlayer == p and isFlinging then
+            isFlinging = false
+            StopFlinging()
+            UpdateActionBtn()
+        end
+        PopulatePlayers()
+    end)
 
     ActionBtn.MouseButton1Click:Connect(function()
         if not ActionBtn.Active then return end
         
         if isFlinging then
             isFlinging = false
-            -- Здесь можно добавить логику остановки флинга
+            StopFlinging()
             Notify("Fling stopped", Theme.Success)
         else
-            isFlinging = true
-            -- Здесь можно добавить логику старта флинга для selectedPlayer
-            Notify("Flinging " .. (selectedPlayer and selectedPlayer.Name or "player") .. "!", Theme.Accent)
+            if selectedPlayer then
+                isFlinging = true
+                StartFlinging(selectedPlayer)
+                Notify("Flinging " .. selectedPlayer.Name .. "!", Theme.Accent)
+            end
         end
         UpdateActionBtn()
     end)
@@ -1250,7 +1490,12 @@ CreateTab("Aim-Bot")
 local MiscTab = CreateTab("Misc")
 Tabs["Misc"].Render = function()
     CreateCategory(PageContainer, "General")
-    CreateToggle(PageContainer, "WallShot", "Allows you to shoot through walls and obstacles.")
+    CreateToggle(PageContainer, "WallShot", "Allows you to shoot through walls and obstacles.", function(v)
+        mmState.wallShot = v
+    end)
+    CreateToggle(PageContainer, "AntiFling", "Prevents other players from launching you.", function(v)
+        ApplyAntiFling(v)
+    end)
     
     CreateCategory(PageContainer, "Trolling")
     CreateFlingModule(PageContainer)
@@ -1260,8 +1505,12 @@ local EspTab = CreateTab("Esp")
 Tabs["Esp"].Render = function()
     CreateCategory(PageContainer, "Player Visuals")
     CreateExpandable(PageContainer, "Chams", "Highlight players through walls.", {
-        {Name = "ChamsMurder", Desc = "Highlight only the murderer role."},
-        {Name = "ChamsSherrif", Desc = "Highlight only the sheriff role."}
+        {Name = "ChamsMurder", Desc = "Highlight only the murderer role.", Callback = function(v)
+            espState.chamsMurder = v
+        end},
+        {Name = "ChamsSherrif", Desc = "Highlight only the sheriff role.", Callback = function(v)
+            espState.chamsSherif = v
+        end}
     })
 end
 

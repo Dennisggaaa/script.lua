@@ -1,5 +1,5 @@
--- // SeraphiCA | Absolute God Tier UI v8.4
--- // 800px | Fling Fixed, Gun TP, State Sync
+-- // SeraphiCA | Absolute God Tier UI v8.5
+-- // 800px | WallShot FireServer Hook & ChamsEnemies
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -82,7 +82,7 @@ local function AddRipple(btn)
 end
 
 -- ========================================================================================
--- NOTIFICATIONS (Должны быть объявлены до использования в логике)
+-- NOTIFICATIONS
 -- ========================================================================================
 local MenuBlur = Instance.new("BlurEffect")
 MenuBlur.Name = "SeraphiCA_Blur"
@@ -164,6 +164,7 @@ local mmState = {
 local espState = {
     chamsMurder = false,
     chamsSherif = false,
+    chamsEnemies = false,
 }
 
 local playerRoles = {}
@@ -189,7 +190,7 @@ local function detectRole(player)
             end
         end
     end
-    return nil
+    return "Innocent"
 end
 
 local function setupRoleReset(player)
@@ -246,6 +247,9 @@ local function updateEspForPlayer(player)
     elseif role == "Sheriff" and espState.chamsSherif then
         shouldHighlight = true
         color = Color3.fromRGB(0, 170, 255)
+    elseif role == "Innocent" and espState.chamsEnemies then
+        shouldHighlight = true
+        color = Color3.fromRGB(0, 255, 0)
     end
 
     if shouldHighlight then
@@ -277,77 +281,120 @@ end)
 
 Players.PlayerRemoving:Connect(removeEspForPlayer)
 
--- WALLSHOT HOOK
+-- WALLSHOT HOOK (Raycast + FireServer для урона)
 local mt = getrawmetatable(game)
 local oldNamecall = mt.__namecall
 setreadonly(mt, false)
 
 mt.__namecall = function(self, ...)
     local method = getnamecallmethod()
-    if mmState.wallShot and self == workspace then
-        if method == "Raycast" then
-            local args = {...}
-            local origin = args[1]
-            local direction = args[2]
-            local params = args[3] or RaycastParams.new()
-            
-            local newParams = RaycastParams.new()
-            newParams.FilterType = Enum.RaycastFilterType.Exclude
-            local filter = {}
-            if params.FilterDescendantsInstances then
-                for _, v in ipairs(params.FilterDescendantsInstances) do table.insert(filter, v) end
-            end
-            if LocalPlayer.Character then table.insert(filter, LocalPlayer.Character) end
-            newParams.FilterDescendantsInstances = filter
-            
-            local currentOrigin = origin
-            local remainingDir = direction
-            
-            for i = 1, 15 do
-                local result = oldNamecall(self, currentOrigin, remainingDir, newParams)
-                if not result then return nil end
-                local model = result.Instance:FindFirstAncestorOfClass("Model")
-                if model and model:FindFirstChildOfClass("Humanoid") then
-                    return result
-                else
-                    table.insert(filter, result.Instance)
-                    currentOrigin = result.Position
-                    remainingDir = origin + direction - currentOrigin
-                    if remainingDir.Magnitude < 0.1 then return nil end
-                end
-            end
-            return oldNamecall(self, origin, direction, params)
-        elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
-            local args = {...}
-            local ray = args[1]
-            local ignoreList = args[2] or {}
-            if LocalPlayer.Character then table.insert(ignoreList, LocalPlayer.Character) end
-            
-            local currentOrigin = ray.Origin
-            local remainingDir = ray.Direction
-            
-            for i = 1, 15 do
-                local newRay = Ray.new(currentOrigin, remainingDir)
-                local part, pos, normal
-                if method == "FindPartOnRay" then
-                    part, pos, normal = oldNamecall(self, newRay)
-                else
-                    part, pos, normal = oldNamecall(self, newRay, ignoreList)
+    if mmState.wallShot then
+        if method == "FireServer" and self:IsA("Tool") then
+            local toolName = self.Name:lower()
+            if toolName:find("gun") or toolName:find("revolver") or toolName:find("pistol") or toolName:find("colt") then
+                local closestPart, closestDist = nil, math.huge
+                local camera = workspace.CurrentCamera
+                local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr ~= LocalPlayer and plr.Character then
+                        local char = plr.Character
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hum and hum.Health > 0 then
+                            for _, partName in ipairs({"Head", "HumanoidRootPart", "Torso", "UpperTorso", "LowerTorso"}) do
+                                local part = char:FindFirstChild(partName)
+                                if part then
+                                    local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
+                                    if onScreen then
+                                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                                        if dist < closestDist then
+                                            closestDist = dist
+                                            closestPart = part
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
                 end
                 
-                if not part then return nil end
-                
-                local model = part:FindFirstAncestorOfClass("Model")
-                if model and model:FindFirstChildOfClass("Humanoid") then
-                    return part, pos, normal
-                else
-                    table.insert(ignoreList, part)
-                    currentOrigin = pos
-                    remainingDir = ray.Origin + ray.Direction - currentOrigin
-                    if remainingDir.Magnitude < 0.1 then return nil end
+                if closestPart then
+                    local args = {...}
+                    for i = 1, #args do
+                        if typeof(args[i]) == "Instance" and args[i]:IsA("BasePart") then
+                            args[i] = closestPart
+                        elseif typeof(args[i]) == "Vector3" then
+                            args[i] = closestPart.Position
+                        end
+                    end
+                    return oldNamecall(self, unpack(args))
                 end
             end
-            return oldNamecall(self, ...)
+        elseif self == workspace then
+            if method == "Raycast" then
+                local args = {...}
+                local origin = args[1]
+                local direction = args[2]
+                local params = args[3] or RaycastParams.new()
+                
+                local newParams = RaycastParams.new()
+                newParams.FilterType = Enum.RaycastFilterType.Exclude
+                local filter = {}
+                if params.FilterDescendantsInstances then
+                    for _, v in ipairs(params.FilterDescendantsInstances) do table.insert(filter, v) end
+                end
+                if LocalPlayer.Character then table.insert(filter, LocalPlayer.Character) end
+                newParams.FilterDescendantsInstances = filter
+                
+                local currentOrigin = origin
+                local remainingDir = direction
+                
+                for i = 1, 15 do
+                    local result = oldNamecall(self, currentOrigin, remainingDir, newParams)
+                    if not result then return nil end
+                    local model = result.Instance:FindFirstAncestorOfClass("Model")
+                    if model and model:FindFirstChildOfClass("Humanoid") then
+                        return result
+                    else
+                        table.insert(filter, result.Instance)
+                        currentOrigin = result.Position
+                        remainingDir = origin + direction - currentOrigin
+                        if remainingDir.Magnitude < 0.1 then return nil end
+                    end
+                end
+                return oldNamecall(self, origin, direction, params)
+            elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
+                local args = {...}
+                local ray = args[1]
+                local ignoreList = args[2] or {}
+                if LocalPlayer.Character then table.insert(ignoreList, LocalPlayer.Character) end
+                
+                local currentOrigin = ray.Origin
+                local remainingDir = ray.Direction
+                
+                for i = 1, 15 do
+                    local newRay = Ray.new(currentOrigin, remainingDir)
+                    local part, pos, normal
+                    if method == "FindPartOnRay" then
+                        part, pos, normal = oldNamecall(self, newRay)
+                    else
+                        part, pos, normal = oldNamecall(self, newRay, ignoreList)
+                    end
+                    
+                    if not part then return nil end
+                    
+                    local model = part:FindFirstAncestorOfClass("Model")
+                    if model and model:FindFirstChildOfClass("Humanoid") then
+                        return part, pos, normal
+                    else
+                        table.insert(ignoreList, part)
+                        currentOrigin = pos
+                        remainingDir = ray.Origin + ray.Direction - currentOrigin
+                        if remainingDir.Magnitude < 0.1 then return nil end
+                    end
+                end
+                return oldNamecall(self, ...)
+            end
         end
     end
     return oldNamecall(self, ...)
@@ -763,7 +810,7 @@ Create("TextLabel", {
     Size = UDim2.new(1, -30, 0, 15),
     Position = UDim2.new(0, 21, 0, 60),
     BackgroundTransparency = 1,
-    Text = "Ultimate Interface v8.4",
+    Text = "Ultimate Interface v8.5",
     Font = Enum.Font.Gotham,
     TextSize = 12,
     TextColor3 = Theme.Description,
@@ -946,7 +993,7 @@ local function CreateTab(name)
 end
 
 -- ========================================================================================
--- UI ELEMENTS WITH STATE SYNC
+-- UI ELEMENTS WITH FULL STATE SYNC
 -- ========================================================================================
 local function CreateCategory(page, title)
     local Cat = Create("Frame", {
@@ -1142,7 +1189,6 @@ local function CreateExpandable(page, title, desc, subOptions)
     local state = false
     local expanded = false
     
-    -- Проверка: если хоть одна функция внутри включена, разворачиваем список по умолчанию
     local hasActiveOption = false
     for _, opt in ipairs(subOptions) do
         if opt.Default then hasActiveOption = true break end
@@ -1155,7 +1201,6 @@ local function CreateExpandable(page, title, desc, subOptions)
         TweenService:Create(SubContainer, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, subHeight)}):Play()
     end
 
-    -- Если есть активная опция, сразу делаем expanded = true и применяем визуал
     if hasActiveOption then
         state = true
         expanded = true
@@ -1164,8 +1209,6 @@ local function CreateExpandable(page, title, desc, subOptions)
         Indicator.Position = UDim2.new(1, -21, 0.5, -9)
         Indicator.BackgroundColor3 = Theme.TextDark
         TogGlow.ImageTransparency = 0.5
-        Container.Size = UDim2.new(1, 0, 0, 65) -- Will be updated properly by UpdateSize on spawn
-        SubContainer.Size = UDim2.new(1, 0, 0, 0)
     end
 
     AddRipple(ToggleBtn)
@@ -1277,10 +1320,9 @@ local function CreateExpandable(page, title, desc, subOptions)
         end)
     end
     
-    -- Применяем правильный размер после рендера всех элементов
     if hasActiveOption then
         task.spawn(function()
-            task.wait(0.1) -- Ждём обновления UIListLayout
+            task.wait(0.1)
             UpdateSize()
         end)
     end
@@ -1526,14 +1568,22 @@ local function CreateFlingModule(page)
     Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = SubContainer})
     Create("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), Parent = SubContainer})
 
-    local state = false
-    local expanded = false
+    local state = mmState.isFlinging
+    local expanded = mmState.isFlinging
 
     local function UpdateSize()
         local baseHeight = 65
         local subHeight = expanded and (SubContainer.UIListLayout.AbsoluteContentSize.Y + 20) or 0
         TweenService:Create(Container, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, baseHeight + subHeight)}):Play()
         TweenService:Create(SubContainer, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, subHeight)}):Play()
+    end
+
+    if state then
+        ToggleBtn.BackgroundColor3 = Theme.Accent
+        TogStroke.Color = Theme.Accent
+        Indicator.Position = UDim2.new(1, -21, 0.5, -9)
+        Indicator.BackgroundColor3 = Theme.TextDark
+        TogGlow.ImageTransparency = 0.5
     end
 
     AddRipple(ToggleBtn)
@@ -1670,6 +1720,12 @@ local function CreateFlingModule(page)
     end)
     
     UpdateActionBtn()
+    if expanded then
+        task.spawn(function()
+            task.wait(0.1)
+            UpdateSize()
+        end)
+    end
 end
 
 -- ========================================================================================
@@ -1708,6 +1764,9 @@ Tabs["Esp"].Render = function()
         end},
         {Name = "ChamsSherrif", Desc = "Highlight only the sheriff role.", Default = espState.chamsSherif, Callback = function(v)
             espState.chamsSherif = v
+        end},
+        {Name = "ChamsEnemies", Desc = "Highlight innocent players (green).", Default = espState.chamsEnemies, Callback = function(v)
+            espState.chamsEnemies = v
         end}
     })
 end

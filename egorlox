@@ -1,5 +1,5 @@
--- // SeraphiCA | Absolute God Tier UI v8.5
--- // 800px | WallShot FireServer Hook & ChamsEnemies
+-- // SeraphiCA | Absolute God Tier UI v8.6
+-- // 800px | Role Detection Fixed
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -232,12 +232,19 @@ local function updateEspForPlayer(player)
     local data = espObjects[player]
     if not data then return end
 
-    if not playerRoles[player] then
-        local role = detectRole(player)
-        if role then playerRoles[player] = role end
+    local role = playerRoles[player]
+    
+    -- Если роль ещё не Murderer/Sheriff, продолжаем проверять (для Innocents)
+    if role ~= "Murderer" and role ~= "Sheriff" then
+        local detectedRole = detectRole(player)
+        if detectedRole == "Murderer" or detectedRole == "Sheriff" then
+            playerRoles[player] = detectedRole
+            role = detectedRole
+        else
+            role = "Innocent"
+        end
     end
 
-    local role = playerRoles[player]
     local shouldHighlight = false
     local color = Color3.new(1, 1, 1)
 
@@ -810,7 +817,7 @@ Create("TextLabel", {
     Size = UDim2.new(1, -30, 0, 15),
     Position = UDim2.new(0, 21, 0, 60),
     BackgroundTransparency = 1,
-    Text = "Ultimate Interface v8.5",
+    Text = "Ultimate Interface v8.6",
     Font = Enum.Font.Gotham,
     TextSize = 12,
     TextColor3 = Theme.Description,

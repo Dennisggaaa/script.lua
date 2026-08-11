@@ -1,5 +1,5 @@
--- // SeraphiCA | Absolute God Tier UI v8.1
--- // 800px | State Fixed & Fling Working
+-- // SeraphiCA | Absolute God Tier UI v8.2
+-- // 800px | WallShot Fixed & FreezePlayer Added
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -81,13 +81,14 @@ local function AddRipple(btn)
 end
 
 -- ========================================================================================
--- GLOBAL STATE (Не сбрасывается при переключении вкладок)
+-- GLOBAL STATE
 -- ========================================================================================
 local mmState = {
     wallShot = false,
     antiFling = false,
-    flingTarget = nil,
-    isFlinging = false,
+    isFreezing = false,
+    freezeTarget = nil,
+    isFreezingAll = false,
 }
 
 local espState = {
@@ -206,45 +207,78 @@ end)
 
 Players.PlayerRemoving:Connect(removeEspForPlayer)
 
--- WALLSHOT HOOK
+-- WALLSHOT HOOK (Raycast + FindPartOnRay)
 local mt = getrawmetatable(game)
 local oldNamecall = mt.__namecall
 setreadonly(mt, false)
 
 mt.__namecall = function(self, ...)
     local method = getnamecallmethod()
-    if method == "Raycast" and self == workspace and mmState.wallShot then
-        local args = {...}
-        local origin = args[1]
-        local direction = args[2]
-        local params = args[3] or RaycastParams.new()
-        
-        local newParams = RaycastParams.new()
-        newParams.FilterType = Enum.RaycastFilterType.Exclude
-        local filter = {}
-        if params.FilterDescendantsInstances then
-            for _, v in ipairs(params.FilterDescendantsInstances) do table.insert(filter, v) end
-        end
-        if LocalPlayer.Character then table.insert(filter, LocalPlayer.Character) end
-        newParams.FilterDescendantsInstances = filter
-        
-        local currentOrigin = origin
-        local remainingDir = direction
-        
-        for i = 1, 15 do
-            local result = oldNamecall(self, currentOrigin, remainingDir, newParams)
-            if not result then return nil end
-            local model = result.Instance:FindFirstAncestorOfClass("Model")
-            if model and model:FindFirstChildOfClass("Humanoid") then
-                return result
-            else
-                table.insert(filter, result.Instance)
-                currentOrigin = result.Position
-                remainingDir = origin + direction - currentOrigin
-                if remainingDir.Magnitude < 0.1 then return nil end
+    if mmState.wallShot and self == workspace then
+        if method == "Raycast" then
+            local args = {...}
+            local origin = args[1]
+            local direction = args[2]
+            local params = args[3] or RaycastParams.new()
+            
+            local newParams = RaycastParams.new()
+            newParams.FilterType = Enum.RaycastFilterType.Exclude
+            local filter = {}
+            if params.FilterDescendantsInstances then
+                for _, v in ipairs(params.FilterDescendantsInstances) do table.insert(filter, v) end
             end
+            if LocalPlayer.Character then table.insert(filter, LocalPlayer.Character) end
+            newParams.FilterDescendantsInstances = filter
+            
+            local currentOrigin = origin
+            local remainingDir = direction
+            
+            for i = 1, 15 do
+                local result = oldNamecall(self, currentOrigin, remainingDir, newParams)
+                if not result then return nil end
+                local model = result.Instance:FindFirstAncestorOfClass("Model")
+                if model and model:FindFirstChildOfClass("Humanoid") then
+                    return result
+                else
+                    table.insert(filter, result.Instance)
+                    currentOrigin = result.Position
+                    remainingDir = origin + direction - currentOrigin
+                    if remainingDir.Magnitude < 0.1 then return nil end
+                end
+            end
+            return oldNamecall(self, origin, direction, params)
+        elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
+            local args = {...}
+            local ray = args[1]
+            local ignoreList = args[2] or {}
+            if LocalPlayer.Character then table.insert(ignoreList, LocalPlayer.Character) end
+            
+            local currentOrigin = ray.Origin
+            local remainingDir = ray.Direction
+            
+            for i = 1, 15 do
+                local newRay = Ray.new(currentOrigin, remainingDir)
+                local part, pos, normal
+                if method == "FindPartOnRay" then
+                    part, pos, normal = oldNamecall(self, newRay)
+                else
+                    part, pos, normal = oldNamecall(self, newRay, ignoreList)
+                end
+                
+                if not part then return nil end
+                
+                local model = part:FindFirstAncestorOfClass("Model")
+                if model and model:FindFirstChildOfClass("Humanoid") then
+                    return part, pos, normal
+                else
+                    table.insert(ignoreList, part)
+                    currentOrigin = pos
+                    remainingDir = ray.Origin + ray.Direction - currentOrigin
+                    if remainingDir.Magnitude < 0.1 then return nil end
+                end
+            end
+            return oldNamecall(self, ...)
         end
-        return oldNamecall(self, origin, direction, params)
     end
     return oldNamecall(self, ...)
 end
@@ -274,43 +308,56 @@ local function ApplyAntiFling(state)
     end
 end
 
--- FLING LOGIC
-local flingConnection
+-- FREEZE LOGIC
+local freezeConnections = {}
 
-local function StopFlinging()
-    if flingConnection then
-        flingConnection:Disconnect()
-        flingConnection = nil
+local function StopFreezingTarget(targetPlayer)
+    if freezeConnections[targetPlayer] then
+        freezeConnections[targetPlayer]:Disconnect()
+        freezeConnections[targetPlayer] = nil
     end
-    mmState.isFlinging = false
-    mmState.flingTarget = nil
 end
 
-local function StartFlinging(target)
-    if flingConnection then flingConnection:Disconnect() end
+local function StartFreezingTarget(targetPlayer)
+    StopFreezingTarget(targetPlayer)
     
-    mmState.flingTarget = target
-    mmState.isFlinging = true
-    
-    flingConnection = RunService.Heartbeat:Connect(function()
-        if mmState.flingTarget and mmState.flingTarget.Character then
-            local hrp = mmState.flingTarget.Character:FindFirstChild("HumanoidRootPart")
+    freezeConnections[targetPlayer] = RunService.Heartbeat:Connect(function()
+        if targetPlayer and targetPlayer.Character then
+            local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
                 pcall(function()
-                    if mmState.flingTarget ~= LocalPlayer then
-                        hrp:SetNetworkOwner(LocalPlayer)
-                    end
+                    hrp:SetNetworkOwner(LocalPlayer)
                 end)
-                hrp.AssemblyLinearVelocity = Vector3.new(99999, 99999, 99999)
-                hrp.AssemblyAngularVelocity = Vector3.new(99999, 99999, 99999)
-                hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(9999), math.rad(9999), math.rad(9999))
-            else
-                StopFlinging()
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                if not freezeConnections[targetPlayer].SavedCFrame then
+                    freezeConnections[targetPlayer].SavedCFrame = hrp.CFrame
+                end
+                hrp.CFrame = freezeConnections[targetPlayer].SavedCFrame
             end
         else
-            StopFlinging()
+            StopFreezingTarget(targetPlayer)
         end
     end)
+end
+
+local function StopFreezeAll()
+    mmState.isFreezingAll = false
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            StopFreezingTarget(p)
+        end
+    end
+end
+
+local function StartFreezeAll()
+    StopFreezeAll()
+    mmState.isFreezingAll = true
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            StartFreezingTarget(p)
+        end
+    end
 end
 
 -- ========================================================================================
@@ -662,7 +709,7 @@ Create("TextLabel", {
     Size = UDim2.new(1, -30, 0, 15),
     Position = UDim2.new(0, 21, 0, 60),
     BackgroundTransparency = 1,
-    Text = "Ultimate Interface v8.1",
+    Text = "Ultimate Interface v8.2",
     Font = Enum.Font.Gotham,
     TextSize = 12,
     TextColor3 = Theme.Description,
@@ -845,7 +892,7 @@ local function CreateTab(name)
 end
 
 -- ========================================================================================
--- UI ELEMENTS WITH STATE
+-- UI ELEMENTS WITH STATE (FIX)
 -- ========================================================================================
 local function CreateCategory(page, title)
     local Cat = Create("Frame", {
@@ -938,12 +985,6 @@ local function CreateToggle(page, title, desc, defaultState, onToggle)
         Indicator.Position = UDim2.new(1, -21, 0.5, -9)
         Indicator.BackgroundColor3 = Theme.TextDark
         TogGlow.ImageTransparency = 0.5
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
-        TogStroke.Color = Theme.Stroke
-        Indicator.Position = UDim2.new(0, 3, 0.5, -9)
-        Indicator.BackgroundColor3 = Theme.Text
-        TogGlow.ImageTransparency = 1
     end
 
     ToggleBtn.MouseButton1Click:Connect(function()
@@ -1146,12 +1187,6 @@ local function CreateExpandable(page, title, desc, subOptions)
             SubInd.Position = UDim2.new(1, -17, 0.5, -7)
             SubInd.BackgroundColor3 = Theme.TextDark
             SubGlow.ImageTransparency = 0.5
-        else
-            SubBtn.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
-            SubStroke.Color = Theme.Stroke
-            SubInd.Position = UDim2.new(0, 3, 0.5, -7)
-            SubInd.BackgroundColor3 = Theme.Text
-            SubGlow.ImageTransparency = 1
         end
 
         SubBtn.MouseButton1Click:Connect(function()
@@ -1275,8 +1310,8 @@ local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged
     end)
 end
 
--- FLING MODULE
-local function CreateFlingModule(page)
+-- FREEZE MODULE
+local function CreateFreezeModule(page)
     local Container = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 65),
         BackgroundColor3 = Theme.Element,
@@ -1300,7 +1335,7 @@ local function CreateFlingModule(page)
         Size = UDim2.new(1, -100, 0, 20),
         Position = UDim2.new(0, 15, 0, 12),
         BackgroundTransparency = 1,
-        Text = "Fling",
+        Text = "FreezePlayer",
         Font = Enum.Font.GothamBold,
         TextSize = 15,
         TextColor3 = Theme.Text,
@@ -1311,7 +1346,7 @@ local function CreateFlingModule(page)
         Size = UDim2.new(1, -100, 0, 15),
         Position = UDim2.new(0, 15, 0, 35),
         BackgroundTransparency = 1,
-        Text = "Select a player to fling them around.",
+        Text = "Select a player to freeze them in place.",
         Font = Enum.Font.Gotham,
         TextSize = 12,
         TextColor3 = Theme.Description,
@@ -1407,7 +1442,7 @@ local function CreateFlingModule(page)
         Size = UDim2.new(1, 0, 0, 35),
         BackgroundColor3 = Theme.Disabled,
         AutoButtonColor = false,
-        Text = "Fling!",
+        Text = "Freeze!",
         Font = Enum.Font.GothamBold,
         TextSize = 14,
         TextColor3 = Theme.Description,
@@ -1418,19 +1453,49 @@ local function CreateFlingModule(page)
     Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = ActionBtn})
     AddRipple(ActionBtn)
 
-    local function UpdateActionBtn()
-        if mmState.isFlinging then
-            TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.RedNotif, TextColor3 = Theme.Text}):Play()
-            ActionBtn.Text = "Stop!"
-            ActionBtn.Active = true
-        elseif mmState.flingTarget then
-            TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent, TextColor3 = Theme.TextDark}):Play()
-            ActionBtn.Text = "Fling!"
-            ActionBtn.Active = true
-        else
+    local AllActionBtn = Create("TextButton", {
+        Size = UDim2.new(1, 0, 0, 35),
+        BackgroundColor3 = Theme.Accent,
+        AutoButtonColor = false,
+        Text = "Freeze All",
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        TextColor3 = Theme.TextDark,
+        Active = true,
+        Parent = SubContainer
+    })
+    Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = AllActionBtn})
+    Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = AllActionBtn})
+    AddRipple(AllActionBtn)
+
+    local function UpdateActionBtns()
+        if mmState.isFreezingAll then
+            TweenService:Create(AllActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.RedNotif, TextColor3 = Theme.Text}):Play()
+            AllActionBtn.Text = "Stop!"
+            AllActionBtn.Active = true
+            
+            -- Disable individual freeze
             TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Disabled, TextColor3 = Theme.Description}):Play()
-            ActionBtn.Text = "Fling!"
+            ActionBtn.Text = "Freeze All Active"
             ActionBtn.Active = false
+        else
+            TweenService:Create(AllActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent, TextColor3 = Theme.TextDark}):Play()
+            AllActionBtn.Text = "Freeze All"
+            AllActionBtn.Active = true
+            
+            if mmState.isFreezing then
+                TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.RedNotif, TextColor3 = Theme.Text}):Play()
+                ActionBtn.Text = "Stop!"
+                ActionBtn.Active = true
+            elseif mmState.freezeTarget then
+                TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent, TextColor3 = Theme.TextDark}):Play()
+                ActionBtn.Text = "Freeze!"
+                ActionBtn.Active = true
+            else
+                TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Disabled, TextColor3 = Theme.Description}):Play()
+                ActionBtn.Text = "Freeze!"
+                ActionBtn.Active = false
+            end
         end
     end
 
@@ -1441,7 +1506,7 @@ local function CreateFlingModule(page)
         
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer then
-                local isSelected = (mmState.flingTarget == plr)
+                local isSelected = (mmState.freezeTarget == plr)
                 local PlrBtn = Create("TextButton", {
                     Size = UDim2.new(1, 0, 0, 30),
                     BackgroundColor3 = isSelected and Theme.Accent or Color3.fromRGB(20, 20, 26),
@@ -1467,10 +1532,10 @@ local function CreateFlingModule(page)
                 AddRipple(PlrBtn)
                 
                 PlrBtn.MouseButton1Click:Connect(function()
-                    if mmState.isFlinging then return end
-                    mmState.flingTarget = plr
-                    PopulatePlayers() -- Refresh to show highlight
-                    UpdateActionBtn()
+                    if mmState.isFreezingAll or mmState.isFreezing then return end
+                    mmState.freezeTarget = plr
+                    PopulatePlayers()
+                    UpdateActionBtns()
                 end)
             end
         end
@@ -1479,30 +1544,52 @@ local function CreateFlingModule(page)
     PopulatePlayers()
     Players.PlayerAdded:Connect(PopulatePlayers)
     Players.PlayerRemoving:Connect(function(p)
-        if mmState.flingTarget == p and mmState.isFlinging then
-            StopFlinging()
+        if mmState.freezeTarget == p and mmState.isFreezing then
+            mmState.isFreezing = false
+            StopFreezingTarget(p)
         end
         PopulatePlayers()
-        UpdateActionBtn()
+        UpdateActionBtns()
     end)
 
     ActionBtn.MouseButton1Click:Connect(function()
         if not ActionBtn.Active then return end
         
-        if mmState.isFlinging then
-            StopFlinging()
-            Notify("Fling stopped", Theme.Success)
+        if mmState.isFreezing then
+            mmState.isFreezing = false
+            StopFreezingTarget(mmState.freezeTarget)
+            Notify("Freeze stopped", Theme.Success)
         else
-            if mmState.flingTarget then
-                StartFlinging(mmState.flingTarget)
-                Notify("Flinging " .. mmState.flingTarget.Name .. "!", Theme.Accent)
+            if mmState.freezeTarget then
+                mmState.isFreezing = true
+                StartFreezingTarget(mmState.freezeTarget)
+                Notify("Freezing " .. mmState.freezeTarget.Name .. "!", Theme.Accent)
             end
         end
-        UpdateActionBtn()
+        UpdateActionBtns()
+    end)
+
+    AllActionBtn.MouseButton1Click:Connect(function()
+        if not AllActionBtn.Active then return end
+        
+        if mmState.isFreezingAll then
+            StopFreezeAll()
+            Notify("Freeze All stopped", Theme.Success)
+        else
+            -- Stop individual freeze if active
+            if mmState.isFreezing then
+                mmState.isFreezing = false
+                StopFreezingTarget(mmState.freezeTarget)
+            end
+            
+            mmState.isFreezingAll = true
+            StartFreezeAll()
+            Notify("Freezing ALL players!", Theme.RedNotif)
+        end
+        UpdateActionBtns()
     end)
     
-    -- Init UI
-    UpdateActionBtn()
+    UpdateActionBtns()
 end
 
 -- ========================================================================================
@@ -1513,7 +1600,7 @@ CreateTab("Aim-Bot")
 local MiscTab = CreateTab("Misc")
 Tabs["Misc"].Render = function()
     CreateCategory(PageContainer, "General")
-    CreateToggle(PageContainer, "WallShot", "Allows you to shoot through walls and obstacles.", mmState.wallShot, function(v)
+    CreateToggle(PageContainer, "WallShot", "Shoot and throw knives through walls.", mmState.wallShot, function(v)
         mmState.wallShot = v
     end)
     CreateToggle(PageContainer, "AntiFling", "Prevents other players from launching you.", mmState.antiFling, function(v)
@@ -1521,7 +1608,7 @@ Tabs["Misc"].Render = function()
     end)
     
     CreateCategory(PageContainer, "Trolling")
-    CreateFlingModule(PageContainer)
+    CreateFreezeModule(PageContainer)
 end
 
 local EspTab = CreateTab("Esp")

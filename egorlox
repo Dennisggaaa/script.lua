@@ -1,6 +1,6 @@
 --[[
 ╔══════════════════════════════════════════════╗
-║           SeraphiCA v5.0                      ║
+║           SeraphiCA v5.0 (Hotfix)             ║
 ║   MM2 Edition · WallShot · AntiFling · Chams  ║
 ║   Delta Android · BloxStrike                  ║
 ╚══════════════════════════════════════════════╝--]]
@@ -100,7 +100,6 @@ local function getPlayerRole(player)
     
     local char = player.Character
     
-    -- Проверяем оружие в руках
     local tool = char:FindFirstChildOfClass("Tool")
     if tool then
         local toolName = tool.Name:lower()
@@ -111,7 +110,6 @@ local function getPlayerRole(player)
         end
     end
     
-    -- Проверяем бэкпак
     local backpack = player:FindFirstChildOfClass("Backpack")
     if backpack then
         for _, item in ipairs(backpack:GetChildren()) do
@@ -126,7 +124,6 @@ local function getPlayerRole(player)
         end
     end
     
-    -- Проверяем через значение роли (если есть на сервере)
     for _, obj in ipairs(player:GetChildren()) do
         if obj:IsA("StringValue") and obj.Name:lower():find("role") then
             local val = obj.Value:lower()
@@ -140,7 +137,6 @@ local function getPlayerRole(player)
         end
     end
     
-    -- Проверка по чайилду сущности
     if char:FindFirstChild("Knife") or char:FindFirstChild("Dagger") or char:FindFirstChild("Blade") then
         return "Murderer"
     end
@@ -202,10 +198,10 @@ local function updateChamsForPlayer(player)
     
     if espState.chamsMurder and role == "Murderer" then
         shouldShow = true
-        color = Color3.fromHex("#FF0000") -- Красный для Murder
+        color = Color3.fromHex("#FF0000")
     elseif espState.chamsSheriff and role == "Sheriff" then
         shouldShow = true
-        color = Color3.fromHex("#0000FF") -- Синий для Sheriff
+        color = Color3.fromHex("#0000FF")
     end
     
     if shouldShow then
@@ -251,15 +247,11 @@ StartChamsLoop()
 
 -- ══════════════ WALLSHOT SYSTEM ══════════════
 local wallShotHooked = false
-local originalRaycast = workspace.Raycast
-local originalFindPartOnRay = workspace.FindPartOnRay
-local originalFindPartOnRayWithIgnoreList = workspace.FindPartOnRayWithIgnoreList
 
 local function ApplyWallShot(state)
     mmState.wallShot = state
     
     if state and not wallShotHooked then
-        -- Хук через метатаблицу workspace
         local mt = getrawmetatable(game)
         local oldNamecall = mt.__namecall
         
@@ -274,7 +266,6 @@ local function ApplyWallShot(state)
                 if method == "Raycast" and self == workspace then
                     local params = args[3]
                     if params and params.FilterDescendantsInstances then
-                        -- Оставляем только игроков в фильтре (игнорируем стены)
                         local newFilter = {}
                         for _, inst in ipairs(params.FilterDescendantsInstances) do
                             if inst:IsA("Model") and inst:FindFirstChildOfClass("Humanoid") then
@@ -286,7 +277,6 @@ local function ApplyWallShot(state)
                         params.FilterDescendantsInstances = newFilter
                     end
                 elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
-                    -- Для старых методов
                     if method == "FindPartOnRayWithIgnoreList" and args[2] then
                         local newFilter = {}
                         for _, inst in ipairs(args[2]) do
@@ -310,7 +300,6 @@ end
 -- ══════════════ ANTI-FLING SYSTEM ══════════════
 local antiFlingLoop
 local lastGoodPositions = {}
-local lastGoodCFrames = {}
 
 local function ApplyAntiFling(state)
     mmState.antiFling = state
@@ -326,22 +315,18 @@ local function ApplyAntiFling(state)
             local hum = char:FindFirstChildOfClass("Humanoid")
             if not root or not hum or hum.Health <= 0 then return end
             
-            -- Сохраняем последнюю хорошую позицию
             local rootVel = root.AssemblyLinearVelocity
             local rootAngVel = root.AssemblyAngularVelocity
             
-            -- Если скорость аномально высокая (флинг)
             local linearMag = rootVel.Magnitude
             local angularMag = rootAngVel.Magnitude
             
             if linearMag > 500 or angularMag > 500 then
-                -- Восстанавливаем позицию
                 if lastGoodPositions[char] then
                     root.CFrame = lastGoodPositions[char]
                     root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                     
-                    -- Деактивируем и реактивируем физику
                     for _, part in ipairs(char:GetDescendants()) do
                         if part:IsA("BasePart") and part:CanSetNetworkOwnership() then
                             part:SetNetworkOwner(nil)
@@ -349,13 +334,11 @@ local function ApplyAntiFling(state)
                     end
                 end
             else
-                -- Сохраняем хорошую позицию (только если не падаем)
                 if linearMag < 100 then
                     lastGoodPositions[char] = root.CFrame
                 end
             end
             
-            -- Проверяем угловую скорость (вращение - частый метод флинга)
             if angularMag > 300 then
                 root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                 if lastGoodPositions[char] then
@@ -487,32 +470,51 @@ Menu.Visible = false; Menu.Parent = GUI
 Corner(Menu, 14)
 LIVE.MenuStroke = Stroke(Menu, CFG.Accent, 1.5)
 
--- Водяной знак
+-- ══════════════ ВОДЯНОЙ ЗНАК (FIXED) ══════════════
 local WM = Instance.new("Frame")
+WM.Name = "SeraphiCA_Watermark"
 WM.Size = UDim2.new(0, 210, 0, 34)
 WM.Position = UDim2.new(0.5, -105, 0, 14)
 WM.BackgroundColor3 = CFG.Panel
-WM.BackgroundTransparency = 1
+WM.BackgroundTransparency = 0.15  -- ФИКС: сразу видимая, без анимации
+WM.BorderSizePixel = 0
+WM.Active = true  -- ФИКС: перехватывает клики
 WM.Parent = GUI
 Corner(WM, 9)
 LIVE.WM.Stroke = Stroke(WM, CFG.WMColor, 1.4)
 
-local wmDot = Instance.new("Frame")
-wmDot.Size = UDim2.new(0, 7, 0, 7); wmDot.Position = UDim2.new(0, 11, 0.5, -3.5)
-wmDot.BorderSizePixel = 0; wmDot.Parent = WM
-Corner(wmDot, 4)
-LIVE.WM.Dot = wmDot; wmDot.BackgroundColor3 = CFG.WMColor
+-- Кнопка-обёртка (поверх всего в WM, ZIndex = 5)
+local wmBtn = Instance.new("TextButton")
+wmBtn.Name = "WM_ClickArea"
+wmBtn.Size = UDim2.new(1, 0, 1, 0)
+wmBtn.Position = UDim2.new(0, 0, 0, 0)
+wmBtn.BackgroundColor3 = CFG.Panel
+wmBtn.BackgroundTransparency = 1  -- Прозрачная, но кликабельная
+wmBtn.Text = ""
+wmBtn.AutoButtonColor = false
+wmBtn.ZIndex = 5  -- ФИКС: поверх всех элементов внутри WM
+wmBtn.Parent = WM
 
+-- Точка (ZIndex = 2, под кнопкой по клику но видна)
+local wmDot = Instance.new("Frame")
+wmDot.Name = "WM_Dot"
+wmDot.Size = UDim2.new(0, 7, 0, 7)
+wmDot.Position = UDim2.new(0, 11, 0.5, -3.5)
+wmDot.BorderSizePixel = 0
+wmDot.ZIndex = 2
+wmDot.Parent = WM
+Corner(wmDot, 4)
+LIVE.WM.Dot = wmDot
+wmDot.BackgroundColor3 = CFG.WMColor
+
+-- Текст (ZIndex = 2, под кнопкой по клику но виден)
 local wmTxt = Lbl(WM, "SeraphiCA  <font color='#454A6E'>|</font>  v5.0",
 UDim2.new(1, -32, 1, 0), CFG.TxtPri, Enum.Font.GothamBold, 13)
 wmTxt.Position = UDim2.new(0, 26, 0, 0)
+wmTxt.ZIndex = 2
 LIVE.WM.Text = wmTxt
 
-local wmBtn = Instance.new("TextButton")
-wmBtn.Size = UDim2.new(1, 0, 1, 0); wmBtn.BackgroundTransparency = 1
-wmBtn.Text = ""; wmBtn.Parent = WM
-
--- Шапка
+-- ══════════════ ШАПКА МЕНЮ ══════════════
 local Head = Instance.new("Frame")
 Head.Size = UDim2.new(1, 0, 0, 50); Head.BackgroundColor3 = CFG.Panel
 Head.BorderSizePixel = 0; Head.Parent = Menu
@@ -611,8 +613,10 @@ UDim2.new(1,-70,0,14), CFG.TxtMut, Enum.Font.Gotham, 10).Position = UDim2.new(0,
 
 local mmTrack = Instance.new("Frame")
 mmTrack.Size = UDim2.new(0,42,0,22); mmTrack.Position = UDim2.new(1,-56,0,16)
-mmTrack.BackgroundColor3 = CFG.Panel; mmTrack.BorderSizePixel = 0; mmCard.Parent = mmCard
+mmTrack.BackgroundColor3 = CFG.Panel; mmTrack.BorderSizePixel = 0
+mmTrack.Parent = mmCard  -- ФИКС: было mmCard.Parent = mmCard (опечатка!)
 Corner(mmTrack, 11)
+
 local mmKnob = Instance.new("Frame")
 mmKnob.Size = UDim2.new(0,16,0,16); mmKnob.Position = UDim2.new(0,3,0.5,-8)
 mmKnob.BackgroundColor3 = CFG.TxtMut; mmKnob.BorderSizePixel = 0; mmKnob.Parent = mmTrack
@@ -651,7 +655,7 @@ mmBtn.MouseButton1Click:Connect(function()
     Tw(mmCard, { Size = UDim2.new(1, 0, 0, mmOn and MM_EXPD or COLL) }, 0.22):Play()
 end)
 
--- ══════════════ СТРАНИЦА EE (Только чамсы) ══════════════
+-- ══════════════ СТРАНИЦА EE ══════════════
 local pEE = NewPage("EE"); Title(pEE, "EE", "ChamsMurder · ChamsSheriff")
 
 local espCard = Instance.new("Frame")
@@ -783,7 +787,6 @@ ColorSection("Watermark Color", ApplyWM, function() return CFG.WMColor end)
 
 -- ══════════════ ВКЛАДКИ ══════════════
 local function SwitchTab(name)
-    -- Блокировка вкладки AA
     if name == "AA" then
         Notify("SeraphiCA", "* not available yet. *", 3)
         return
@@ -809,7 +812,7 @@ for _, name in ipairs({ "AA", "MM", "EE", "SS" }) do
     b.MouseButton1Click:Connect(function() SwitchTab(name) end)
 end
 
--- Открываем вкладку MM по умолчанию (AA заблокирована)
+-- Стартовая вкладка — MM
 Pages["MM"].Visible = true
 for _, t in ipairs(LIVE.Tabs) do
     if t.name == "MM" then
@@ -819,7 +822,7 @@ for _, t in ipairs(LIVE.Tabs) do
     end
 end
 
--- ══════════════ ОТКРЫТИЕ / ЗАКРЫТИЕ ══════════════
+-- ══════════════ ОТКРЫТИЕ / ЗАКРЫТИЕ МЕНЮ ══════════════
 local isOpen = false
 local function OpenMenu()
     isOpen = true; Menu.Visible = true
@@ -832,9 +835,12 @@ local function CloseMenu()
     local t = Tw(Menu, { Size = UDim2.new(0,CFG.MenuW*0.9,0,CFG.MenuH*0.9), BackgroundTransparency = 1 }, 0.2)
     t:Play(); t.Completed:Wait(); Menu.Visible = false
 end
+
+-- ФИКС: привязка клика по ватермарку
 wmBtn.MouseButton1Click:Connect(function()
     if isOpen then task.spawn(CloseMenu) else OpenMenu() end
 end)
+
 closeBtn.MouseButton1Click:Connect(function() task.spawn(CloseMenu) end)
 UserInputService.InputBegan:Connect(function(i, gp)
     if gp then return end
@@ -852,7 +858,7 @@ local function MakeDrag(frame, handle)
             dragging = true; startInput = i.Position; startPos = frame.Position
             i.Changed:Connect(function()
                 if i.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
+            end])
         end
     end)
     UserInputService.InputChanged:Connect(function(i)
@@ -869,8 +875,7 @@ MakeDrag(Menu, Head)
 MakeDrag(WM, WM)
 
 -- ══════════════ СТАРТ ══════════════
-Tw(WM, { BackgroundTransparency = 0.15 }, 0.4):Play()
-task.delay(0.4, OpenMenu)
+task.delay(0.3, OpenMenu)
 
 -- ══════════════ ОЧИСТКА ПРИ РЕСПАВНЕ ══════════════
 LocalPlayer.CharacterAdded:Connect(function()
@@ -882,4 +887,4 @@ LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 
-Notify("SeraphiCA", "Loaded! MM2 Edition v5.0", 4)
+Notify("SeraphiCA", "Loaded! MM2 Edition v5.0 (Hotfix)", 4)

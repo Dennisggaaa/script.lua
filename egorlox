@@ -19,16 +19,16 @@ if not PlayerGui then PlayerGui = game:GetService("CoreGui") end
 -- ══════════════ КОНФИГ ══════════════
 local CFG = {
     MenuW = 720, MenuH = 520, Spd = 0.25,
-    BG      = Color3.fromHex("#0D0F1A"),
-    Panel   = Color3.fromHex("#131629"),
-    Card    = Color3.fromHex("#1B1F36"),
-    Accent  = Color3.fromHex("#5B6EF5"),
-    WMColor = Color3.fromHex("#5B6EF5"),
-    TabOff  = Color3.fromHex("#1B1F36"),
-    TxtPri  = Color3.fromHex("#EAEEFF"),
-    TxtSec  = Color3.fromHex("#7A82B0"),
-    TxtMut  = Color3.fromHex("#454A6E"),
-    Sep     = Color3.fromHex("#232742"),
+    BG      = Color3.fromRGB(13, 15, 26),
+    Panel   = Color3.fromRGB(19, 22, 41),
+    Card    = Color3.fromRGB(27, 31, 54),
+    Accent  = Color3.fromRGB(91, 110, 245),
+    WMColor = Color3.fromRGB(91, 110, 245),
+    TabOff  = Color3.fromRGB(27, 31, 54),
+    TxtPri  = Color3.fromRGB(234, 238, 255),
+    TxtSec  = Color3.fromRGB(122, 130, 176),
+    TxtMut  = Color3.fromRGB(69, 74, 110),
+    Sep     = Color3.fromRGB(35, 39, 66),
 }
 
 local LIVE = { Accents = {}, WM = {}, MenuStroke = nil, Tabs = {} }
@@ -162,10 +162,10 @@ local function updateEspForPlayer(player)
 
     if role == "Murderer" and espState.chamsMurder then
         shouldHighlight = true
-        color = Color3.fromHex("#FF0040")
+        color = Color3.fromRGB(255, 0, 64) -- Красный
     elseif role == "Sheriff" and espState.chamsSherif then
         shouldHighlight = true
-        color = Color3.fromHex("#00AAFF")
+        color = Color3.fromRGB(0, 170, 255) -- Синий
     end
 
     if shouldHighlight then
@@ -211,11 +211,8 @@ end)
 StartEspLoop()
 
 -- ══════════════ WALLSHOT HOOK ══════════════
-local mt = getrawmetatable(game)
-local oldNamecall = mt.__namecall
-setreadonly(mt, false)
-
-mt.__namecall = function(self, ...)
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
     if method == "Raycast" and self == workspace and mmState.wallShot then
         local args = {...}
@@ -239,16 +236,15 @@ mt.__namecall = function(self, ...)
         local currentOrigin = origin
         local remainingDir = direction
         
-        -- Идём сквозь стены до 15 раз, пока не найдём игрока
+        -- Идём сквозь стены до 15 раз
         for i = 1, 15 do
             local result = oldNamecall(self, currentOrigin, remainingDir, newParams)
             if not result then return nil end
             
             local model = result.Instance:FindFirstAncestorOfClass("Model")
             if model and model:FindFirstChildOfClass("Humanoid") then
-                return result -- Нашли игрока, возвращаем попадание
+                return result
             else
-                -- Это стена, добавляем в игнор и продолжаем луч
                 table.insert(filter, result.Instance)
                 currentOrigin = result.Position
                 remainingDir = origin + direction - currentOrigin
@@ -258,8 +254,7 @@ mt.__namecall = function(self, ...)
         return oldNamecall(self, origin, direction, params)
     end
     return oldNamecall(self, ...)
-end
-setreadonly(mt, true)
+end)
 
 -- ══════════════ ANTI-FLING SYSTEM ══════════════
 local antiFlingLoop
@@ -278,7 +273,6 @@ local function ApplyAntiFling(state)
                     
                     -- Если скорость слишком высокая (нас флингают)
                     if linVel.Magnitude > 200 or angVel.Magnitude > 100 then
-                        -- Сбрасываем импульс, оставляя только гравитацию
                         hrp.AssemblyLinearVelocity = Vector3.new(0, linVel.Y, 0)
                         hrp.AssemblyAngularVelocity = Vector3.zero
                     end
@@ -500,7 +494,6 @@ end
 
 -- ══════════════ СТРАНИЦА AA (ПУСТАЯ) ══════════════
 local pAA = NewPage("AA"); Title(pAA, "AA", "Not available")
--- Функционал удалён
 
 -- ══════════════ СТРАНИЦА MM ══════════════
 local pMM = NewPage("MM"); Title(pMM, "MM", "WallShot · AntiFling")
@@ -608,7 +601,6 @@ espBtn.Size = UDim2.new(1,0,1,0); espBtn.BackgroundTransparency = 1; espBtn.Text
 local espOn = false
 espBtn.MouseButton1Click:Connect(function()
     espOn = not espOn
-    -- Если выключили главную кнопку, отключаем всё
     if not espOn then
         espState.chamsMurder = false
         espState.chamsSherif = false
@@ -641,9 +633,9 @@ local function ApplyWM(col)
 end
 
 local PALETTE = {
-    { "Indigo", "#5B6EF5" }, { "Cyan", "#39D3E0" }, { "Mint", "#4ECCA3" },
-    { "Lime", "#A8E063" }, { "Amber", "#FFB347" }, { "Coral", "#FF7A59" },
-    { "Rose", "#FF5F7E" }, { "Purple", "#A46BFF" }, { "White", "#EAEEFF" },
+    { "Indigo",  Color3.fromRGB(91, 110, 245) }, { "Cyan",   Color3.fromRGB(57, 211, 224) }, { "Mint",   Color3.fromRGB(78, 204, 163) },
+    { "Lime",    Color3.fromRGB(168, 224, 99) }, { "Amber",  Color3.fromRGB(255, 179, 71) }, { "Coral",  Color3.fromRGB(255, 122, 89) },
+    { "Rose",    Color3.fromRGB(255, 95, 126) }, { "Purple", Color3.fromRGB(164, 107, 255) }, { "White",  Color3.fromRGB(234, 238, 255) },
 }
 
 local function ColorSection(titleTxt, applyFn, getCur)
@@ -665,13 +657,12 @@ local function ColorSection(titleTxt, applyFn, getCur)
     gl.CellSize = UDim2.new(0,34,0,34); gl.CellPadding = UDim2.new(0,8,0,8); gl.Parent = grid
 
     for _, c in ipairs(PALETTE) do
-        local col = Color3.fromHex(c[2])
         local sw = Instance.new("TextButton")
-        sw.BackgroundColor3 = col; sw.Text = ""; sw.AutoButtonColor = false
+        sw.BackgroundColor3 = c; sw.Text = ""; sw.AutoButtonColor = false
         sw.BorderSizePixel = 0; sw.Parent = grid
         Corner(sw, 8); Stroke(sw, CFG.Sep, 1)
         sw.MouseButton1Click:Connect(function()
-            applyFn(col); preview.BackgroundColor3 = col
+            applyFn(c); preview.BackgroundColor3 = c
         end)
     end
 
@@ -686,9 +677,15 @@ local function ColorSection(titleTxt, applyFn, getCur)
     box.FocusLost:Connect(function()
         local t = box.Text:gsub("%s","")
         if t:sub(1,1) ~= "#" then t = "#"..t end
-        local ok, col = pcall(Color3.fromHex, t)
-        if ok then applyFn(col); preview.BackgroundColor3 = col; box.Text = t:upper()
-        else box.Text = "" end
+        local r = tonumber(t:sub(2,3), 16)
+        local g = tonumber(t:sub(4,5), 16)
+        local b = tonumber(t:sub(6,7), 16)
+        if r and g and b then
+            local col = Color3.fromRGB(r, g, b)
+            applyFn(col); preview.BackgroundColor3 = col; box.Text = t:upper()
+        else
+            box.Text = ""
+        end
     end)
 end
 
@@ -717,7 +714,6 @@ for _, name in ipairs({ "AA", "MM", "EE", "SS" }) do
     
     b.MouseButton1Click:Connect(function()
         if name == "AA" then
-            -- Не переключаемся, показываем сообщение
             ShowMessage("*not available yet.*")
         else
             SwitchTab(name)
@@ -746,7 +742,7 @@ closeBtn.MouseButton1Click:Connect(function() task.spawn(CloseMenu) end)
 UserInputService.InputBegan:Connect(function(i, gp)
     if gp then return end
     if i.KeyCode == Enum.KeyCode.RightShift then
-        if isOpen then task.spawn(CloseMenu) else OpenMenu() fi
+        if isOpen then task.spawn(CloseMenu) else OpenMenu() end
     end
 end)
 

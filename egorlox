@@ -1,552 +1,960 @@
---[[
-    SeraphiCA UI Menu
-    UI-only LocalScript using standard Roblox APIs.
-    Recommended location: StarterPlayer > StarterPlayerScripts
-    or StarterGui as a LocalScript.
+-[[
+    SeraphiCA Tablet UI v2
+    • Размер интерфейса: 780 x 500 px
+    • Нажатие на ватермарк открывает/закрывает меню
+    • Адаптация под планшеты
+    • Вкладки: Aim-Bot / Misc / Esp / Settings
+    • Только интерфейс и слоты-заготовки
 ]]
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-local oldGui = playerGui:FindFirstChild("SeraphiCA_UI")
-if oldGui then
-    oldGui:Destroy()
+if playerGui:FindFirstChild("SeraphiCA_Tablet") then
+    playerGui.SeraphiCA_Tablet:Destroy()
 end
 
-local COLORS = {
-    Background = Color3.fromRGB(14, 16, 23),
-    Surface = Color3.fromRGB(22, 25, 35),
-    SurfaceHover = Color3.fromRGB(30, 34, 47),
-    Text = Color3.fromRGB(239, 242, 255),
-    Muted = Color3.fromRGB(137, 145, 170),
-    Accent = Color3.fromRGB(142, 92, 255),
-    Outline = Color3.fromRGB(53, 58, 78),
+--// ТЕМА
+local Theme = {
+    Accent = Color3.fromRGB(124, 92, 255),
+    Accent2 = Color3.fromRGB(73, 190, 255),
+    Watermark = Color3.fromRGB(155, 127, 255),
+    Base = Color3.fromRGB(9, 10, 16),
+    Surface = Color3.fromRGB(15, 16, 25),
+    Surface2 = Color3.fromRGB(22, 23, 35),
+    Surface3 = Color3.fromRGB(29, 30, 45),
+    Text = Color3.fromRGB(244, 245, 252),
+    Text2 = Color3.fromRGB(161, 164, 187),
+    Text3 = Color3.fromRGB(105, 108, 130),
+    Green = Color3.fromRGB(89, 221, 151)
 }
 
-local function create(className, properties, parent)
-    local instance = Instance.new(className)
-    for property, value in pairs(properties or {}) do
-        instance[property] = value
+local function New(className, props, parent)
+    local object = Instance.new(className)
+    for property, value in pairs(props or {}) do
+        object[property] = value
     end
-    instance.Parent = parent
-    return instance
+    object.Parent = parent
+    return object
 end
 
-local function corner(parent, radius)
-    return create("UICorner", {CornerRadius = UDim.new(0, radius)}, parent)
+local function Round(parent, pixels)
+    return New("UICorner", {CornerRadius = UDim.new(0, pixels)}, parent)
 end
 
-local function stroke(parent, color, thickness, transparency)
-    return create("UIStroke", {
+local function Stroke(parent, color, transparency, thickness)
+    return New("UIStroke", {
         Color = color,
-        Thickness = thickness or 1,
         Transparency = transparency or 0,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        Thickness = thickness or 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     }, parent)
 end
 
-local screenGui = create("ScreenGui", {
-    Name = "SeraphiCA_UI",
+local function Gradient(parent, colorA, colorB, rotation)
+    return New("UIGradient", {
+        Color = ColorSequence.new(colorA, colorB),
+        Rotation = rotation or 0
+    }, parent)
+end
+
+local function Tween(object, goal, duration, style)
+    local animation = TweenService:Create(
+        object,
+        TweenInfo.new(duration or 0.2, style or Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+        goal
+    )
+    animation:Play()
+    return animation
+end
+
+local gui = New("ScreenGui", {
+    Name = "SeraphiCA_Tablet",
     ResetOnSpawn = false,
-    IgnoreGuiInset = false,
+    IgnoreGuiInset = true,
     ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    DisplayOrder = 999999
 }, playerGui)
 
--- Soft screen tint behind the main window.
-local dim = create("Frame", {
-    Name = "Dim",
-    Size = UDim2.fromScale(1, 1),
-    BackgroundColor3 = Color3.fromRGB(4, 5, 9),
-    BackgroundTransparency = 0.62,
+--// ВАТЕРМАРК — ВСЕГДА ОСТАЁТСЯ НА ЭКРАНЕ
+local watermarkShadow = New("Frame", {
+    Name = "WatermarkShadow",
+    AnchorPoint = Vector2.new(0.5, 0),
+    Position = UDim2.new(0.5, 0, 0, 7),
+    Size = UDim2.fromOffset(282, 40),
+    BackgroundColor3 = Color3.new(0, 0, 0),
+    BackgroundTransparency = 0.5,
     BorderSizePixel = 0,
-    ZIndex = 0,
-}, screenGui)
+    ZIndex = 99
+}, gui)
+Round(watermarkShadow, 12)
 
--- Top-centred watermark.
-local watermark = create("TextLabel", {
+local watermark = New("TextButton", {
     Name = "Watermark",
     AnchorPoint = Vector2.new(0.5, 0),
-    Position = UDim2.new(0.5, 0, 0, 10),
-    Size = UDim2.fromOffset(220, 34),
-    BackgroundColor3 = COLORS.Surface,
-    BackgroundTransparency = 0.05,
+    Position = UDim2.new(0.5, 0, 0, 3),
+    Size = UDim2.fromOffset(282, 40),
+    BackgroundColor3 = Theme.Surface,
+    BackgroundTransparency = 0.02,
     BorderSizePixel = 0,
-    Text = "SeraphiCA | 00:00",
-    TextColor3 = COLORS.Text,
-    Font = Enum.Font.GothamSemibold,
-    TextSize = 14,
-    ZIndex = 20,
-}, screenGui)
-corner(watermark, 10)
-local watermarkStroke = stroke(watermark, COLORS.Accent, 1.2, 0.15)
+    AutoButtonColor = false,
+    Text = "",
+    ZIndex = 100
+}, gui)
+Round(watermark, 12)
+local watermarkStroke = Stroke(watermark, Theme.Watermark, 0.18, 1.2)
+local watermarkGradient = Gradient(
+    watermark,
+    Color3.fromRGB(27, 24, 43),
+    Color3.fromRGB(12, 14, 23),
+    12
+)
 
-local watermarkGradient = create("UIGradient", {
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 35, 49)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(19, 21, 30)),
-    }),
-    Rotation = 90,
+local statusDotGlow = New("Frame", {
+    AnchorPoint = Vector2.new(0, 0.5),
+    Position = UDim2.new(0, 15, 0.5, 0),
+    Size = UDim2.fromOffset(14, 14),
+    BackgroundColor3 = Theme.Green,
+    BackgroundTransparency = 0.75,
+    BorderSizePixel = 0,
+    ZIndex = 101
+}, watermark)
+Round(statusDotGlow, 20)
+
+local statusDot = New("Frame", {
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.fromScale(0.5, 0.5),
+    Size = UDim2.fromOffset(6, 6),
+    BackgroundColor3 = Theme.Green,
+    BorderSizePixel = 0,
+    ZIndex = 102
+}, statusDotGlow)
+Round(statusDot, 20)
+
+local watermarkTitle = New("TextLabel", {
+    Position = UDim2.fromOffset(38, 0),
+    Size = UDim2.fromOffset(110, 40),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamBold,
+    Text = "SERAPHICA",
+    TextColor3 = Theme.Text,
+    TextSize = 13,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 102
 }, watermark)
 
--- Main window: 700 px wide on larger displays and responsive on phones.
-local main = create("Frame", {
+local watermarkDivider = New("Frame", {
+    Position = UDim2.fromOffset(151, 12),
+    Size = UDim2.fromOffset(1, 16),
+    BackgroundColor3 = Theme.Text3,
+    BackgroundTransparency = 0.35,
+    BorderSizePixel = 0,
+    ZIndex = 102
+}, watermark)
+
+local watermarkTime = New("TextLabel", {
+    Position = UDim2.fromOffset(165, 0),
+    Size = UDim2.fromOffset(56, 40),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamSemibold,
+    Text = "00:00",
+    TextColor3 = Theme.Watermark,
+    TextSize = 13,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 102
+}, watermark)
+
+local watermarkHint = New("TextLabel", {
+    AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, -13, 0, 0),
+    Size = UDim2.fromOffset(38, 40),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamBold,
+    Text = "−",
+    TextColor3 = Theme.Text2,
+    TextSize = 18,
+    ZIndex = 102
+}, watermark)
+
+--// ТЕНЬ ОСНОВНОГО ОКНА
+local mainShadow = New("Frame", {
+    Name = "MainShadow",
+    AnchorPoint = Vector2.new(0.5, 0),
+    Position = UDim2.new(0.5, 0, 0, 57),
+    Size = UDim2.fromOffset(792, 512),
+    BackgroundColor3 = Color3.new(0, 0, 0),
+    BackgroundTransparency = 0.55,
+    BorderSizePixel = 0,
+    ZIndex = 2
+}, gui)
+Round(mainShadow, 23)
+
+--// ОСНОВНОЕ ОКНО: 780 PX
+local main = New("Frame", {
     Name = "Main",
-    AnchorPoint = Vector2.new(0.5, 0.5),
-    Position = UDim2.fromScale(0.5, 0.52),
-    Size = UDim2.fromOffset(700, 420),
-    BackgroundColor3 = COLORS.Background,
+    AnchorPoint = Vector2.new(0.5, 0),
+    Position = UDim2.new(0.5, 0, 0, 53),
+    Size = UDim2.fromOffset(780, 500),
+    BackgroundColor3 = Theme.Base,
     BorderSizePixel = 0,
     ClipsDescendants = true,
-    ZIndex = 2,
-}, screenGui)
-corner(main, 18)
-local mainStroke = stroke(main, COLORS.Outline, 1.2, 0.08)
+    ZIndex = 3
+}, gui)
+Round(main, 20)
+local mainStroke = Stroke(main, Theme.Accent, 0.48, 1.2)
+Gradient(main, Color3.fromRGB(11, 12, 20), Color3.fromRGB(7, 8, 13), 125)
 
-create("UISizeConstraint", {
-    MaxSize = Vector2.new(700, 420),
-    MinSize = Vector2.new(330, 300),
-}, main)
+-- Размер остаётся 780 px логически, а на маленьком экране аккуратно масштабируется
+local mainScale = New("UIScale", {Scale = 1}, main)
+local shadowScale = New("UIScale", {Scale = 1}, mainShadow)
 
-local function fitToViewport()
+local function updateTabletScale()
     local camera = workspace.CurrentCamera
     if not camera then return end
     local viewport = camera.ViewportSize
-    local width = math.min(700, math.max(330, viewport.X - 24))
-    local height = math.min(420, math.max(300, viewport.Y - 100))
-    main.Size = UDim2.fromOffset(width, height)
+    local wanted = math.min(1, (viewport.X - 28) / 792, (viewport.Y - 70) / 512)
+    mainScale.Scale = wanted
+    shadowScale.Scale = wanted
 end
 
-fitToViewport()
-if workspace.CurrentCamera then
-    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitToViewport)
+local viewportConnection
+local function connectViewport()
+    if viewportConnection then viewportConnection:Disconnect() end
+    if workspace.CurrentCamera then
+        viewportConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateTabletScale)
+    end
+    updateTabletScale()
 end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(connectViewport)
+connectViewport()
 
--- Header.
-local header = create("Frame", {
-    Name = "Header",
-    Size = UDim2.new(1, 0, 0, 68),
-    BackgroundColor3 = COLORS.Surface,
+-- Декоративные свечения
+local glowOne = New("Frame", {
+    Position = UDim2.fromOffset(-115, -150),
+    Size = UDim2.fromOffset(390, 390),
+    BackgroundColor3 = Theme.Accent,
+    BackgroundTransparency = 0.91,
     BorderSizePixel = 0,
-    ZIndex = 3,
+    ZIndex = 3
+}, main)
+Round(glowOne, 250)
+
+local glowTwo = New("Frame", {
+    AnchorPoint = Vector2.new(1, 1),
+    Position = UDim2.new(1, 120, 1, 140),
+    Size = UDim2.fromOffset(370, 370),
+    BackgroundColor3 = Theme.Accent2,
+    BackgroundTransparency = 0.95,
+    BorderSizePixel = 0,
+    ZIndex = 3
+}, main)
+Round(glowTwo, 250)
+
+--// ЛЕВАЯ НАВИГАЦИЯ
+local sidebar = New("Frame", {
+    Name = "Sidebar",
+    Size = UDim2.new(0, 190, 1, 0),
+    BackgroundColor3 = Theme.Surface,
+    BackgroundTransparency = 0.18,
+    BorderSizePixel = 0,
+    ZIndex = 5
 }, main)
 
-create("UIGradient", {
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 31, 44)),
-        ColorSequenceKeypoint.new(1, COLORS.Surface),
-    }),
-    Rotation = 10,
-}, header)
+local sidebarLine = New("Frame", {
+    AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, 0, 0, 0),
+    Size = UDim2.new(0, 1, 1, 0),
+    BackgroundColor3 = Theme.Surface3,
+    BackgroundTransparency = 0.2,
+    BorderSizePixel = 0,
+    ZIndex = 6
+}, sidebar)
 
-local title = create("TextLabel", {
-    Position = UDim2.fromOffset(22, 12),
-    Size = UDim2.new(1, -80, 0, 24),
+local brandIcon = New("Frame", {
+    Position = UDim2.fromOffset(18, 18),
+    Size = UDim2.fromOffset(46, 46),
+    BackgroundColor3 = Theme.Accent,
+    BorderSizePixel = 0,
+    ZIndex = 7
+}, sidebar)
+Round(brandIcon, 14)
+local brandGradient = Gradient(brandIcon, Theme.Accent, Theme.Accent2, 45)
+
+New("TextLabel", {
+    Size = UDim2.fromScale(1, 1),
     BackgroundTransparency = 1,
-    Text = "SERAPHICA",
-    TextColor3 = COLORS.Text,
-    TextXAlignment = Enum.TextXAlignment.Left,
     Font = Enum.Font.GothamBold,
-    TextSize = 20,
-    ZIndex = 4,
-}, header)
+    Text = "S",
+    TextColor3 = Color3.new(1, 1, 1),
+    TextSize = 21,
+    ZIndex = 8
+}, brandIcon)
 
-local subtitle = create("TextLabel", {
-    Position = UDim2.fromOffset(23, 36),
-    Size = UDim2.new(1, -90, 0, 18),
+New("TextLabel", {
+    Position = UDim2.fromOffset(76, 20),
+    Size = UDim2.fromOffset(100, 21),
     BackgroundTransparency = 1,
-    Text = "clean interface  •  mobile ready",
-    TextColor3 = COLORS.Muted,
+    Font = Enum.Font.GothamBold,
+    Text = "SeraphiCA",
+    TextColor3 = Theme.Text,
+    TextSize = 15,
     TextXAlignment = Enum.TextXAlignment.Left,
-    Font = Enum.Font.Gotham,
-    TextSize = 11,
-    ZIndex = 4,
-}, header)
-
-local accentDot = create("Frame", {
-    AnchorPoint = Vector2.new(1, 0.5),
-    Position = UDim2.new(1, -24, 0.5, 0),
-    Size = UDim2.fromOffset(11, 11),
-    BackgroundColor3 = COLORS.Accent,
-    BorderSizePixel = 0,
-    ZIndex = 4,
-}, header)
-corner(accentDot, 99)
-stroke(accentDot, COLORS.Text, 1, 0.55)
-
--- Sidebar and content.
-local sidebar = create("Frame", {
-    Position = UDim2.fromOffset(0, 68),
-    Size = UDim2.new(0, 170, 1, -68),
-    BackgroundColor3 = Color3.fromRGB(17, 19, 28),
-    BorderSizePixel = 0,
-    ZIndex = 3,
-}, main)
-
-create("UIListLayout", {
-    Padding = UDim.new(0, 8),
-    HorizontalAlignment = Enum.HorizontalAlignment.Center,
-    SortOrder = Enum.SortOrder.LayoutOrder,
-}, sidebar)
-create("UIPadding", {
-    PaddingTop = UDim.new(0, 18),
-    PaddingLeft = UDim.new(0, 12),
-    PaddingRight = UDim.new(0, 12),
+    ZIndex = 7
 }, sidebar)
 
-local content = create("Frame", {
-    Position = UDim2.fromOffset(170, 68),
-    Size = UDim2.new(1, -170, 1, -68),
+New("TextLabel", {
+    Position = UDim2.fromOffset(77, 42),
+    Size = UDim2.fromOffset(100, 16),
     BackgroundTransparency = 1,
+    Font = Enum.Font.GothamMedium,
+    Text = "TABLET EDITION",
+    TextColor3 = Theme.Text3,
+    TextSize = 9,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 7
+}, sidebar)
+
+New("TextLabel", {
+    Position = UDim2.fromOffset(18, 91),
+    Size = UDim2.fromOffset(150, 16),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamBold,
+    Text = "NAVIGATION",
+    TextColor3 = Theme.Text3,
+    TextSize = 9,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 7
+}, sidebar)
+
+local navHolder = New("Frame", {
+    Position = UDim2.fromOffset(12, 116),
+    Size = UDim2.new(1, -24, 0, 244),
+    BackgroundTransparency = 1,
+    ZIndex = 7
+}, sidebar)
+New("UIListLayout", {
+    Padding = UDim.new(0, 8),
+    SortOrder = Enum.SortOrder.LayoutOrder
+}, navHolder)
+
+local profile = New("Frame", {
+    AnchorPoint = Vector2.new(0, 1),
+    Position = UDim2.new(0, 13, 1, -14),
+    Size = UDim2.new(1, -26, 0, 58),
+    BackgroundColor3 = Theme.Surface2,
+    BackgroundTransparency = 0.18,
     BorderSizePixel = 0,
-    ZIndex = 3,
+    ZIndex = 7
+}, sidebar)
+Round(profile, 13)
+Stroke(profile, Theme.Surface3, 0.25, 1)
+
+local avatar = New("Frame", {
+    Position = UDim2.fromOffset(10, 10),
+    Size = UDim2.fromOffset(38, 38),
+    BackgroundColor3 = Theme.Surface3,
+    BorderSizePixel = 0,
+    ZIndex = 8
+}, profile)
+Round(avatar, 11)
+
+New("TextLabel", {
+    Size = UDim2.fromScale(1, 1),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamBold,
+    Text = string.upper(string.sub(player.DisplayName, 1, 1)),
+    TextColor3 = Theme.Accent2,
+    TextSize = 16,
+    ZIndex = 9
+}, avatar)
+
+New("TextLabel", {
+    Position = UDim2.fromOffset(58, 11),
+    Size = UDim2.new(1, -66, 0, 18),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamSemibold,
+    Text = player.DisplayName,
+    TextColor3 = Theme.Text,
+    TextSize = 11,
+    TextTruncate = Enum.TextTruncate.AtEnd,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 8
+}, profile)
+
+New("TextLabel", {
+    Position = UDim2.fromOffset(58, 30),
+    Size = UDim2.new(1, -66, 0, 15),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.Gotham,
+    Text = "●  connected",
+    TextColor3 = Theme.Green,
+    TextSize = 9,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 8
+}, profile)
+
+--// КОНТЕНТ
+local content = New("Frame", {
+    Position = UDim2.fromOffset(190, 0),
+    Size = UDim2.new(1, -190, 1, 0),
+    BackgroundTransparency = 1,
+    ClipsDescendants = true,
+    ZIndex = 5
 }, main)
 
--- Keep sidebar usable on very narrow Android screens.
-local function updateLayout()
-    local narrow = main.AbsoluteSize.X < 500
-    sidebar.Size = UDim2.new(0, narrow and 120 or 170, 1, -68)
-    content.Position = UDim2.fromOffset(narrow and 120 or 170, 68)
-    content.Size = UDim2.new(1, narrow and -120 or -170, 1, -68)
+local contentHeader = New("Frame", {
+    Size = UDim2.new(1, 0, 0, 82),
+    BackgroundTransparency = 1,
+    ZIndex = 6
+}, content)
+
+local pageTitle = New("TextLabel", {
+    Position = UDim2.fromOffset(28, 19),
+    Size = UDim2.fromOffset(320, 29),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamBold,
+    Text = "Aim-Bot",
+    TextColor3 = Theme.Text,
+    TextSize = 23,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 7
+}, contentHeader)
+
+local pageSubtitle = New("TextLabel", {
+    Position = UDim2.fromOffset(29, 50),
+    Size = UDim2.fromOffset(380, 18),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.Gotham,
+    Text = "Configure this section using the prepared slot",
+    TextColor3 = Theme.Text2,
+    TextSize = 11,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 7
+}, contentHeader)
+
+local versionPill = New("TextLabel", {
+    AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, -27, 0, 25),
+    Size = UDim2.fromOffset(70, 28),
+    BackgroundColor3 = Theme.Surface2,
+    BackgroundTransparency = 0.12,
+    BorderSizePixel = 0,
+    Font = Enum.Font.GothamSemibold,
+    Text = "V2.0",
+    TextColor3 = Theme.Accent2,
+    TextSize = 10,
+    ZIndex = 7
+}, contentHeader)
+Round(versionPill, 9)
+Stroke(versionPill, Theme.Accent2, 0.65, 1)
+
+local pagesHolder = New("Frame", {
+    Position = UDim2.fromOffset(28, 82),
+    Size = UDim2.new(1, -56, 1, -106),
+    BackgroundTransparency = 1,
+    ClipsDescendants = true,
+    ZIndex = 6
+}, content)
+
+local navInfo = {
+    ["Aim-Bot"] = {icon = "◎", description = "Configure this section using the prepared slot"},
+    ["Misc"] = {icon = "✦", description = "Additional controls and utility options"},
+    ["Esp"] = {icon = "◇", description = "Visual configuration and display options"},
+    ["Settings"] = {icon = "⚙", description = "Personalize colors and interface appearance"}
+}
+
+local pageOrder = {"Aim-Bot", "Misc", "Esp", "Settings"}
+local navButtons = {}
+local pageFrames = {}
+local accentObjects = {}
+local activePage = "Aim-Bot"
+
+local function AddAccent(object, property)
+    table.insert(accentObjects, {object = object, property = property or "BackgroundColor3"})
 end
-main:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLayout)
-task.defer(updateLayout)
 
-local pages = {}
-local tabButtons = {}
-local currentPage
+local function createEmptySlot(parent, sectionName, order)
+    local card = New("Frame", {
+        Size = UDim2.new(1, 0, 0, 178),
+        BackgroundColor3 = Theme.Surface,
+        BackgroundTransparency = 0.03,
+        BorderSizePixel = 0,
+        LayoutOrder = order or 1,
+        ZIndex = 7
+    }, parent)
+    Round(card, 16)
+    local cardStroke = Stroke(card, Theme.Surface3, 0.08, 1)
 
-local function makePage(name, description)
-    local page = create("Frame", {
+    local topAccent = New("Frame", {
+        Size = UDim2.new(1, 0, 0, 3),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 8
+    }, card)
+    AddAccent(topAccent)
+    Gradient(topAccent, Theme.Accent, Theme.Accent2, 0)
+
+    local slotIcon = New("Frame", {
+        Position = UDim2.fromOffset(20, 22),
+        Size = UDim2.fromOffset(42, 42),
+        BackgroundColor3 = Theme.Surface3,
+        BorderSizePixel = 0,
+        ZIndex = 8
+    }, card)
+    Round(slotIcon, 12)
+
+    New("TextLabel", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = "+",
+        TextColor3 = Theme.Accent2,
+        TextSize = 22,
+        ZIndex = 9
+    }, slotIcon)
+
+    New("TextLabel", {
+        Position = UDim2.fromOffset(75, 21),
+        Size = UDim2.new(1, -96, 0, 24),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamSemibold,
+        Text = sectionName .. " module slot",
+        TextColor3 = Theme.Text,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 8
+    }, card)
+
+    New("TextLabel", {
+        Position = UDim2.fromOffset(75, 45),
+        Size = UDim2.new(1, -96, 0, 18),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.Gotham,
+        Text = "Empty component placeholder",
+        TextColor3 = Theme.Text2,
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 8
+    }, card)
+
+    local emptyArea = New("Frame", {
+        Position = UDim2.fromOffset(20, 82),
+        Size = UDim2.new(1, -40, 0, 72),
+        BackgroundColor3 = Theme.Surface2,
+        BackgroundTransparency = 0.27,
+        BorderSizePixel = 0,
+        ZIndex = 8
+    }, card)
+    Round(emptyArea, 12)
+    Stroke(emptyArea, Theme.Surface3, 0.26, 1)
+
+    New("TextLabel", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamMedium,
+        Text = "Ready for your future UI element",
+        TextColor3 = Theme.Text3,
+        TextSize = 11,
+        ZIndex = 9
+    }, emptyArea)
+end
+
+-- Создание страниц
+for _, name in ipairs(pageOrder) do
+    local page = New("ScrollingFrame", {
         Name = name .. "Page",
         Size = UDim2.fromScale(1, 1),
         BackgroundTransparency = 1,
-        Visible = false,
-        ZIndex = 4,
-    }, content)
-
-    create("UIPadding", {
-        PaddingTop = UDim.new(0, 22),
-        PaddingLeft = UDim.new(0, 24),
-        PaddingRight = UDim.new(0, 24),
-        PaddingBottom = UDim.new(0, 20),
-    }, page)
-
-    create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 28),
-        BackgroundTransparency = 1,
-        Text = name,
-        TextColor3 = COLORS.Text,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Font = Enum.Font.GothamBold,
-        TextSize = 22,
-        ZIndex = 5,
-    }, page)
-
-    create("TextLabel", {
-        Position = UDim2.fromOffset(0, 31),
-        Size = UDim2.new(1, 0, 0, 20),
-        BackgroundTransparency = 1,
-        Text = description,
-        TextColor3 = COLORS.Muted,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Font = Enum.Font.Gotham,
-        TextSize = 12,
-        ZIndex = 5,
-    }, page)
-
-    local slot = create("Frame", {
-        Name = "PlaceholderSlot",
-        Position = UDim2.fromOffset(0, 70),
-        Size = UDim2.new(1, 0, 0, 76),
-        BackgroundColor3 = COLORS.Surface,
         BorderSizePixel = 0,
-        ZIndex = 5,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = Theme.Accent,
+        Visible = name == activePage,
+        ZIndex = 7
+    }, pagesHolder)
+    New("UIListLayout", {
+        Padding = UDim.new(0, 13),
+        SortOrder = Enum.SortOrder.LayoutOrder
     }, page)
-    corner(slot, 12)
-    stroke(slot, COLORS.Outline, 1, 0.15)
-
-    create("TextLabel", {
-        Position = UDim2.fromOffset(16, 12),
-        Size = UDim2.new(1, -32, 0, 22),
-        BackgroundTransparency = 1,
-        Text = "Empty slot",
-        TextColor3 = COLORS.Text,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Font = Enum.Font.GothamSemibold,
-        TextSize = 14,
-        ZIndex = 6,
-    }, slot)
-
-    create("TextLabel", {
-        Position = UDim2.fromOffset(16, 37),
-        Size = UDim2.new(1, -32, 0, 20),
-        BackgroundTransparency = 1,
-        Text = "Your future control can be placed here.",
-        TextColor3 = COLORS.Muted,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Font = Enum.Font.Gotham,
-        TextSize = 11,
-        ZIndex = 6,
-    }, slot)
-
-    pages[name] = page
-    return page, slot
+    pageFrames[name] = page
 end
 
-local tabNames = {"Aim-Bot", "Misc", "Esp", "Settings"}
-local descriptions = {
-    ["Aim-Bot"] = "Interface placeholder — no gameplay logic attached.",
-    Misc = "Additional interface options.",
-    Esp = "Visual interface placeholder.",
-    Settings = "Personalise the menu and watermark colours.",
-}
+createEmptySlot(pageFrames["Aim-Bot"], "Aim-Bot", 1)
+createEmptySlot(pageFrames["Misc"], "Misc", 1)
+createEmptySlot(pageFrames["Esp"], "ESP", 1)
 
-for index, name in ipairs(tabNames) do
-    local button = create("TextButton", {
-        Name = name .. "Tab",
-        LayoutOrder = index,
-        Size = UDim2.new(1, 0, 0, 42),
-        BackgroundColor3 = COLORS.Surface,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        AutoButtonColor = false,
-        Text = "  " .. name,
-        TextColor3 = COLORS.Muted,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Font = Enum.Font.GothamSemibold,
-        TextSize = 13,
-        ZIndex = 4,
-    }, sidebar)
-    corner(button, 10)
-
-    local marker = create("Frame", {
-        AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(0, 2, 0.5, 0),
-        Size = UDim2.fromOffset(3, 18),
-        BackgroundColor3 = COLORS.Accent,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ZIndex = 5,
-    }, button)
-    corner(marker, 10)
-
-    tabButtons[name] = {Button = button, Marker = marker}
-    makePage(name, descriptions[name])
-end
-
-local function switchPage(name)
-    currentPage = name
-    for pageName, page in pairs(pages) do
-        page.Visible = pageName == name
-    end
-    for tabName, objects in pairs(tabButtons) do
-        local active = tabName == name
-        TweenService:Create(objects.Button, TweenInfo.new(0.18), {
-            BackgroundTransparency = active and 0 or 1,
-            TextColor3 = active and COLORS.Text or COLORS.Muted,
-        }):Play()
-        TweenService:Create(objects.Marker, TweenInfo.new(0.18), {
-            BackgroundTransparency = active and 0 or 1,
-        }):Play()
-    end
-end
-
-for name, objects in pairs(tabButtons) do
-    objects.Button.MouseButton1Click:Connect(function()
-        switchPage(name)
-    end)
-    objects.Button.MouseEnter:Connect(function()
-        if currentPage ~= name then
-            TweenService:Create(objects.Button, TweenInfo.new(0.12), {
-                BackgroundTransparency = 0.55,
-            }):Play()
-        end
-    end)
-    objects.Button.MouseLeave:Connect(function()
-        if currentPage ~= name then
-            TweenService:Create(objects.Button, TweenInfo.new(0.12), {
-                BackgroundTransparency = 1,
-            }):Play()
-        end
-    end)
-end
-
--- Settings: preset colour controls.
-local settingsPage = pages.Settings
-local placeholder = settingsPage:FindFirstChild("PlaceholderSlot")
-placeholder.Visible = false
-
-local settingsCard = create("Frame", {
-    Position = UDim2.fromOffset(0, 70),
-    Size = UDim2.new(1, 0, 0, 158),
-    BackgroundColor3 = COLORS.Surface,
+--// SETTINGS
+local settingsPage = pageFrames["Settings"]
+local settingsCard = New("Frame", {
+    Size = UDim2.new(1, 0, 0, 245),
+    BackgroundColor3 = Theme.Surface,
+    BackgroundTransparency = 0.03,
     BorderSizePixel = 0,
-    ZIndex = 5,
+    LayoutOrder = 1,
+    ZIndex = 7
 }, settingsPage)
-corner(settingsCard, 12)
-stroke(settingsCard, COLORS.Outline, 1, 0.15)
+Round(settingsCard, 16)
+local settingsStroke = Stroke(settingsCard, Theme.Surface3, 0.08, 1)
 
-create("TextLabel", {
-    Position = UDim2.fromOffset(16, 12),
-    Size = UDim2.new(1, -32, 0, 22),
+local settingsAccent = New("Frame", {
+    Size = UDim2.new(1, 0, 0, 3),
+    BackgroundColor3 = Theme.Accent,
+    BorderSizePixel = 0,
+    ZIndex = 8
+}, settingsCard)
+AddAccent(settingsAccent)
+Gradient(settingsAccent, Theme.Accent, Theme.Accent2, 0)
+
+New("TextLabel", {
+    Position = UDim2.fromOffset(20, 20),
+    Size = UDim2.new(1, -40, 0, 24),
     BackgroundTransparency = 1,
-    Text = "Colour theme",
-    TextColor3 = COLORS.Text,
-    TextXAlignment = Enum.TextXAlignment.Left,
     Font = Enum.Font.GothamSemibold,
+    Text = "Interface palette",
+    TextColor3 = Theme.Text,
     TextSize = 14,
-    ZIndex = 6,
-}, settingsCard)
-
-create("TextLabel", {
-    Position = UDim2.fromOffset(16, 34),
-    Size = UDim2.new(1, -32, 0, 18),
-    BackgroundTransparency = 1,
-    Text = "Tap a colour to update the menu and watermark.",
-    TextColor3 = COLORS.Muted,
     TextXAlignment = Enum.TextXAlignment.Left,
-    Font = Enum.Font.Gotham,
-    TextSize = 11,
-    ZIndex = 6,
+    ZIndex = 8
 }, settingsCard)
 
-local palette = {
-    Color3.fromRGB(142, 92, 255),
-    Color3.fromRGB(40, 191, 255),
-    Color3.fromRGB(255, 84, 145),
-    Color3.fromRGB(54, 214, 142),
-    Color3.fromRGB(255, 173, 59),
-}
-
-local paletteHolder = create("Frame", {
-    Position = UDim2.fromOffset(16, 67),
-    Size = UDim2.new(1, -32, 0, 38),
+New("TextLabel", {
+    Position = UDim2.fromOffset(20, 44),
+    Size = UDim2.new(1, -40, 0, 18),
     BackgroundTransparency = 1,
-    ZIndex = 6,
+    Font = Enum.Font.Gotham,
+    Text = "Choose a color for the menu and watermark",
+    TextColor3 = Theme.Text2,
+    TextSize = 10,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 8
 }, settingsCard)
 
-create("UIListLayout", {
+local paletteHolder = New("Frame", {
+    Position = UDim2.fromOffset(20, 79),
+    Size = UDim2.new(1, -40, 0, 72),
+    BackgroundTransparency = 1,
+    ZIndex = 8
+}, settingsCard)
+New("UIListLayout", {
     FillDirection = Enum.FillDirection.Horizontal,
-    Padding = UDim.new(0, 10),
-    VerticalAlignment = Enum.VerticalAlignment.Center,
-    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0, 11),
+    SortOrder = Enum.SortOrder.LayoutOrder
 }, paletteHolder)
 
-local function setAccent(color)
-    COLORS.Accent = color
-    watermarkStroke.Color = color
-    accentDot.BackgroundColor3 = color
-    for _, objects in pairs(tabButtons) do
-        objects.Marker.BackgroundColor3 = color
+local Palettes = {
+    {"Royal", Color3.fromRGB(124, 92, 255), Color3.fromRGB(73, 190, 255), Color3.fromRGB(155, 127, 255)},
+    {"Ice", Color3.fromRGB(45, 181, 229), Color3.fromRGB(94, 235, 210), Color3.fromRGB(99, 215, 255)},
+    {"Rose", Color3.fromRGB(232, 77, 143), Color3.fromRGB(255, 137, 105), Color3.fromRGB(255, 122, 174)},
+    {"Toxic", Color3.fromRGB(85, 207, 115), Color3.fromRGB(190, 230, 73), Color3.fromRGB(132, 239, 151)},
+    {"Solar", Color3.fromRGB(237, 158, 50), Color3.fromRGB(255, 95, 85), Color3.fromRGB(255, 194, 92)}
+}
+
+local paletteButtons = {}
+local chosenPalette = 1
+
+local function ApplyTheme(index)
+    chosenPalette = index
+    local palette = Palettes[index]
+    Theme.Accent = palette[2]
+    Theme.Accent2 = palette[3]
+    Theme.Watermark = palette[4]
+
+    mainStroke.Color = Theme.Accent
+    glowOne.BackgroundColor3 = Theme.Accent
+    glowTwo.BackgroundColor3 = Theme.Accent2
+    watermarkStroke.Color = Theme.Watermark
+    watermarkTime.TextColor3 = Theme.Watermark
+    brandGradient.Color = ColorSequence.new(Theme.Accent, Theme.Accent2)
+
+    for _, data in ipairs(accentObjects) do
+        if data.object and data.object.Parent then
+            data.object[data.property] = Theme.Accent
+            local gradient = data.object:FindFirstChildOfClass("UIGradient")
+            if gradient then gradient.Color = ColorSequence.new(Theme.Accent, Theme.Accent2) end
+        end
+    end
+
+    for name, buttonData in pairs(navButtons) do
+        local selected = name == activePage
+        buttonData.button.BackgroundColor3 = selected and Theme.Accent or Theme.Surface2
+        buttonData.icon.TextColor3 = selected and Color3.new(1, 1, 1) or Theme.Text2
+        buttonData.label.TextColor3 = selected and Color3.new(1, 1, 1) or Theme.Text2
+        buttonData.bar.BackgroundColor3 = Theme.Accent2
+    end
+
+    for buttonIndex, button in ipairs(paletteButtons) do
+        local selected = buttonIndex == index
+        Tween(button, {
+            BackgroundTransparency = selected and 0 or 0.22,
+            Size = selected and UDim2.fromOffset(91, 62) or UDim2.fromOffset(91, 56)
+        }, 0.18)
     end
 end
 
-for index, color in ipairs(palette) do
-    local colourButton = create("TextButton", {
-        LayoutOrder = index,
-        Size = UDim2.fromOffset(34, 34),
-        BackgroundColor3 = color,
+for index, palette in ipairs(Palettes) do
+    local button = New("TextButton", {
+        Size = UDim2.fromOffset(91, index == 1 and 62 or 56),
+        BackgroundColor3 = palette[2],
+        BackgroundTransparency = index == 1 and 0 or 0.22,
         BorderSizePixel = 0,
-        Text = "",
         AutoButtonColor = false,
-        ZIndex = 7,
+        Font = Enum.Font.GothamSemibold,
+        Text = palette[1],
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 10,
+        LayoutOrder = index,
+        ZIndex = 9
     }, paletteHolder)
-    corner(colourButton, 99)
-    stroke(colourButton, COLORS.Text, 1, 0.55)
-    colourButton.MouseButton1Click:Connect(function()
-        setAccent(color)
+    Round(button, 12)
+    Gradient(button, palette[2], palette[3], 45)
+    paletteButtons[index] = button
+    button.MouseButton1Click:Connect(function()
+        ApplyTheme(index)
     end)
 end
 
-local darkButton = create("TextButton", {
-    AnchorPoint = Vector2.new(0, 1),
-    Position = UDim2.new(0, 16, 1, -12),
-    Size = UDim2.new(0.5, -21, 0, 32),
-    BackgroundColor3 = Color3.fromRGB(14, 16, 23),
+local watermarkRow = New("Frame", {
+    Position = UDim2.fromOffset(20, 170),
+    Size = UDim2.new(1, -40, 0, 52),
+    BackgroundColor3 = Theme.Surface2,
+    BackgroundTransparency = 0.18,
     BorderSizePixel = 0,
-    Text = "Dark menu",
-    TextColor3 = COLORS.Text,
-    Font = Enum.Font.GothamSemibold,
-    TextSize = 11,
-    ZIndex = 7,
+    ZIndex = 8
 }, settingsCard)
-corner(darkButton, 8)
-stroke(darkButton, COLORS.Outline, 1, 0)
+Round(watermarkRow, 12)
+Stroke(watermarkRow, Theme.Surface3, 0.25, 1)
 
-local lightButton = create("TextButton", {
-    AnchorPoint = Vector2.new(1, 1),
-    Position = UDim2.new(1, -16, 1, -12),
-    Size = UDim2.new(0.5, -21, 0, 32),
-    BackgroundColor3 = Color3.fromRGB(43, 47, 63),
+New("TextLabel", {
+    Position = UDim2.fromOffset(14, 5),
+    Size = UDim2.new(1, -115, 0, 21),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamSemibold,
+    Text = "Watermark visibility",
+    TextColor3 = Theme.Text,
+    TextSize = 11,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 9
+}, watermarkRow)
+
+New("TextLabel", {
+    Position = UDim2.fromOffset(14, 27),
+    Size = UDim2.new(1, -115, 0, 16),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.Gotham,
+    Text = "Tap it to open or close the menu",
+    TextColor3 = Theme.Text3,
+    TextSize = 9,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 9
+}, watermarkRow)
+
+local alwaysOn = New("TextLabel", {
+    AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.new(1, -12, 0.5, 0),
+    Size = UDim2.fromOffset(78, 28),
+    BackgroundColor3 = Theme.Green,
+    BackgroundTransparency = 0.8,
     BorderSizePixel = 0,
-    Text = "Slate menu",
-    TextColor3 = COLORS.Text,
-    Font = Enum.Font.GothamSemibold,
-    TextSize = 11,
-    ZIndex = 7,
-}, settingsCard)
-corner(lightButton, 8)
-stroke(lightButton, COLORS.Outline, 1, 0)
+    Font = Enum.Font.GothamBold,
+    Text = "ALWAYS ON",
+    TextColor3 = Theme.Green,
+    TextSize = 8,
+    ZIndex = 9
+}, watermarkRow)
+Round(alwaysOn, 8)
 
-local function setMenuColour(background, surface)
-    COLORS.Background = background
-    COLORS.Surface = surface
-    main.BackgroundColor3 = background
-    header.BackgroundColor3 = surface
-    watermark.BackgroundColor3 = surface
-    settingsCard.BackgroundColor3 = surface
-    for pageName, page in pairs(pages) do
-        local slot = page:FindFirstChild("PlaceholderSlot")
-        if slot then slot.BackgroundColor3 = surface end
+--// НАВИГАЦИОННЫЕ КНОПКИ
+local function switchPage(name)
+    if activePage == name then return end
+    activePage = name
+
+    pageTitle.Text = name
+    pageSubtitle.Text = navInfo[name].description
+
+    for pageName, page in pairs(pageFrames) do
+        page.Visible = pageName == name
     end
-    for _, objects in pairs(tabButtons) do
-        objects.Button.BackgroundColor3 = surface
+
+    for buttonName, data in pairs(navButtons) do
+        local selected = buttonName == name
+        Tween(data.button, {
+            BackgroundColor3 = selected and Theme.Accent or Theme.Surface2,
+            BackgroundTransparency = selected and 0.06 or 0.56
+        }, 0.18)
+        Tween(data.bar, {BackgroundTransparency = selected and 0 or 1}, 0.18)
+        data.icon.TextColor3 = selected and Color3.new(1, 1, 1) or Theme.Text2
+        data.label.TextColor3 = selected and Color3.new(1, 1, 1) or Theme.Text2
     end
 end
 
-darkButton.MouseButton1Click:Connect(function()
-    setMenuColour(Color3.fromRGB(14, 16, 23), Color3.fromRGB(22, 25, 35))
+for index, name in ipairs(pageOrder) do
+    local info = navInfo[name]
+    local selected = name == activePage
+
+    local button = New("TextButton", {
+        Name = name,
+        Size = UDim2.new(1, 0, 0, 51),
+        BackgroundColor3 = selected and Theme.Accent or Theme.Surface2,
+        BackgroundTransparency = selected and 0.06 or 0.56,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Text = "",
+        LayoutOrder = index,
+        ZIndex = 8
+    }, navHolder)
+    Round(button, 12)
+
+    local bar = New("Frame", {
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 0, 0.5, 0),
+        Size = UDim2.fromOffset(3, 25),
+        BackgroundColor3 = Theme.Accent2,
+        BackgroundTransparency = selected and 0 or 1,
+        BorderSizePixel = 0,
+        ZIndex = 9
+    }, button)
+    Round(bar, 5)
+
+    local icon = New("TextLabel", {
+        Position = UDim2.fromOffset(17, 0),
+        Size = UDim2.fromOffset(25, 51),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = info.icon,
+        TextColor3 = selected and Color3.new(1, 1, 1) or Theme.Text2,
+        TextSize = 17,
+        ZIndex = 9
+    }, button)
+
+    local label = New("TextLabel", {
+        Position = UDim2.fromOffset(53, 0),
+        Size = UDim2.new(1, -60, 1, 0),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamSemibold,
+        Text = name,
+        TextColor3 = selected and Color3.new(1, 1, 1) or Theme.Text2,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 9
+    }, button)
+
+    navButtons[name] = {button = button, bar = bar, icon = icon, label = label}
+
+    button.MouseEnter:Connect(function()
+        if activePage ~= name then
+            Tween(button, {BackgroundTransparency = 0.34}, 0.14)
+        end
+    end)
+    button.MouseLeave:Connect(function()
+        if activePage ~= name then
+            Tween(button, {BackgroundTransparency = 0.56}, 0.14)
+        end
+    end)
+    button.MouseButton1Click:Connect(function()
+        switchPage(name)
+    end)
+end
+
+--// ОТКРЫТИЕ / ЗАКРЫТИЕ ЧЕРЕЗ ВАТЕРМАРК
+local menuOpen = true
+local menuBusy = false
+
+local function setMenu(open)
+    if menuBusy or menuOpen == open then return end
+    menuBusy = true
+    menuOpen = open
+
+    if open then
+        main.Visible = true
+        mainShadow.Visible = true
+        main.Position = UDim2.new(0.5, 0, 0, 43)
+        main.BackgroundTransparency = 1
+        mainShadow.BackgroundTransparency = 1
+        watermarkHint.Text = "−"
+
+        Tween(main, {
+            Position = UDim2.new(0.5, 0, 0, 53),
+            BackgroundTransparency = 0
+        }, 0.28, Enum.EasingStyle.Quint)
+        Tween(mainShadow, {BackgroundTransparency = 0.55}, 0.28)
+
+        task.delay(0.29, function()
+            menuBusy = false
+        end)
+    else
+        watermarkHint.Text = "+"
+        Tween(main, {
+            Position = UDim2.new(0.5, 0, 0, 43),
+            BackgroundTransparency = 1
+        }, 0.22, Enum.EasingStyle.Quint)
+        Tween(mainShadow, {BackgroundTransparency = 1}, 0.2)
+
+        task.delay(0.23, function()
+            main.Visible = false
+            mainShadow.Visible = false
+            menuBusy = false
+        end)
+    end
+end
+
+watermark.MouseButton1Click:Connect(function()
+    setMenu(not menuOpen)
 end)
 
-lightButton.MouseButton1Click:Connect(function()
-    setMenuColour(Color3.fromRGB(31, 34, 46), Color3.fromRGB(43, 47, 63))
+watermark.MouseEnter:Connect(function()
+    Tween(watermark, {Size = UDim2.fromOffset(288, 42)}, 0.15)
+    Tween(watermarkStroke, {Transparency = 0}, 0.15)
 end)
 
--- Drag support for mouse and touch.
+watermark.MouseLeave:Connect(function()
+    Tween(watermark, {Size = UDim2.fromOffset(282, 40)}, 0.15)
+    Tween(watermarkStroke, {Transparency = 0.18}, 0.15)
+end)
+
+--// ПЕРЕТАСКИВАНИЕ ОКНА ЗА ПУСТУЮ ОБЛАСТЬ ЗАГОЛОВКА
 local dragging = false
 local dragStart
 local startPosition
-local activeInput
+local dragInput
 
-header.InputBegan:Connect(function(input)
+contentHeader.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPosition = main.Position
-        activeInput = input
+        dragInput = input
     end
 end)
 
-header.InputChanged:Connect(function(input)
+contentHeader.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch then
-        activeInput = input
+        dragInput = input
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and input == activeInput and dragStart and startPosition then
+    if dragging and input == dragInput and main.Visible then
         local delta = input.Position - dragStart
-        main.Position = UDim2.new(
+        local newPosition = UDim2.new(
             startPosition.X.Scale,
             startPosition.X.Offset + delta.X,
             startPosition.Y.Scale,
             startPosition.Y.Offset + delta.Y
+        )
+        main.Position = newPosition
+        mainShadow.Position = UDim2.new(
+            newPosition.X.Scale,
+            newPosition.X.Offset,
+            newPosition.Y.Scale,
+            newPosition.Y.Offset + 4
         )
     end
 end)
@@ -555,26 +963,46 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
-        activeInput = nil
     end
 end)
 
--- Local client time. DateTime:ToLocalTime() reflects the device/client locale.
+--// ЛОКАЛЬНОЕ ВРЕМЯ
+local lastShownTime = ""
+local heartbeatConnection
+heartbeatConnection = RunService.Heartbeat:Connect(function()
+    if not gui.Parent then
+        heartbeatConnection:Disconnect()
+        return
+    end
+
+    local currentTime = os.date("%H:%M")
+    if currentTime ~= lastShownTime then
+        lastShownTime = currentTime
+        watermarkTime.Text = currentTime
+    end
+end)
+
+-- Лёгкая пульсация статуса
+local pulseUp = true
 task.spawn(function()
-    while screenGui.Parent do
-        local localTime = DateTime.now():ToLocalTime()
-        watermark.Text = string.format("SeraphiCA | %02d:%02d", localTime.Hour, localTime.Minute)
-        task.wait(1)
+    while gui.Parent do
+        Tween(statusDotGlow, {
+            BackgroundTransparency = pulseUp and 0.9 or 0.67,
+            Size = pulseUp and UDim2.fromOffset(11, 11) or UDim2.fromOffset(15, 15)
+        }, 0.8, Enum.EasingStyle.Sine)
+        pulseUp = not pulseUp
+        task.wait(0.82)
     end
 end)
 
-switchPage("Aim-Bot")
-
--- Small opening animation.
-local finalSize = main.Size
-main.Size = UDim2.fromOffset(math.max(330, finalSize.X.Offset - 35), math.max(300, finalSize.Y.Offset - 25))
+-- Стартовая анимация
+main.Position = UDim2.new(0.5, 0, 0, 43)
 main.BackgroundTransparency = 1
-TweenService:Create(main, TweenInfo.new(0.32, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-    Size = finalSize,
-    BackgroundTransparency = 0,
-}):Play()
+mainShadow.BackgroundTransparency = 1
+Tween(main, {
+    Position = UDim2.new(0.5, 0, 0, 53),
+    BackgroundTransparency = 0
+}, 0.42, Enum.EasingStyle.Quint)
+Tween(mainShadow, {BackgroundTransparency = 0.55}, 0.42)
+
+ApplyTheme(1)

@@ -1,5 +1,5 @@
--- // SeraphiCA | Absolute God Tier UI v8.3
--- // 800px | State Fix, Gun TP & Freeze Fix
+-- // SeraphiCA | Absolute God Tier UI v8.4
+-- // 800px | Fling Fixed, Gun TP, State Sync
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -82,15 +82,83 @@ local function AddRipple(btn)
 end
 
 -- ========================================================================================
+-- NOTIFICATIONS (Должны быть объявлены до использования в логике)
+-- ========================================================================================
+local MenuBlur = Instance.new("BlurEffect")
+MenuBlur.Name = "SeraphiCA_Blur"
+MenuBlur.Size = 0
+MenuBlur.Parent = Lighting
+
+local NotifHolder = Create("Frame", {
+    Size = UDim2.new(0, 350, 1, 0),
+    Position = UDim2.new(1, -370, 0, 0),
+    BackgroundTransparency = 1,
+    Parent = ScreenGui
+})
+Create("UIListLayout", {
+    Padding = UDim.new(0, 10),
+    VerticalAlignment = Enum.VerticalAlignment.Bottom,
+    HorizontalAlignment = Enum.HorizontalAlignment.Right,
+    Parent = NotifHolder
+})
+
+local function Notify(text, color)
+    local Notif = Create("Frame", {
+        Size = UDim2.new(0, 320, 0, 55),
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
+        Parent = NotifHolder
+    })
+    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Notif})
+    Create("UIStroke", {Color = color, Thickness = 1.5, Transparency = 0.3, Parent = Notif})
+    Create("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 18, 22)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 10))
+        }),
+        Rotation = 90,
+        Parent = Notif
+    })
+
+    Create("Frame", {
+        Size = UDim2.new(0, 4, 0, 30),
+        Position = UDim2.new(0, 10, 0.5, -15),
+        BackgroundColor3 = color,
+        BorderSizePixel = 0,
+        Parent = Notif
+    }, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
+
+    Create("TextLabel", {
+        Size = UDim2.new(1, -30, 1, 0),
+        Position = UDim2.new(0, 25, 0, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        TextColor3 = color,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Notif
+    })
+
+    Notif.Position = UDim2.new(0, 350, 0, 0)
+    TweenService:Create(Notif, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+
+    task.delay(3, function()
+        TweenService:Create(Notif, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0, 350, 0, 0)}):Play()
+        task.wait(0.5)
+        Notif:Destroy()
+    end)
+end
+
+-- ========================================================================================
 -- GLOBAL STATE
 -- ========================================================================================
 local mmState = {
     wallShot = false,
     antiFling = false,
     autoPickUpGun = false,
-    isFreezing = false,
-    freezeTarget = nil,
-    isFreezingAll = false,
+    isFlinging = false,
+    flingTarget = nil,
 }
 
 local espState = {
@@ -316,7 +384,7 @@ local function FindGun()
         if obj:IsA("Tool") then
             local name = obj.Name:lower()
             if name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then
-                if obj.Parent == Workspace or obj.Parent:IsA("Model") then -- На земле или в modelling
+                if obj.Parent == Workspace or obj.Parent:IsA("Model") then
                     local handle = obj:FindFirstChild("Handle")
                     if handle then
                         return obj, handle
@@ -332,15 +400,13 @@ local function TpToGunAndPickUp()
     local char = LocalPlayer.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum then return end
+    if not hrp then return end
 
     local tool, handle = FindGun()
     if tool and handle then
         local originalCFrame = hrp.CFrame
         hrp.CFrame = handle.CFrame * CFrame.new(0, 0, -2)
         task.wait(0.05)
-        -- Пытаемся подобрать
         firetouchinterest(hrp, handle, 0)
         task.wait(0.05)
         firetouchinterest(hrp, handle, 1)
@@ -352,7 +418,6 @@ local function TpToGunAndPickUp()
     end
 end
 
--- AutoPickUpGun Loop
 local autoPickUpConnection
 local function ApplyAutoPickUpGun(state)
     mmState.autoPickUpGun = state
@@ -366,10 +431,8 @@ local function ApplyAutoPickUpGun(state)
                     local char = LocalPlayer.Character
                     if handle and char then
                         local hrp = char:FindFirstChild("HumanoidRootPart")
-                        local hum = char:FindFirstChildOfClass("Humanoid")
-                        if hrp and hum and hum.Health > 0 then
+                        if hrp then
                             local originalCFrame = hrp.CFrame
-                            -- Instant TP, Touch, TP Back
                             hrp.CFrame = handle.CFrame
                             firetouchinterest(hrp, handle, 0)
                             task.wait()
@@ -383,63 +446,41 @@ local function ApplyAutoPickUpGun(state)
     end
 end
 
--- FREEZE LOGIC
-local freezeConnections = {}
-
-local function StopFreezingTarget(targetPlayer)
-    if freezeConnections[targetPlayer] then
-        freezeConnections[targetPlayer]:Disconnect()
-        freezeConnections[targetPlayer] = nil
+-- FLING LOGIC
+local flingConnection
+local function StopFlinging()
+    if flingConnection then
+        flingConnection:Disconnect()
+        flingConnection = nil
     end
+    mmState.isFlinging = false
+    mmState.flingTarget = nil
 end
 
-local function StartFreezingTarget(targetPlayer)
-    StopFreezingTarget(targetPlayer)
+local function StartFlinging(target)
+    StopFlinging()
+    mmState.flingTarget = target
+    mmState.isFlinging = true
     
-    freezeConnections[targetPlayer] = RunService.Heartbeat:Connect(function()
-        if targetPlayer and targetPlayer.Character then
-            local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local hum = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if hrp and hum and hum.Health > 0 then
+    flingConnection = RunService.Heartbeat:Connect(function()
+        if mmState.flingTarget and mmState.flingTarget.Character then
+            local hrp = mmState.flingTarget.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
                 pcall(function()
-                    hrp:SetNetworkOwner(LocalPlayer)
+                    if mmState.flingTarget ~= LocalPlayer then
+                        hrp:SetNetworkOwner(LocalPlayer)
+                    end
                 end)
-                
-                if not freezeConnections[targetPlayer].SavedCFrame then
-                    freezeConnections[targetPlayer].SavedCFrame = hrp.CFrame
-                end
-                
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
-                hrp.CFrame = freezeConnections[targetPlayer].SavedCFrame
+                hrp.AssemblyLinearVelocity = Vector3.new(99999, 99999, 99999)
+                hrp.AssemblyAngularVelocity = Vector3.new(99999, 99999, 99999)
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(9999), math.rad(9999), math.rad(9999))
             else
-                if freezeConnections[targetPlayer] then
-                    freezeConnections[targetPlayer].SavedCFrame = nil
-                end
+                StopFlinging()
             end
         else
-            StopFreezingTarget(targetPlayer)
+            StopFlinging()
         end
     end)
-end
-
-local function StopFreezeAll()
-    mmState.isFreezingAll = false
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            StopFreezingTarget(p)
-        end
-    end
-end
-
-local function StartFreezeAll()
-    StopFreezeAll()
-    mmState.isFreezingAll = true
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            StartFreezingTarget(p)
-        end
-    end
 end
 
 -- ========================================================================================
@@ -532,75 +573,6 @@ task.delay(2.2, function()
     task.wait(0.7)
     Intro.Visible = false
 end)
-
--- ========================================================================================
--- BLUR & NOTIFICATIONS
--- ========================================================================================
-local MenuBlur = Instance.new("BlurEffect")
-MenuBlur.Name = "SeraphiCA_Blur"
-MenuBlur.Size = 0
-MenuBlur.Parent = Lighting
-
-local NotifHolder = Create("Frame", {
-    Size = UDim2.new(0, 350, 1, 0),
-    Position = UDim2.new(1, -370, 0, 0),
-    BackgroundTransparency = 1,
-    Parent = ScreenGui
-})
-Create("UIListLayout", {
-    Padding = UDim.new(0, 10),
-    VerticalAlignment = Enum.VerticalAlignment.Bottom,
-    HorizontalAlignment = Enum.HorizontalAlignment.Right,
-    Parent = NotifHolder
-})
-
-local function Notify(text, color)
-    local Notif = Create("Frame", {
-        Size = UDim2.new(0, 320, 0, 55),
-        BackgroundColor3 = Theme.Background,
-        BorderSizePixel = 0,
-        Parent = NotifHolder
-    })
-    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Notif})
-    Create("UIStroke", {Color = color, Thickness = 1.5, Transparency = 0.3, Parent = Notif})
-    Create("UIGradient", {
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 18, 22)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 10))
-        }),
-        Rotation = 90,
-        Parent = Notif
-    })
-
-    Create("Frame", {
-        Size = UDim2.new(0, 4, 0, 30),
-        Position = UDim2.new(0, 10, 0.5, -15),
-        BackgroundColor3 = color,
-        BorderSizePixel = 0,
-        Parent = Notif
-    }, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
-
-    Create("TextLabel", {
-        Size = UDim2.new(1, -30, 1, 0),
-        Position = UDim2.new(0, 25, 0, 0),
-        BackgroundTransparency = 1,
-        Text = text,
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextColor3 = color,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = Notif
-    })
-
-    Notif.Position = UDim2.new(0, 350, 0, 0)
-    TweenService:Create(Notif, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
-
-    task.delay(3, function()
-        TweenService:Create(Notif, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0, 350, 0, 0)}):Play()
-        task.wait(0.5)
-        Notif:Destroy()
-    end)
-end
 
 -- ========================================================================================
 -- WATERMARK
@@ -791,7 +763,7 @@ Create("TextLabel", {
     Size = UDim2.new(1, -30, 0, 15),
     Position = UDim2.new(0, 21, 0, 60),
     BackgroundTransparency = 1,
-    Text = "Ultimate Interface v8.3",
+    Text = "Ultimate Interface v8.4",
     Font = Enum.Font.Gotham,
     TextSize = 12,
     TextColor3 = Theme.Description,
@@ -974,7 +946,7 @@ local function CreateTab(name)
 end
 
 -- ========================================================================================
--- UI ELEMENTS WITH STATE FIX
+-- UI ELEMENTS WITH STATE SYNC
 -- ========================================================================================
 local function CreateCategory(page, title)
     local Cat = Create("Frame", {
@@ -1169,12 +1141,31 @@ local function CreateExpandable(page, title, desc, subOptions)
 
     local state = false
     local expanded = false
+    
+    -- Проверка: если хоть одна функция внутри включена, разворачиваем список по умолчанию
+    local hasActiveOption = false
+    for _, opt in ipairs(subOptions) do
+        if opt.Default then hasActiveOption = true break end
+    end
 
     local function UpdateSize()
         local baseHeight = 65
         local subHeight = expanded and (SubContainer.UIListLayout.AbsoluteContentSize.Y + 20) or 0
         TweenService:Create(Container, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, baseHeight + subHeight)}):Play()
         TweenService:Create(SubContainer, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, subHeight)}):Play()
+    end
+
+    -- Если есть активная опция, сразу делаем expanded = true и применяем визуал
+    if hasActiveOption then
+        state = true
+        expanded = true
+        ToggleBtn.BackgroundColor3 = Theme.Accent
+        TogStroke.Color = Theme.Accent
+        Indicator.Position = UDim2.new(1, -21, 0.5, -9)
+        Indicator.BackgroundColor3 = Theme.TextDark
+        TogGlow.ImageTransparency = 0.5
+        Container.Size = UDim2.new(1, 0, 0, 65) -- Will be updated properly by UpdateSize on spawn
+        SubContainer.Size = UDim2.new(1, 0, 0, 0)
     end
 
     AddRipple(ToggleBtn)
@@ -1283,6 +1274,14 @@ local function CreateExpandable(page, title, desc, subOptions)
                 TweenService:Create(SubGlow, TweenInfo.new(0.3), {ImageTransparency = 1}):Play()
             end
             if opt.Callback then opt.Callback(subState) end
+        end)
+    end
+    
+    -- Применяем правильный размер после рендера всех элементов
+    if hasActiveOption then
+        task.spawn(function()
+            task.wait(0.1) -- Ждём обновления UIListLayout
+            UpdateSize()
         end)
     end
 end
@@ -1444,8 +1443,8 @@ local function CreateButton(page, title, desc, onClick)
     end)
 end
 
--- FREEZE MODULE
-local function CreateFreezeModule(page)
+-- FLING MODULE
+local function CreateFlingModule(page)
     local Container = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 65),
         BackgroundColor3 = Theme.Element,
@@ -1469,7 +1468,7 @@ local function CreateFreezeModule(page)
         Size = UDim2.new(1, -100, 0, 20),
         Position = UDim2.new(0, 15, 0, 12),
         BackgroundTransparency = 1,
-        Text = "FreezePlayer",
+        Text = "Fling Player",
         Font = Enum.Font.GothamBold,
         TextSize = 15,
         TextColor3 = Theme.Text,
@@ -1480,7 +1479,7 @@ local function CreateFreezeModule(page)
         Size = UDim2.new(1, -100, 0, 15),
         Position = UDim2.new(0, 15, 0, 35),
         BackgroundTransparency = 1,
-        Text = "Select a player to freeze them in place.",
+        Text = "Select a player to fling them into space.",
         Font = Enum.Font.Gotham,
         TextSize = 12,
         TextColor3 = Theme.Description,
@@ -1576,7 +1575,7 @@ local function CreateFreezeModule(page)
         Size = UDim2.new(1, 0, 0, 35),
         BackgroundColor3 = Theme.Disabled,
         AutoButtonColor = false,
-        Text = "Freeze!",
+        Text = "Fling!",
         Font = Enum.Font.GothamBold,
         TextSize = 14,
         TextColor3 = Theme.Description,
@@ -1587,48 +1586,19 @@ local function CreateFreezeModule(page)
     Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = ActionBtn})
     AddRipple(ActionBtn)
 
-    local AllActionBtn = Create("TextButton", {
-        Size = UDim2.new(1, 0, 0, 35),
-        BackgroundColor3 = Theme.Accent,
-        AutoButtonColor = false,
-        Text = "Freeze All",
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextColor3 = Theme.TextDark,
-        Active = true,
-        Parent = SubContainer
-    })
-    Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = AllActionBtn})
-    Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = AllActionBtn})
-    AddRipple(AllActionBtn)
-
-    local function UpdateActionBtns()
-        if mmState.isFreezingAll then
-            TweenService:Create(AllActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.RedNotif, TextColor3 = Theme.Text}):Play()
-            AllActionBtn.Text = "Stop!"
-            AllActionBtn.Active = true
-            
-            TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Disabled, TextColor3 = Theme.Description}):Play()
-            ActionBtn.Text = "Freeze All Active"
-            ActionBtn.Active = false
+    local function UpdateActionBtn()
+        if mmState.isFlinging then
+            TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.RedNotif, TextColor3 = Theme.Text}):Play()
+            ActionBtn.Text = "Stop!"
+            ActionBtn.Active = true
+        elseif mmState.flingTarget then
+            TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent, TextColor3 = Theme.TextDark}):Play()
+            ActionBtn.Text = "Fling!"
+            ActionBtn.Active = true
         else
-            TweenService:Create(AllActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent, TextColor3 = Theme.TextDark}):Play()
-            AllActionBtn.Text = "Freeze All"
-            AllActionBtn.Active = true
-            
-            if mmState.isFreezing then
-                TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.RedNotif, TextColor3 = Theme.Text}):Play()
-                ActionBtn.Text = "Stop!"
-                ActionBtn.Active = true
-            elseif mmState.freezeTarget then
-                TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent, TextColor3 = Theme.TextDark}):Play()
-                ActionBtn.Text = "Freeze!"
-                ActionBtn.Active = true
-            else
-                TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Disabled, TextColor3 = Theme.Description}):Play()
-                ActionBtn.Text = "Freeze!"
-                ActionBtn.Active = false
-            end
+            TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Disabled, TextColor3 = Theme.Description}):Play()
+            ActionBtn.Text = "Fling!"
+            ActionBtn.Active = false
         end
     end
 
@@ -1639,7 +1609,7 @@ local function CreateFreezeModule(page)
         
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer then
-                local isSelected = (mmState.freezeTarget == plr)
+                local isSelected = (mmState.flingTarget == plr)
                 local PlrBtn = Create("TextButton", {
                     Size = UDim2.new(1, 0, 0, 30),
                     BackgroundColor3 = isSelected and Theme.Accent or Color3.fromRGB(20, 20, 26),
@@ -1665,10 +1635,10 @@ local function CreateFreezeModule(page)
                 AddRipple(PlrBtn)
                 
                 PlrBtn.MouseButton1Click:Connect(function()
-                    if mmState.isFreezingAll or mmState.isFreezing then return end
-                    mmState.freezeTarget = plr
+                    if mmState.isFlinging then return end
+                    mmState.flingTarget = plr
                     PopulatePlayers()
-                    UpdateActionBtns()
+                    UpdateActionBtn()
                 end)
             end
         end
@@ -1677,51 +1647,29 @@ local function CreateFreezeModule(page)
     PopulatePlayers()
     Players.PlayerAdded:Connect(PopulatePlayers)
     Players.PlayerRemoving:Connect(function(p)
-        if mmState.freezeTarget == p and mmState.isFreezing then
-            mmState.isFreezing = false
-            StopFreezingTarget(p)
+        if mmState.flingTarget == p and mmState.isFlinging then
+            StopFlinging()
         end
         PopulatePlayers()
-        UpdateActionBtns()
+        UpdateActionBtn()
     end)
 
     ActionBtn.MouseButton1Click:Connect(function()
         if not ActionBtn.Active then return end
         
-        if mmState.isFreezing then
-            mmState.isFreezing = false
-            StopFreezingTarget(mmState.freezeTarget)
-            Notify("Freeze stopped", Theme.Success)
+        if mmState.isFlinging then
+            StopFlinging()
+            Notify("Fling stopped", Theme.Success)
         else
-            if mmState.freezeTarget then
-                mmState.isFreezing = true
-                StartFreezingTarget(mmState.freezeTarget)
-                Notify("Freezing " .. mmState.freezeTarget.Name .. "!", Theme.Accent)
+            if mmState.flingTarget then
+                StartFlinging(mmState.flingTarget)
+                Notify("Flinging " .. mmState.flingTarget.Name .. "!", Theme.Accent)
             end
         end
-        UpdateActionBtns()
-    end)
-
-    AllActionBtn.MouseButton1Click:Connect(function()
-        if not AllActionBtn.Active then return end
-        
-        if mmState.isFreezingAll then
-            StopFreezeAll()
-            Notify("Freeze All stopped", Theme.Success)
-        else
-            if mmState.isFreezing then
-                mmState.isFreezing = false
-                StopFreezingTarget(mmState.freezeTarget)
-            end
-            
-            mmState.isFreezingAll = true
-            StartFreezeAll()
-            Notify("Freezing ALL players!", Theme.RedNotif)
-        end
-        UpdateActionBtns()
+        UpdateActionBtn()
     end)
     
-    UpdateActionBtns()
+    UpdateActionBtn()
 end
 
 -- ========================================================================================
@@ -1748,7 +1696,7 @@ Tabs["Misc"].Render = function()
     end)
     
     CreateCategory(PageContainer, "Trolling")
-    CreateFreezeModule(PageContainer)
+    CreateFlingModule(PageContainer)
 end
 
 local EspTab = CreateTab("Esp")

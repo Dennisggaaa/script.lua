@@ -1,5 +1,5 @@
--- // SeraphiCA | Key System & MM2 Edition v9.0
--- // 800px | Key System Added, AutoPickUp Fixed
+-- // SeraphiCA | Absolute God Tier UI v9.1
+-- // 800px | Key System Obfuscated & AutoPickUp Fixed
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -12,8 +12,23 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 -- ========================================================================================
--- KEY SYSTEM
+-- OBFUSCATED KEY SYSTEM
 -- ========================================================================================
+local function decode(arr)
+    local s = ""
+    for _, v in ipairs(arr) do
+        s = s .. string.char(v - 27) -- Сдвиг байтов
+    end
+    return s
+end
+
+-- "beta" = {125, 128, 143, 124}
+-- "test" = {143, 128, 142, 143}
+local validKeys = {
+    [decode({125, 128, 143, 124})] = true,
+    [decode({143, 128, 142, 143})] = true
+}
+
 local KeyGui = Instance.new("ScreenGui")
 KeyGui.Name = "SeraphiCA_Key"
 KeyGui.Parent = CoreGui
@@ -138,7 +153,7 @@ SubmitBtn.MouseButton1Click:Connect(function()
     if isCooldown or isUnlocked or isClosed then return end
 
     local key = InputBox.Text
-    if key == "081324-adyka" then
+    if validKeys[key] then
         StatusLbl.Text = "Unlocked! Loading..."
         StatusLbl.TextColor3 = Color3.fromRGB(45, 255, 100)
         task.wait(1)
@@ -974,7 +989,7 @@ Create("TextLabel", {
     Size = UDim2.new(1, -30, 0, 15),
     Position = UDim2.new(0, 21, 0, 60),
     BackgroundTransparency = 1,
-    Text = "Ultimate Interface v9.0",
+    Text = "Ultimate Interface v9.1",
     Font = Enum.Font.Gotham,
     TextSize = 12,
     TextColor3 = Theme.Description,
@@ -1135,7 +1150,7 @@ local function CreateTab(name)
         Font = Enum.Font.GothamSemibold,
         TextSize = 14,
         TextColor3 = Theme.Text,
-        TextXAlignment = Enum.TextXAlignment.Left,
+    TextXAlignment = Enum.TextXAlignment.Left,
         Parent = Btn
     })
 

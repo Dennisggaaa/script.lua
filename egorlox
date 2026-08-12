@@ -1,5 +1,5 @@
--- // SeraphiCA | Absolute God Tier UI v11.0
--- // MS-KILL: Sheriff & Murderer, AutoPickUp Fix
+-- // SeraphiCA | Absolute God Tier UI v11.5
+-- // KillAll Fix, AutoPickUp Fix, Teleport Added
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -11,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- KEY SYSTEM
 local function decode(arr)
     local s = ""
     for _, v in ipairs(arr) do s = s .. string.char(v - 27) end
@@ -62,6 +63,7 @@ KeyFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
 KeyFrame.BorderSizePixel = 0
 KeyFrame.Parent = KeyGui
 Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
+
 local KeyStroke = Instance.new("UIStroke")
 KeyStroke.Color = Color3.fromRGB(138, 43, 226)
 KeyStroke.Thickness = 1.5
@@ -98,6 +100,7 @@ InputBox.TextSize = 14
 InputBox.TextColor3 = Color3.fromRGB(245, 245, 250)
 InputBox.Parent = KeyFrame
 Instance.new("UICorner", InputBox).CornerRadius = UDim.new(0, 6)
+
 local InputStroke = Instance.new("UIStroke")
 InputStroke.Color = Color3.fromRGB(35, 35, 45)
 InputStroke.Thickness = 1
@@ -182,23 +185,12 @@ end)
 while not isUnlocked and not isClosed do task.wait(0.1) end
 if isClosed then return end
 
+-- MAIN SCRIPT
 local oldUi = CoreGui:FindFirstChild("SeraphiCA_GodTier_v11")
 if oldUi then oldUi:Destroy() end
 
 local Theme = {
-    Background = Color3.fromRGB(10, 10, 14),
-    Sidebar = Color3.fromRGB(14, 14, 18),
-    Element = Color3.fromRGB(20, 20, 26),
-    Hover = Color3.fromRGB(28, 28, 36),
-    Accent = Color3.fromRGB(138, 43, 226),
-    Text = Color3.fromRGB(245, 245, 250),
-    TextDark = Color3.fromRGB(10, 10, 14),
-    Description = Color3.fromRGB(130, 130, 145),
-    Stroke = Color3.fromRGB(35, 35, 45),
-    DarkStroke = Color3.fromRGB(18, 18, 22),
-    RedNotif = Color3.fromRGB(255, 45, 45),
-    Success = Color3.fromRGB(45, 255, 100),
-    Disabled = Color3.fromRGB(40, 40, 48)
+    Background = Color3.fromRGB(10, 10, 14), Sidebar = Color3.fromRGB(14, 14, 18), Element = Color3.fromRGB(20, 20, 26), Hover = Color3.fromRGB(28, 28, 36), Accent = Color3.fromRGB(138, 43, 226), Text = Color3.fromRGB(245, 245, 250), TextDark = Color3.fromRGB(10, 10, 14), Description = Color3.fromRGB(130, 130, 145), Stroke = Color3.fromRGB(35, 35, 45), DarkStroke = Color3.fromRGB(18, 18, 22), RedNotif = Color3.fromRGB(255, 45, 45), Success = Color3.fromRGB(45, 255, 100), Disabled = Color3.fromRGB(40, 40, 48)
 }
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -265,6 +257,7 @@ local Lang = {
     AntiFling = {ENG = "AntiFling", RUS = "АнтиФлинг"}, AntiFlingDesc = {ENG = "Prevents other players from launching you.", RUS = "Защита от отправки в полёт."},
     AutoPickUpGun = {ENG = "AutoPickUpGun", RUS = "АвтоПодборПушки"}, AutoPickUpGunDesc = {ENG = "Instantly teleports to gun when dropped and picks it up.", RUS = "Мгновенно телепортирует к пушке и подбирает её."},
     TpToGun = {ENG = "TpToGun", RUS = "ТелепортКПушке"}, TpToGunDesc = {ENG = "Teleport to gun and return to your position.", RUS = "Телепорт к пушке и возврат на место."},
+    Teleport = {ENG = "Teleport", RUS = "Телепорт"}, TeleportDesc = {ENG = "Select a player to teleport to them.", RUS = "Выбрать игрока для телепорта."},
     TouchForSheriff = {ENG = "Touch For Sheriff", RUS = "Touch For Sheriff"}, TouchForSheriffDesc = {ENG = "Enable to setup the kill button.", RUS = "Настройка кнопки убийства."},
     KillMurder = {ENG = "KillMurder", RUS = "KillMurder"}, KillMurderDesc = {ENG = "Enable to show kill buttons.", RUS = "Показать кнопки убийства."},
     ForMurder = {ENG = "For Murder", RUS = "Для Мардера"}, ForMurderDesc = {ENG = "Enable to setup the kill all button.", RUS = "Настройка кнопки убийства всех."},
@@ -311,31 +304,18 @@ local function detectRole(player)
     return "Innocent"
 end
 
-local function setupRoleReset(player)
-    player.CharacterAdded:Connect(function() task.wait(1) playerRoles[player] = nil end)
-end
+local function setupRoleReset(player) player.CharacterAdded:Connect(function() task.wait(1) playerRoles[player] = nil end) end
 for _, p in ipairs(Players:GetPlayers()) do setupRoleReset(p) end
 Players.PlayerAdded:Connect(setupRoleReset)
 
 -- MS-KILL LOGIC
-local ShotButton = nil
-local ShotBtnPos = UDim2.new(0.5, -50, 0.5, -50)
-local ShotBtnSize = UDim2.new(0, 100, 0, 100)
-
-local KillAllButton = nil
-local KillAllBtnPos = UDim2.new(0.5, -50, 0.5, 50)
-local KillAllBtnSize = UDim2.new(0, 100, 0, 100)
-
-local isCustomizing = false
-local isDraggingShot = false
-local dragStart, startPos
-local ActiveCustomBtn = nil
+local ShotButton = nil local ShotBtnPos = UDim2.new(0.5, -50, 0.5, -50) local ShotBtnSize = UDim2.new(0, 100, 0, 100)
+local KillAllButton = nil local KillAllBtnPos = UDim2.new(0.5, -50, 0.5, 50) local KillAllBtnSize = UDim2.new(0, 100, 0, 100)
+local isCustomizing = false local isDraggingShot = false local dragStart, startPos local ActiveCustomBtn = nil
 
 local function ShootMurderer()
     local murderer = nil
-    for _, p in ipairs(Players:GetPlayers()) do
-        if playerRoles[p] == "Murderer" then murderer = p break end
-    end
+    for _, p in ipairs(Players:GetPlayers()) do if playerRoles[p] == "Murderer" then murderer = p break end end
     if not murderer or not murderer.Character then Notify("Murderer not found", Theme.RedNotif) return end
     local mHumRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
     if not mHumRoot then return end
@@ -381,31 +361,30 @@ local function KillAllPlayers()
     
     if tool.Parent == LocalPlayer.Backpack then hum:EquipTool(tool) task.wait(0.05) end
     
+    local wasAntiFling = mmState.antiFling
+    if wasAntiFling then ApplyAntiFling(false) end -- Temporarily disable AntiFling
+    
     for _, target in ipairs(Players:GetPlayers()) do
         if target ~= LocalPlayer and target.Character then
             local tHum = target.Character:FindFirstChildOfClass("Humanoid")
             local tHrp = target.Character:FindFirstChild("HumanoidRootPart")
             if tHum and tHrp and tHum.Health > 0 then
-                hrp.CFrame = CFrame.lookAt(hrp.Position, tHrp.Position)
-                pcall(function() tool:FireServer() end)
+                hrp.CFrame = tHrp.CFrame * CFrame.new(0, 0, 2)
                 tool:Activate()
-                task.wait(0.05)
+                task.wait(0.1)
             end
         end
     end
+    
+    if wasAntiFling then ApplyAntiFling(true) end -- Re-enable AntiFling
     Notify("Killed everyone!", Theme.Success)
 end
 
 local function AddShotButton()
     if ShotButton then return end
     ShotButton = Instance.new("TextButton")
-    ShotButton.Size = ShotBtnSize
-    ShotButton.Position = ShotBtnPos
-    ShotButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    ShotButton.Text = "shot"
-    ShotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ShotButton.Font = Enum.Font.GothamBold
-    ShotButton.TextSize = 20
+    ShotButton.Size = ShotBtnSize ShotButton.Position = ShotBtnPos ShotButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ShotButton.Text = "shot" ShotButton.TextColor3 = Color3.fromRGB(255, 255, 255) ShotButton.Font = Enum.Font.GothamBold ShotButton.TextSize = 20
     ShotButton.Parent = ScreenGui
     Instance.new("UICorner", ShotButton).CornerRadius = UDim.new(0, 15)
     
@@ -420,13 +399,8 @@ end
 local function AddKillAllButton()
     if KillAllButton then return end
     KillAllButton = Instance.new("TextButton")
-    KillAllButton.Size = KillAllBtnSize
-    KillAllButton.Position = KillAllBtnPos
-    KillAllButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    KillAllButton.Text = "KillAll"
-    KillAllButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    KillAllButton.Font = Enum.Font.GothamBold
-    KillAllButton.TextSize = 20
+    KillAllButton.Size = KillAllBtnSize KillAllButton.Position = KillAllBtnPos KillAllButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    KillAllButton.Text = "KillAll" KillAllButton.TextColor3 = Color3.fromRGB(255, 255, 255) KillAllButton.Font = Enum.Font.GothamBold KillAllButton.TextSize = 20
     KillAllButton.Parent = ScreenGui
     Instance.new("UICorner", KillAllButton).CornerRadius = UDim.new(0, 15)
     
@@ -711,20 +685,22 @@ local function ApplyAutoPickUpGun(state)
                 local name = child.Name:lower()
                 if name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then
                     task.spawn(function()
-                        local handle = child:FindFirstChild("Handle") or child:WaitForChild("Handle", 1)
+                        local handle = child:FindFirstChild("Handle") or child:WaitForChild("Handle", 2)
                         local char = LocalPlayer.Character
                         if handle and char then
                             local hrp = char:FindFirstChild("HumanoidRootPart")
                             local hum = char:FindFirstChildOfClass("Humanoid")
                             if hrp and hum and hum.Health > 0 then
-                                task.wait(0.05)
-                                if not child.Parent then return end
                                 local originalCFrame = hrp.CFrame
                                 hrp.CFrame = handle.CFrame * CFrame.new(0, 0, -2)
-                                firetouchinterest(hrp, handle, 0)
-                                task.wait()
-                                firetouchinterest(hrp, handle, 1)
-                                task.wait()
+                                -- Loop 5 times to ensure pickup
+                                for i = 1, 5 do
+                                    if not child.Parent then break end
+                                    firetouchinterest(hrp, handle, 0)
+                                    task.wait()
+                                    firetouchinterest(hrp, handle, 1)
+                                    task.wait()
+                                end
                                 hrp.CFrame = originalCFrame
                             end
                         end
@@ -849,7 +825,7 @@ local Sidebar = Create("Frame", {Size = UDim2.new(0, 240, 1, 0), BackgroundColor
 Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(16, 16, 20)), ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 14))}), Parent = Sidebar})
 Create("Frame", {Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0), BackgroundColor3 = Theme.DarkStroke, BorderSizePixel = 0, Parent = Sidebar})
 Create("TextLabel", {Size = UDim2.new(1, -30, 0, 35), Position = UDim2.new(0, 20, 0, 25), BackgroundTransparency = 1, Text = "SeraphiCA", Font = Enum.Font.GothamBlack, TextSize = 26, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
-Create("TextLabel", {Size = UDim2.new(1, -30, 0, 15), Position = UDim2.new(0, 21, 0, 60), BackgroundTransparency = 1, Text = "Ultimate Interface v11.0", Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
+Create("TextLabel", {Size = UDim2.new(1, -30, 0, 15), Position = UDim2.new(0, 21, 0, 60), BackgroundTransparency = 1, Text = "Ultimate Interface v11.5", Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
 Create("Frame", {Size = UDim2.new(1, -40, 0, 1), Position = UDim2.new(0, 20, 0, 85), BackgroundColor3 = Theme.DarkStroke, BorderSizePixel = 0, Parent = Sidebar})
 local TabContainer = Create("Frame", {Size = UDim2.new(1, 0, 1, -160), Position = UDim2.new(0, 0, 0, 100), BackgroundTransparency = 1, Parent = Sidebar})
 Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = TabContainer})
@@ -1080,16 +1056,16 @@ local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged
     UserInputService.InputChanged:Connect(function(input) if draggingSlider and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then update(input) end end)
 end
 
--- FLING MODULE
-local function CreateFlingModule(page)
+-- FLING/TELEPORT MODULE
+local function CreatePlayerSelectModule(page, title, desc, defaultState, actionText, onAction)
     local Container = Create("Frame", {Size = UDim2.new(1, 0, 0, 65), BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = page})
     Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
     Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = Container})
     Container.ClipsDescendants = true
     local Header = Create("TextButton", {Size = UDim2.new(1, 0, 0, 65), BackgroundTransparency = 1, AutoButtonColor = false, Text = "", Parent = Container})
     AddRipple(Header)
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 20), Position = UDim2.new(0, 15, 0, 12), BackgroundTransparency = 1, Text = L("FlingPlayer"), Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header})
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 15), Position = UDim2.new(0, 15, 0, 35), BackgroundTransparency = 1, Text = L("FlingPlayerDesc"), Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header})
+    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 20), Position = UDim2.new(0, 15, 0, 12), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header})
+    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 15), Position = UDim2.new(0, 15, 0, 35), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header})
     local ToggleBtn = Create("TextButton", {Size = UDim2.new(0, 50, 0, 24), Position = UDim2.new(1, -65, 0.5, -12), BackgroundColor3 = Color3.fromRGB(10, 10, 12), AutoButtonColor = false, Text = "", Parent = Header})
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = ToggleBtn})
     local TogStroke = Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = ToggleBtn})
@@ -1099,8 +1075,10 @@ local function CreateFlingModule(page)
     local SubContainer = Create("Frame", {Size = UDim2.new(1, 0, 0, 0), Position = UDim2.new(0, 0, 0, 65), BackgroundColor3 = Color3.fromRGB(16, 16, 20), BorderSizePixel = 0, Parent = Container})
     Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = SubContainer})
     Create("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), Parent = SubContainer})
-    local state = mmState.isFlinging
-    local expanded = mmState.isFlinging
+    local state = defaultState
+    local expanded = false
+    local selectedPlayer = nil
+
     local function UpdateSize()
         local baseHeight = 65
         local subHeight = expanded and (SubContainer.UIListLayout.AbsoluteContentSize.Y + 20) or 0
@@ -1110,6 +1088,7 @@ local function CreateFlingModule(page)
     if state then
         ToggleBtn.BackgroundColor3 = Theme.Accent TogStroke.Color = Theme.Accent
         Indicator.Position = UDim2.new(1, -21, 0.5, -9) Indicator.BackgroundColor3 = Theme.TextDark TogGlow.ImageTransparency = 0.5
+        expanded = true
     end
     AddRipple(ToggleBtn)
     ToggleBtn.MouseButton1Click:Connect(function()
@@ -1129,42 +1108,42 @@ local function CreateFlingModule(page)
         end
         UpdateSize()
     end)
+    
     local PlayerList = Create("ScrollingFrame", {Size = UDim2.new(1, 0, 0, 150), BackgroundColor3 = Color3.fromRGB(12, 12, 16), BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = Theme.Accent, CanvasSize = UDim2.new(0, 0, 0, 0), Parent = SubContainer})
     Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = PlayerList})
     Create("UIListLayout", {Padding = UDim.new(0, 5), Parent = PlayerList})
     Create("UIPadding", {PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), Parent = PlayerList})
     PlayerList.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() PlayerList.CanvasSize = UDim2.new(0, 0, 0, PlayerList.UIListLayout.AbsoluteContentSize.Y + 10) end)
-    local ActionBtn = Create("TextButton", {Size = UDim2.new(1, 0, 0, 35), BackgroundColor3 = Theme.Disabled, AutoButtonColor = false, Text = "Fling!", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Description, Active = false, Parent = SubContainer})
+    
+    local ActionBtn = Create("TextButton", {Size = UDim2.new(1, 0, 0, 35), BackgroundColor3 = Theme.Disabled, AutoButtonColor = false, Text = actionText, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Description, Active = false, Parent = SubContainer})
     Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = ActionBtn})
     Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = ActionBtn})
     AddRipple(ActionBtn)
+
     local function UpdateActionBtn()
-        if mmState.isFlinging then
-            TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.RedNotif, TextColor3 = Theme.Text}):Play()
-            ActionBtn.Text = "Stop!" ActionBtn.Active = true
-        elseif mmState.flingTarget then
+        if selectedPlayer then
             TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent, TextColor3 = Theme.TextDark}):Play()
-            ActionBtn.Text = "Fling!" ActionBtn.Active = true
+            ActionBtn.Active = true
         else
             TweenService:Create(ActionBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Disabled, TextColor3 = Theme.Description}):Play()
-            ActionBtn.Text = "Fling!" ActionBtn.Active = false
+            ActionBtn.Active = false
         end
     end
+
     local function PopulatePlayers()
         for _, child in ipairs(PlayerList:GetChildren()) do
             if child:IsA("TextButton") then child:Destroy() end
         end
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer then
-                local isSelected = (mmState.flingTarget == plr)
+                local isSelected = (selectedPlayer == plr)
                 local PlrBtn = Create("TextButton", {Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = isSelected and Theme.Accent or Color3.fromRGB(20, 20, 26), AutoButtonColor = false, Text = "", Parent = PlayerList})
                 Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = PlrBtn})
                 Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = PlrBtn})
                 Create("TextLabel", {Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 10, 0, 0), BackgroundTransparency = 1, Text = plr.Name, Font = Enum.Font.GothamSemibold, TextSize = 13, TextColor3 = isSelected and Theme.TextDark or Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = PlrBtn})
                 AddRipple(PlrBtn)
                 PlrBtn.MouseButton1Click:Connect(function()
-                    if mmState.isFlinging then return end
-                    mmState.flingTarget = plr
+                    selectedPlayer = plr
                     PopulatePlayers()
                     UpdateActionBtn()
                 end)
@@ -1174,27 +1153,14 @@ local function CreateFlingModule(page)
     PopulatePlayers()
     Players.PlayerAdded:Connect(PopulatePlayers)
     Players.PlayerRemoving:Connect(function(p)
-        if mmState.flingTarget == p and mmState.isFlinging then StopFlinging() end
+        if selectedPlayer == p then selectedPlayer = nil UpdateActionBtn() end
         PopulatePlayers()
-        UpdateActionBtn()
     end)
     ActionBtn.MouseButton1Click:Connect(function()
-        if not ActionBtn.Active then return end
-        if mmState.isFlinging then
-            StopFlinging()
-            Notify("Fling stopped", Theme.Success)
-        else
-            if mmState.flingTarget then
-                StartFlinging(mmState.flingTarget)
-                Notify("Flinging " .. mmState.flingTarget.Name .. "!", Theme.Accent)
-            end
-        end
-        UpdateActionBtn()
+        if ActionBtn.Active and selectedPlayer then onAction(selectedPlayer) end
     end)
     UpdateActionBtn()
-    if expanded then
-        task.spawn(function() task.wait(0.1) UpdateSize() end)
-    end
+    if state then task.spawn(function() task.wait(0.1) UpdateSize() end) end
 end
 
 -- INIT & RENDER
@@ -1230,7 +1196,24 @@ Tabs[L("Misc")].Render = function()
     CreateButton(PageContainer, L("TpToGun"), L("TpToGunDesc"), function() TpToGunAndPickUp() end)
     
     CreateCategory(PageContainer, L("Trolling"))
-    CreateFlingModule(PageContainer)
+    CreatePlayerSelectModule(PageContainer, L("FlingPlayer"), L("FlingPlayerDesc"), mmState.isFlinging, "Fling!", function(target)
+        StartFlinging(target)
+        Notify("Flinging " .. target.Name .. "!", Theme.Accent)
+    end)
+    
+    CreateCategory(PageContainer, L("General"))
+    CreatePlayerSelectModule(PageContainer, L("Teleport"), L("TeleportDesc"), false, "Teleport", function(target)
+        local char = LocalPlayer.Character
+        local tChar = target.Character
+        if char and tChar then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local tHrp = tChar:FindFirstChild("HumanoidRootPart")
+            if hrp and tHrp then
+                hrp.CFrame = tHrp.CFrame * CFrame.new(0, 0, 3)
+                Notify("Teleported to " .. target.Name, Theme.Success)
+            end
+        end
+    end)
 end
 
 CreateTab(L("Esp"))

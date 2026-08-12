@@ -1,4 +1,4 @@
--- // SeraphiCA | Summer Maximalism UI v22 (Flick Edition)
+-- // SeraphiCA | Summer Maximalism UI v23 (Flick Edition)
 -- // 810px | Neon Sunsets, Heavy Glows, Max Effects
 
 local CoreGui = game:GetService("CoreGui")
@@ -8,7 +8,6 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
-local GuiService = game:GetService("GuiService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -204,7 +203,7 @@ if isClosed then return end
 -- ========================================================================================
 -- MAIN SCRIPT
 -- ========================================================================================
-local oldUi = CoreGui:FindFirstChild("SeraphiCA_Flick_v22")
+local oldUi = CoreGui:FindFirstChild("SeraphiCA_Flick_v23")
 if oldUi then oldUi:Destroy() end
 local oldBlur = Lighting:FindFirstChild("SeraphiCA_Summer_Blur")
 if oldBlur then oldBlur:Destroy() end
@@ -214,7 +213,7 @@ local Theme = {
 }
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphiCA_Flick_v22"
+ScreenGui.Name = "SeraphiCA_Flick_v23"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
@@ -268,13 +267,16 @@ end
 -- GLOBAL STATE & LOGIC
 local currentLang = "ENG"
 local Lang = {
-    AimBot = {ENG = "Aim-Bot", RUS = "Аим-Бот"}, Settings = {ENG = "Settings", RUS = "Настройки"},
+    AimBot = {ENG = "Aim-Bot", RUS = "Аим-Бот"}, Esp = {ENG = "Esp", RUS = "Есп"}, Settings = {ENG = "Settings", RUS = "Настройки"},
     General = {ENG = "Main", RUS = "Основное"}, ThemeCustomization = {ENG = "Theme Customization", RUS = "Тема"}, VisualEffects = {ENG = "Visual Effects", RUS = "Визуальные Эффекты"},
     Enabled = {ENG = "Enabled", RUS = "Включено"}, EnabledDesc = {ENG = "Toggle the Aimbot on/off.", RUS = "Включить/выключить Аимбот."},
     Fov = {ENG = "Fov", RUS = "Поле зрения"}, FovDesc = {ENG = "Max 360. Shows a circle on screen.", RUS = "Макс 360. Показывает круг на экране."},
     VisibleCheck = {ENG = "Visible Check", RUS = "Проверка видимости"}, VisibleCheckDesc = {ENG = "If on, won't aim through walls.", RUS = "Если вкл, не наводится сквозь стены."},
     Aim360 = {ENG = "360° Aim", RUS = "360° Аим"}, Aim360Desc = {ENG = "Aims at players behind you too.", RUS = "Наводится на игроков позади вас."},
-    AutoFire = {ENG = "Auto Fire", RUS = "Авто Выстрел"}, AutoFireDesc = {ENG = "Auto shoots when target is locked. Tablet safe.", RUS = "Авто стрельба при захвате цели. Безопасно для планшета."},
+    Box = {ENG = "Box", RUS = "Бокс"}, BoxDesc = {ENG = "White box around players.", RUS = "Белый бокс вокруг игроков."},
+    Line = {ENG = "Line", RUS = "Линия"}, LineDesc = {ENG = "Line from screen edge to box.", RUS = "Линия от края экрана к боксу."},
+    LinePos = {ENG = "Line Position", RUS = "Позиция линии"}, LinePosDesc = {ENG = "Top, Bottom, or Center.", RUS = "Верх, низ или центр."},
+    Health = {ENG = "Health", RUS = "Здоровье"}, HealthDesc = {ENG = "Health bar and text.", RUS = "Полоска здоровья и цифры."},
     AccentColor = {ENG = "Accent Color", RUS = "Акцентный Цвет"}, AccentColorDesc = {ENG = "Change the main menu and UI accent color.", RUS = "Изменить цвет меню."},
     WmTextColor = {ENG = "Watermark Text Color", RUS = "Цвет Водяного Знака"}, WmTextColorDesc = {ENG = "Change the text color of the watermark.", RUS = "Изменить цвет текста вотермарка."},
     Language = {ENG = "Language", RUS = "Язык"}, LanguageDesc = {ENG = "Switch between RUS and ENG.", RUS = "Переключить между RUS и ENG."},
@@ -286,8 +288,15 @@ local aimState = {
     Enabled = false,
     Fov = 90,
     VisibleCheck = false,
-    Aim360 = false,
-    AutoFire = false
+    Aim360 = false
+}
+
+local espState = {
+    Enabled = false,
+    Box = false,
+    Line = false,
+    LinePos = "Top",
+    Health = false
 }
 
 -- INTRO
@@ -357,82 +366,7 @@ local FovCircle = Create("Frame", {
 Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = FovCircle})
 local FovStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 1.5, Transparency = 0.2, Parent = FovCircle})
 
-local cachedFireBtn = nil
-local lastFireTime = 0
-
--- Определение нахождения игрока в Лобби / Проверка активной игры
-local function isInLobby()
-    local char = LocalPlayer.Character
-    if not char then return true end
-    
-    local tool = char:FindFirstChildOfClass("Tool")
-    -- Если у игрока в руках нет оружия, он считается в Лобби / не в бою
-    if not tool then
-        return true
-    end
-
-    -- Дополнительная проверка на зону/имя карты (если в игре есть папка Lobby)
-    local lobbyFolder = Workspace:FindFirstChild("Lobby") or Workspace:FindFirstChild("lobby")
-    if lobbyFolder and char:IsDescendantOf(lobbyFolder) then
-        return true
-    end
-
-    return false
-end
-
--- Поиск мобильной кнопки выстрела без переключения на ПК-управление
-local function getMobileFireButton()
-    if cachedFireBtn and cachedFireBtn.Parent and cachedFireBtn.Visible then 
-        return cachedFireBtn 
-    end
-
-    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-    if not playerGui then return nil end
-
-    -- Поиск конкретно кнопки атаки в интерфейсе игры
-    for _, gui in ipairs(playerGui:GetChildren()) do
-        if gui:IsA("ScreenGui") and gui.Enabled then
-            for _, obj in ipairs(gui:GetDescendants()) do
-                if obj:IsA("GuiButton") and obj.Visible then
-                    local name = obj.Name:lower()
-                    if name:find("fire") or name:find("shoot") or name:find("attackbutton") or name:find("actionbutton") then
-                        cachedFireBtn = obj
-                        return obj
-                    end
-                end
-            end
-        end
-    end
-
-    return nil
-end
-
--- Безопасный выстрел для планшета (без использования VirtualInputManager)
-local function executeMobileFire()
-    if isInLobby() then return end -- Запрет выстрела в Лобби
-
-    -- 1. Выстрел напрямую через оружие в руках
-    local char = LocalPlayer.Character
-    if char then
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            tool:Activate()
-        end
-    end
-
-    -- 2. Сигнал мобильной кнопке на экране (без сброса сенсора)
-    local btn = getMobileFireButton()
-    if btn and firesignal then
-        pcall(function()
-            firesignal(btn.Activated)
-            firesignal(btn.MouseButton1Click)
-        end)
-    end
-end
-
 local function getClosestPlayer()
-    if isInLobby() then return nil end -- В лобби аимбот не ищет цели
-
     local closestPlayer = nil
     local shortestDist = aimState.Fov
     local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
@@ -444,14 +378,12 @@ local function getClosestPlayer()
             local hum = char:FindFirstChildOfClass("Humanoid")
             local hrp = char:FindFirstChild("HumanoidRootPart")
             if hum and hrp and hum.Health > 0 then
-                
                 local isVisible = true
                 if aimState.VisibleCheck then
                     local ray = Ray.new(Camera.CFrame.Position, hrp.Position - Camera.CFrame.Position)
                     local hit = Workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, char})
                     isVisible = (hit == nil or hit:IsDescendantOf(char))
                 end
-                
                 if isVisible then
                     if aimState.Aim360 then
                         local charHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -479,7 +411,164 @@ local function getClosestPlayer()
     return closestPlayer
 end
 
+-- ESP SYSTEM LOGIC
+local espObjects = {}
+local function createEspForPlayer(player)
+    if espObjects[player] then return end
+    local espGui = Instance.new("Frame")
+    espGui.BackgroundTransparency = 1
+    espGui.Visible = false
+    espGui.Parent = ScreenGui
+
+    -- Box
+    local box = Instance.new("Frame")
+    box.BackgroundTransparency = 1
+    box.BorderSizePixel = 0
+    box.Visible = false
+    box.Parent = espGui
+    local boxStroke = Instance.new("UIStroke")
+    boxStroke.Color = Color3.fromRGB(255, 255, 255)
+    boxStroke.Thickness = 1
+    boxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    boxStroke.Parent = box
+
+    -- Health Bar Background (Red)
+    local healthBg = Instance.new("Frame")
+    healthBg.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    healthBg.BorderSizePixel = 0
+    healthBg.Visible = false
+    healthBg.Parent = espGui
+
+    -- Health Bar Fill (Green)
+    local healthFill = Instance.new("Frame")
+    healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    healthFill.BorderSizePixel = 0
+    healthFill.AnchorPoint = Vector2.new(0, 0)
+    healthFill.Parent = healthBg
+
+    -- Health Text
+    local healthText = Instance.new("TextLabel")
+    healthText.BackgroundTransparency = 1
+    healthText.Text = ""
+    healthText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    healthText.TextSize = 12
+    healthText.Font = Enum.Font.GothamMedium
+    healthText.Visible = false
+    healthText.Parent = espGui
+
+    -- Tracer Line
+    local tracer = Instance.new("Frame")
+    tracer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    tracer.BorderSizePixel = 0
+    tracer.AnchorPoint = Vector2.new(0, 0.5)
+    tracer.Visible = false
+    tracer.Parent = espGui
+
+    espObjects[player] = {gui = espGui, box = box, healthBg = healthBg, healthFill = healthFill, healthText = healthText, tracer = tracer}
+end
+
+local function removeEspForPlayer(player)
+    local data = espObjects[player]
+    if data then
+        data.gui:Destroy()
+        espObjects[player] = nil
+    end
+end
+
+local function updateEspForPlayer(player)
+    local data = espObjects[player]
+    if not data then return end
+
+    if not espState.Enabled or not player.Character then
+        data.gui.Visible = false
+        return
+    end
+
+    local char = player.Character
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local head = char:FindFirstChild("Head")
+
+    if not hum or not hrp or not head or hum.Health <= 0 then
+        data.gui.Visible = false
+        return
+    end
+
+    local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position)
+    local footPos, footOnScreen = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+
+    if not headOnScreen and not footOnScreen then
+        data.gui.Visible = false
+        return
+    end
+
+    local height = math.abs(footPos.Y - headPos.Y)
+    local width = height / 2
+    local centerX = (headPos.X + footPos.X) / 2
+    local topY = math.min(headPos.Y, footPos.Y)
+
+    if height < 10 then
+        data.gui.Visible = false
+        return
+    end
+
+    data.gui.Visible = true
+
+    -- Update Box
+    if espState.Box then
+        data.box.Visible = true
+        data.box.Size = UDim2.new(0, width, 0, height)
+        data.box.Position = UDim2.new(0, centerX - width / 2, 0, topY)
+    else
+        data.box.Visible = false
+    end
+
+    -- Update Health
+    if espState.Health then
+        data.healthBg.Visible = true
+        data.healthText.Visible = true
+        
+        local barWidth = 3
+        local barX = centerX - width / 2 - barWidth - 2
+        
+        data.healthBg.Size = UDim2.new(0, barWidth, 0, height)
+        data.healthBg.Position = UDim2.new(0, barX, 0, topY)
+        
+        local healthPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+        data.healthFill.Size = UDim2.new(1, 0, healthPct, 0)
+        
+        data.healthText.Text = tostring(math.floor(hum.Health))
+        data.healthText.Size = UDim2.new(0, 50, 0, 15)
+        data.healthText.Position = UDim2.new(0, centerX - 25, 0, topY + height + 2)
+    else
+        data.healthBg.Visible = false
+        data.healthText.Visible = false
+    end
+
+    -- Update Tracer
+    if espState.Line then
+        data.tracer.Visible = true
+        local startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        if espState.LinePos == "Top" then
+            startPos = Vector2.new(Camera.ViewportSize.X / 2, 0)
+        elseif espState.LinePos == "Bottom" then
+            startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+        end
+
+        local endPos = Vector2.new(centerX, topY)
+        local dist = (endPos - startPos).Magnitude
+        local angle = math.atan2(endPos.Y - startPos.Y, endPos.X - startPos.X)
+        
+        data.tracer.Size = UDim2.new(0, dist, 0, 1)
+        data.tracer.Position = UDim2.new(0, startPos.X, 0, startPos.Y)
+        data.tracer.Rotation = math.deg(angle)
+    else
+        data.tracer.Visible = false
+    end
+end
+
 RunService.RenderStepped:Connect(function()
+    -- Aimbot
     if aimState.Enabled then
         FovCircle.Visible = true
         FovCircle.Size = UDim2.new(0, aimState.Fov * 2, 0, aimState.Fov * 2)
@@ -491,20 +580,37 @@ RunService.RenderStepped:Connect(function()
             local targetPos = hrp.Position
             local currentCFrame = Camera.CFrame
             local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPos)
-            Camera.CFrame = currentCFrame:Lerp(targetCFrame, 0.8)
-            
-            if aimState.AutoFire then
-                local currentTime = tick()
-                if currentTime - lastFireTime > 0.1 then
-                    lastFireTime = currentTime
-                    executeMobileFire()
-                end
-            end
+            Camera.CFrame = currentCFrame:Lerp(targetCFrame, 1)
         end
     else
         FovCircle.Visible = false
     end
+    
+    -- ESP
+    if espState.Enabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                if not espObjects[player] then
+                    createEspForPlayer(player)
+                end
+                updateEspForPlayer(player)
+            end
+        end
+    else
+        for _, data in pairs(espObjects) do
+            data.gui.Visible = false
+        end
+    end
+    
+    -- Cleanup
+    for player, _ in pairs(espObjects) do
+        if not Players:FindFirstChild(player.Name) then
+            removeEspForPlayer(player)
+        end
+    end
 end)
+
+Players.PlayerRemoving:Connect(removeEspForPlayer)
 
 -- WATERMARK
 local Watermark = Create("TextButton", {Size = UDim2.new(0, 240, 0, 38), Position = UDim2.new(0.5, -120, 0, 15), BackgroundColor3 = Color3.fromRGB(20, 20, 25), BackgroundTransparency = 0.3, AutoButtonColor = false, Text = "", Parent = ScreenGui})
@@ -580,7 +686,7 @@ Create("Frame", {Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0)
 
 local SideTitle = Create("TextLabel", {Size = UDim2.new(1, -30, 0, 35), Position = UDim2.new(0, 20, 0, 25), BackgroundTransparency = 1, Text = "SeraphiCA", Font = Enum.Font.GothamBlack, TextSize = 24, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
 AddShimmer(SideTitle)
-Create("TextLabel", {Size = UDim2.new(1, -30, 0, 15), Position = UDim2.new(0, 21, 0, 60), BackgroundTransparency = 1, Text = "Flick v22", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
+Create("TextLabel", {Size = UDim2.new(1, -30, 0, 15), Position = UDim2.new(0, 21, 0, 60), BackgroundTransparency = 1, Text = "Flick v23", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
 
 local TabContainer = Create("Frame", {Size = UDim2.new(1, 0, 1, -160), Position = UDim2.new(0, 0, 0, 100), BackgroundTransparency = 1, Parent = Sidebar})
 Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = TabContainer})
@@ -701,6 +807,26 @@ local function CreateSlider(page, title, desc, maxVal, defaultVal, onValueChange
     UserInputService.InputChanged:Connect(function(input) if draggingSlider and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then update(input) end end)
 end
 
+local function CreateCycleButton(page, title, desc, options, defaultIndex, onValueChanged)
+    local Container = Create("TextButton", {Size = UDim2.new(1, 0, 0, 60), BackgroundColor3 = Theme.Element, AutoButtonColor = false, Text = "", Parent = page})
+    Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Container})
+    Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = Container})
+    AddRipple(Container)
+    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 20), Position = UDim2.new(0, 20, 0, 12), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
+    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 15), Position = UDim2.new(0, 20, 0, 34), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
+
+    local ValBtn = Create("TextButton", {Size = UDim2.new(0, 80, 0, 30), Position = UDim2.new(1, -95, 0.5, -15), BackgroundColor3 = Theme.Accent, AutoButtonColor = false, Text = options[defaultIndex], Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = Theme.TextDark, Parent = Container})
+    Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = ValBtn})
+
+    local currentIndex = defaultIndex
+    ValBtn.MouseButton1Click:Connect(function()
+        currentIndex = currentIndex + 1
+        if currentIndex > #options then currentIndex = 1 end
+        ValBtn.Text = options[currentIndex]
+        if onValueChanged then onValueChanged(options[currentIndex]) end
+    end)
+end
+
 local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged)
     local Container = Create("Frame", {Size = UDim2.new(1, 0, 0, 75), BackgroundColor3 = Theme.Element, Parent = page})
     Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Container})
@@ -733,13 +859,16 @@ Tabs[L("AimBot")].Render = function()
     CreateSlider(PageContainer, L("Fov"), L("FovDesc"), 360, aimState.Fov, function(v) aimState.Fov = v end)
     CreateToggle(PageContainer, L("VisibleCheck"), L("VisibleCheckDesc"), aimState.VisibleCheck, function(v) aimState.VisibleCheck = v end)
     CreateToggle(PageContainer, L("Aim360"), L("Aim360Desc"), aimState.Aim360, function(v) aimState.Aim360 = v end)
-    CreateToggle(PageContainer, L("AutoFire"), L("AutoFireDesc"), aimState.AutoFire, function(v) 
-        aimState.AutoFire = v 
-        if v then
-            Notify("Mobile AutoFire Active!", Theme.Success)
-        end
-        cachedFireBtn = nil
-    end)
+end
+
+CreateTab(L("Esp"))
+Tabs[L("Esp")].Render = function()
+    CreateCategory(PageContainer, L("General"))
+    CreateToggle(PageContainer, L("Enabled"), L("EnabledDesc"), espState.Enabled, function(v) espState.Enabled = v end)
+    CreateToggle(PageContainer, L("Box"), L("BoxDesc"), espState.Box, function(v) espState.Box = v end)
+    CreateToggle(PageContainer, L("Line"), L("LineDesc"), espState.Line, function(v) espState.Line = v end)
+    CreateCycleButton(PageContainer, L("LinePos"), L("LinePosDesc"), {"Top", "Bottom", "Center"}, 1, function(val) espState.LinePos = val end)
+    CreateToggle(PageContainer, L("Health"), L("HealthDesc"), espState.Health, function(v) espState.Health = v end)
 end
 
 CreateTab(L("Settings"))

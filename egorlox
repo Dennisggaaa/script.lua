@@ -9,7 +9,6 @@ local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 local GuiService = game:GetService("GuiService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -361,8 +360,28 @@ local FovStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 1.5, Tra
 local cachedFireBtn = nil
 local lastFireTime = 0
 
--- Динамический поиск кнопки выстрела в игре (без жестких координат)
-local function getGameFireButton()
+-- Определение нахождения игрока в Лобби / Проверка активной игры
+local function isInLobby()
+    local char = LocalPlayer.Character
+    if not char then return true end
+    
+    local tool = char:FindFirstChildOfClass("Tool")
+    -- Если у игрока в руках нет оружия, он считается в Лобби / не в бою
+    if not tool then
+        return true
+    end
+
+    -- Дополнительная проверка на зону/имя карты (если в игре есть папка Lobby)
+    local lobbyFolder = Workspace:FindFirstChild("Lobby") or Workspace:FindFirstChild("lobby")
+    if lobbyFolder and char:IsDescendantOf(lobbyFolder) then
+        return true
+    end
+
+    return false
+end
+
+-- Поиск мобильной кнопки выстрела без переключения на ПК-управление
+local function getMobileFireButton()
     if cachedFireBtn and cachedFireBtn.Parent and cachedFireBtn.Visible then 
         return cachedFireBtn 
     end
@@ -370,12 +389,13 @@ local function getGameFireButton()
     local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
     if not playerGui then return nil end
 
+    -- Поиск конкретно кнопки атаки в интерфейсе игры
     for _, gui in ipairs(playerGui:GetChildren()) do
         if gui:IsA("ScreenGui") and gui.Enabled then
             for _, obj in ipairs(gui:GetDescendants()) do
                 if obj:IsA("GuiButton") and obj.Visible then
                     local name = obj.Name:lower()
-                    if name:find("fire") or name:find("shoot") or name:find("attack") or name:find("action") or name:find("button") then
+                    if name:find("fire") or name:find("shoot") or name:find("attackbutton") or name:find("actionbutton") then
                         cachedFireBtn = obj
                         return obj
                     end
@@ -384,21 +404,14 @@ local function getGameFireButton()
         end
     end
 
-    -- Если кнопка не найдена по имени, пробуем забрать первую видимую мобильную кнопку
-    local objs = GuiService:GetGuiObjectsAtPosition(106, 113)
-    for _, obj in ipairs(objs) do
-        if obj:IsA("GuiButton") and not obj:IsDescendantOf(ScreenGui) then
-            cachedFireBtn = obj
-            return obj
-        end
-    end
-
     return nil
 end
 
--- Улучшенная универсальная стрельба (Tool + GUI Signal + VirtualInputManager)
-local function executeFire()
-    -- 1. Стрельба через Tool в руках (если есть)
+-- Безопасный выстрел для планшета (без использования VirtualInputManager)
+local function executeMobileFire()
+    if isInLobby() then return end -- Запрет выстрела в Лобби
+
+    -- 1. Выстрел напрямую через оружие в руках
     local char = LocalPlayer.Character
     if char then
         local tool = char:FindFirstChildOfClass("Tool")
@@ -407,32 +420,19 @@ local function executeFire()
         end
     end
 
-    -- 2. Выстрел через нажатие на UI кнопку
-    local btn = getGameFireButton()
-    if btn then
+    -- 2. Сигнал мобильной кнопке на экране (без сброса сенсора)
+    local btn = getMobileFireButton()
+    if btn and firesignal then
         pcall(function()
-            if firesignal then
-                firesignal(btn.Activated)
-                firesignal(btn.MouseButton1Click)
-                firesignal(btn.MouseButton1Down)
-                task.wait(0.02)
-                firesignal(btn.MouseButton1Up)
-            end
-        end)
-
-        -- Симуляция клика в центр найденной кнопки через VirtualInputManager
-        pcall(function()
-            local absPos = btn.AbsolutePosition
-            local absSize = btn.AbsoluteSize
-            local center = absPos + (absSize / 2)
-            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 0)
-            task.wait(0.02)
-            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 0)
+            firesignal(btn.Activated)
+            firesignal(btn.MouseButton1Click)
         end)
     end
 end
 
 local function getClosestPlayer()
+    if isInLobby() then return nil end -- В лобби аимбот не ищет цели
+
     local closestPlayer = nil
     local shortestDist = aimState.Fov
     local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
@@ -495,9 +495,9 @@ RunService.RenderStepped:Connect(function()
             
             if aimState.AutoFire then
                 local currentTime = tick()
-                if currentTime - lastFireTime > 0.08 then -- Оптимальная задержка выстрелов
+                if currentTime - lastFireTime > 0.1 then
                     lastFireTime = currentTime
-                    executeFire()
+                    executeMobileFire()
                 end
             end
         end
@@ -736,14 +736,9 @@ Tabs[L("AimBot")].Render = function()
     CreateToggle(PageContainer, L("AutoFire"), L("AutoFireDesc"), aimState.AutoFire, function(v) 
         aimState.AutoFire = v 
         if v then
-            local btn = getGameFireButton()
-            if btn then
-                Notify("Fire system active!", Theme.Success)
-            else
-                Notify("AutoFire active (Tool / VIM mode)", Theme.Success)
-            end
+            Notify("Mobile AutoFire Active!", Theme.Success)
         end
-        cachedFireBtn = nil -- Reset cache when toggled
+        cachedFireBtn = nil
     end)
 end
 

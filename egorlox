@@ -1,5 +1,5 @@
--- // SeraphiCA | Absolute God Tier UI v9.1
--- // 800px | Key System Obfuscated & AutoPickUp Fixed
+-- // SeraphiCA | Absolute God Tier UI v10.0
+-- // 800px | MS-KILL, Customization, Languages
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -17,13 +17,11 @@ local LocalPlayer = Players.LocalPlayer
 local function decode(arr)
     local s = ""
     for _, v in ipairs(arr) do
-        s = s .. string.char(v - 27) -- Сдвиг байтов
+        s = s .. string.char(v - 27)
     end
     return s
 end
 
--- "beta" = {125, 128, 143, 124}
--- "test" = {143, 128, 142, 143}
 local validKeys = {
     [decode({125, 128, 143, 124})] = true,
     [decode({143, 128, 142, 143})] = true
@@ -206,7 +204,7 @@ if isClosed then return end
 -- ========================================================================================
 -- MAIN SCRIPT
 -- ========================================================================================
-local oldUi = CoreGui:FindFirstChild("SeraphiCA_GodTier_v9")
+local oldUi = CoreGui:FindFirstChild("SeraphiCA_GodTier_v10")
 if oldUi then oldUi:Destroy() end
 
 local Theme = {
@@ -226,7 +224,7 @@ local Theme = {
 }
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphiCA_GodTier_v9"
+ScreenGui.Name = "SeraphiCA_GodTier_v10"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
@@ -276,6 +274,11 @@ local MenuBlur = Instance.new("BlurEffect")
 MenuBlur.Name = "SeraphiCA_Blur"
 MenuBlur.Size = 0
 MenuBlur.Parent = Lighting
+
+local CustomBlur = Instance.new("BlurEffect")
+CustomBlur.Name = "SeraphiCA_Custom_Blur"
+CustomBlur.Size = 0
+CustomBlur.Parent = Lighting
 
 local NotifHolder = Create("Frame", {
     Size = UDim2.new(0, 350, 1, 0),
@@ -338,12 +341,66 @@ local function Notify(text, color)
     end)
 end
 
+local currentLang = "ENG"
+
+local Lang = {
+    MS_KILL = {ENG = "MS-KILL", RUS = "MS-KILL"},
+    Misc = {ENG = "Misc", RUS = "Разное"},
+    Esp = {ENG = "Esp", RUS = "Есп"},
+    Settings = {ENG = "Settings", RUS = "Настройки"},
+    General = {ENG = "General", RUS = "Основное"},
+    GunFeatures = {ENG = "Gun Features", RUS = "Оружие"},
+    Trolling = {ENG = "Trolling", RUS = "Троллинг"},
+    PlayerVisuals = {ENG = "Player Visuals", RUS = "Игроки"},
+    ThemeCustomization = {ENG = "Theme Customization", RUS = "Тема"},
+    SheriffFeatures = {ENG = "Sheriff Features", RUS = "Функции Шерифа"},
+    WallShot = {ENG = "WallShot", RUS = "Валлшот"},
+    WallShotDesc = {ENG = "Shoot and throw knives through walls.", RUS = "Стрелять и кидать ножи сквозь стены."},
+    AntiFling = {ENG = "AntiFling", RUS = "АнтиФлинг"},
+    AntiFlingDesc = {ENG = "Prevents other players from launching you.", RUS = "Защита от отправки в полёт."},
+    AutoPickUpGun = {ENG = "AutoPickUpGun", RUS = "АвтоПодборПушки"},
+    AutoPickUpGunDesc = {ENG = "Instantly teleports to gun when dropped and picks it up.", RUS = "Мгновенно телепортирует к пушке и подбирает её."},
+    TpToGun = {ENG = "TpToGun", RUS = "ТелепортКПушке"},
+    TpToGunDesc = {ENG = "Teleport to gun and return to your position.", RUS = "Телепорт к пушке и возврат на место."},
+    TouchForSheriff = {ENG = "Touch For Sheriff", RUS = "Touch For Sheriff"},
+    TouchForSheriffDesc = {ENG = "Enable to setup the kill button.", RUS = "Настройка кнопки убийства."},
+    KillMurder = {ENG = "KillMurder", RUS = "KillMurder"},
+    KillMurderDesc = {ENG = "Enable to show kill buttons.", RUS = "Показать кнопки убийства."},
+    AddBtn = {ENG = "Add", RUS = "Добавить"},
+    AddBtnDesc = {ENG = "Add the shoot button.", RUS = "Добавить кнопку выстрела."},
+    DeleteBtn = {ENG = "Delete", RUS = "Удалить"},
+    DeleteBtnDesc = {ENG = "Delete the shoot button.", RUS = "Удалить кнопку выстрела."},
+    CustomizationBtn = {ENG = "Customization", RUS = "Настройка"},
+    CustomizationBtnDesc = {ENG = "Change size and position.", RUS = "Изменить размер и позицию."},
+    FlingPlayer = {ENG = "Fling Player", RUS = "Флинг Игрока"},
+    FlingPlayerDesc = {ENG = "Select a player to fling them into space.", RUS = "Выбрать игрока для флинга."},
+    Chams = {ENG = "Chams", RUS = "Чамсы"},
+    ChamsDesc = {ENG = "Highlight players through walls.", RUS = "Подсветка игроков сквозь стены."},
+    ChamsMurder = {ENG = "ChamsMurder", RUS = "ЧамсыМардера"},
+    ChamsMurderDesc = {ENG = "Highlight only the murderer role.", RUS = "Подсветить только убийцу."},
+    ChamsSherif = {ENG = "ChamsSherif", RUS = "ЧамсыШерифа"},
+    ChamsSherifDesc = {ENG = "Highlight only the sheriff role.", RUS = "Подсветить только шерифа."},
+    ChamsEnemies = {ENG = "ChamsEnemies", RUS = "ЧамсыНевинных"},
+    ChamsEnemiesDesc = {ENG = "Highlight innocent players (green).", RUS = "Подсветить невинных (зеленый)."},
+    AccentColor = {ENG = "Accent Color", RUS = "Акцентный Цвет"},
+    AccentColorDesc = {ENG = "Change the main menu and UI accent color.", RUS = "Изменить цвет меню."},
+    WmTextColor = {ENG = "Watermark Text Color", RUS = "Цвет Водяного Знака"},
+    WmTextColorDesc = {ENG = "Change the text color of the watermark.", RUS = "Изменить цвет текста вотермарка."},
+    Language = {ENG = "Language", RUS = "Язык"},
+    LanguageDesc = {ENG = "Switch between RUS and ENG.", RUS = "Переключить между RUS и ENG."}
+}
+
+local function L(key)
+    return Lang[key][currentLang]
+end
+
 local mmState = {
     wallShot = false,
     antiFling = false,
     autoPickUpGun = false,
     isFlinging = false,
     flingTarget = nil,
+    forceTarget = nil,
 }
 
 local espState = {
@@ -387,7 +444,209 @@ end
 
 for _, p in ipairs(Players:GetPlayers()) do setupRoleReset(p) end
 Players.PlayerAdded:Connect(setupRoleReset)
+-- ========================================================================================
+-- MS-KILL LOGIC
+-- ========================================================================================
+local ShotButton = nil
+local ShotBtnPos = UDim2.new(0.5, -50, 0.5, -50)
+local ShotBtnSize = UDim2.new(0, 100, 0, 100)
+local isDraggingShot = false
 
+local function ShootMurderer()
+    local murderer = nil
+    for _, p in ipairs(Players:GetPlayers()) do
+        if playerRoles[p] == "Murderer" then murderer = p break end
+    end
+
+    if not murderer or not murderer.Character then
+        Notify("Murderer not found", Theme.RedNotif)
+        return
+    end
+
+    local mHumRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
+    if not mHumRoot then return end
+
+    -- Anti-Idiot Check
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p ~= murderer and playerRoles[p] == "Innocent" and p.Character then
+            local pHumRoot = p.Character:FindFirstChild("HumanoidRootPart")
+            if pHumRoot then
+                local dist = (pHumRoot.Position - mHumRoot.Position).Magnitude
+                if dist < 15 then
+                    Notify("There's an idiot standing next to the murder, wait until he moves away.", Theme.RedNotif)
+                    return
+                end
+            end
+        end
+    end
+
+    -- Shoot
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local tool = char:FindFirstChildOfClass("Tool") or (LocalPlayer.Backpack and LocalPlayer.Backpack:FindFirstChildOfClass("Tool"))
+    
+    if tool and hum and tool.Name:lower():find("gun") then
+        if tool.Parent == LocalPlayer.Backpack then
+            hum:EquipTool(tool)
+            task.wait(0.05)
+        end
+        
+        mmState.forceTarget = mHumRoot
+        tool:Activate()
+        task.wait(0.05)
+        mmState.forceTarget = nil
+    else
+        Notify("You don't have a gun!", Theme.RedNotif)
+    end
+end
+
+local function AddShotButton()
+    if ShotButton then return end
+    ShotButton = Instance.new("TextButton")
+    ShotButton.Size = ShotBtnSize
+    ShotButton.Position = ShotBtnPos
+    ShotButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ShotButton.Text = "shot"
+    ShotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ShotButton.Font = Enum.Font.GothamBold
+    ShotButton.TextSize = 20
+    ShotButton.Parent = ScreenGui
+    Instance.new("UICorner", ShotButton).CornerRadius = UDim.new(0, 15)
+    
+    ShotButton.MouseButton1Click:Connect(function()
+        if not isDraggingShot then
+            ShootMurderer()
+        end
+    end)
+end
+
+local function RemoveShotButton()
+    if ShotButton then
+        ShotButton:Destroy()
+        ShotButton = nil
+    end
+end
+
+-- Customization Screen
+local CustomFrame = Create("Frame", {
+    Size = UDim2.new(1, 0, 1, 0),
+    BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+    BackgroundTransparency = 0.4,
+    Visible = false,
+    ZIndex = 100,
+    Parent = ScreenGui
+})
+
+local CustomMenu = Create("Frame", {
+    Size = UDim2.new(0, 300, 0, 200),
+    Position = UDim2.new(0.5, -150, 0.5, -100),
+    BackgroundColor3 = Theme.Background,
+    Parent = CustomFrame
+})
+Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = CustomMenu})
+Create("UIStroke", {Color = Theme.Accent, Thickness = 1.5, Parent = CustomMenu})
+
+local CustomTitle = Create("TextLabel", {
+    Size = UDim2.new(1, 0, 0, 40),
+    BackgroundTransparency = 1,
+    Text = "Customization",
+    Font = Enum.Font.GothamBold,
+    TextSize = 16,
+    TextColor3 = Theme.Text,
+    Parent = CustomMenu
+})
+
+local SizeSlider = Create("TextButton", {
+    Size = UDim2.new(1, -40, 0, 15),
+    Position = UDim2.new(0, 20, 0, 60),
+    BackgroundColor3 = Theme.Element,
+    Text = "",
+    AutoButtonColor = false,
+    Parent = CustomMenu
+})
+Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = SizeSlider})
+local SizeKnob = Create("Frame", {
+    Size = UDim2.new(0, 20, 0, 20),
+    Position = UDim2.new(0.5, -10, 0.5, -10),
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+    Parent = SizeSlider
+})
+Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = SizeKnob})
+
+local CloseCustomBtn = Create("TextButton", {
+    Size = UDim2.new(0, 80, 0, 30),
+    Position = UDim2.new(0.5, -40, 1, -40),
+    BackgroundColor3 = Theme.Accent,
+    Text = "Close",
+    Font = Enum.Font.GothamBold,
+    TextSize = 14,
+    TextColor3 = Theme.TextDark,
+    Parent = CustomMenu
+})
+Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = CloseCustomBtn})
+
+local function OpenCustomization()
+    CustomFrame.Visible = true
+    CustomBlur.Size = 24
+    
+    local draggingSlider = false
+    SizeSlider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingSlider = true
+            local pos = math.clamp((input.Position.X - SizeSlider.AbsolutePosition.X) / SizeSlider.AbsoluteSize.X, 0, 1)
+            SizeKnob.Position = UDim2.new(pos, -10, 0.5, -10)
+            ShotBtnSize = UDim2.new(0, 50 + pos * 150, 0, 50 + pos * 150)
+            if ShotButton then ShotButton.Size = ShotBtnSize end
+        end
+    end)
+    SizeSlider.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingSlider = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local pos = math.clamp((input.Position.X - SizeSlider.AbsolutePosition.X) / SizeSlider.AbsoluteSize.X, 0, 1)
+            SizeKnob.Position = UDim2.new(pos, -10, 0.5, -10)
+            ShotBtnSize = UDim2.new(0, 50 + pos * 150, 0, 50 + pos * 150)
+            if ShotButton then ShotButton.Size = ShotBtnSize end
+        end
+    end)
+    
+    if ShotButton then
+        local dragInput, dragStart, startPos
+        ShotButton.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                isDraggingShot = true
+                dragStart = input.Position
+                startPos = ShotButton.Position
+            end
+        end)
+        ShotButton.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                isDraggingShot = false
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if isDraggingShot and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                ShotButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                ShotBtnPos = ShotButton.Position
+            end
+        end)
+    end
+end
+
+CloseCustomBtn.MouseButton1Click:Connect(function()
+    CustomFrame.Visible = false
+    CustomBlur.Size = 0
+    isDraggingShot = false
+end)
+
+-- ========================================================================================
+-- ESP SYSTEM
+-- ========================================================================================
 local espObjects = {}
 
 local function createEspForPlayer(player)
@@ -471,55 +730,60 @@ end)
 
 Players.PlayerRemoving:Connect(removeEspForPlayer)
 
+-- WALLSHOT HOOK
 local mt = getrawmetatable(game)
 local oldNamecall = mt.__namecall
 setreadonly(mt, false)
 
 mt.__namecall = function(self, ...)
     local method = getnamecallmethod()
-    if mmState.wallShot then
+    if mmState.wallShot or mmState.forceTarget then
         if method == "FireServer" and self:IsA("Tool") then
             local toolName = self.Name:lower()
             if toolName:find("gun") or toolName:find("revolver") or toolName:find("pistol") or toolName:find("colt") then
-                local closestPart, closestDist = nil, math.huge
-                local camera = workspace.CurrentCamera
-                local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-                
-                for _, plr in ipairs(Players:GetPlayers()) do
-                    if plr ~= LocalPlayer and plr.Character then
-                        local char = plr.Character
-                        local hum = char:FindFirstChildOfClass("Humanoid")
-                        if hum and hum.Health > 0 then
-                            for _, partName in ipairs({"Head", "HumanoidRootPart", "Torso", "UpperTorso", "LowerTorso"}) do
-                                local part = char:FindFirstChild(partName)
-                                if part then
-                                    local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
-                                    if onScreen then
-                                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-                                        if dist < closestDist then
-                                            closestDist = dist
-                                            closestPart = part
+                local targetPart = mmState.forceTarget
+                if not targetPart then
+                    local closestPart, closestDist = nil, math.huge
+                    local camera = workspace.CurrentCamera
+                    local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                    
+                    for _, plr in ipairs(Players:GetPlayers()) do
+                        if plr ~= LocalPlayer and plr.Character then
+                            local char = plr.Character
+                            local hum = char:FindFirstChildOfClass("Humanoid")
+                            if hum and hum.Health > 0 then
+                                for _, partName in ipairs({"Head", "HumanoidRootPart", "Torso", "UpperTorso", "LowerTorso"}) do
+                                    local part = char:FindFirstChild(partName)
+                                    if part then
+                                        local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
+                                        if onScreen then
+                                            local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                                            if dist < closestDist then
+                                                closestDist = dist
+                                                closestPart = part
+                                            end
                                         end
                                     end
                                 end
                             end
                         end
                     end
+                    targetPart = closestPart
                 end
                 
-                if closestPart then
+                if targetPart then
                     local args = {...}
                     for i = 1, #args do
                         if typeof(args[i]) == "Instance" and args[i]:IsA("BasePart") then
-                            args[i] = closestPart
+                            args[i] = targetPart
                         elseif typeof(args[i]) == "Vector3" then
-                            args[i] = closestPart.Position
+                            args[i] = targetPart.Position
                         end
                     end
                     return oldNamecall(self, unpack(args))
                 end
             end
-        elseif self == workspace then
+        elseif self == workspace and mmState.wallShot then
             if method == "Raycast" then
                 local args = {...}
                 local origin = args[1]
@@ -590,6 +854,7 @@ mt.__namecall = function(self, ...)
 end
 setreadonly(mt, true)
 
+-- ANTI-FLING LOGIC
 local antiFlingLoop
 local function ApplyAntiFling(state)
     mmState.antiFling = state
@@ -613,6 +878,7 @@ local function ApplyAntiFling(state)
     end
 end
 
+-- GUN FINDER & TP
 local function FindGun()
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("Tool") then
@@ -686,6 +952,7 @@ local function ApplyAutoPickUpGun(state)
     end
 end
 
+-- FLING LOGIC
 local flingConnection
 local function StopFlinging()
     if flingConnection then
@@ -722,6 +989,9 @@ local function StartFlinging(target)
     end)
 end
 
+-- ========================================================================================
+-- UI ELEMENTS
+-- ========================================================================================
 local Intro = Create("Frame", {
     Size = UDim2.new(1, 0, 1, 0),
     BackgroundColor3 = Theme.Background,
@@ -989,7 +1259,7 @@ Create("TextLabel", {
     Size = UDim2.new(1, -30, 0, 15),
     Position = UDim2.new(0, 21, 0, 60),
     BackgroundTransparency = 1,
-    Text = "Ultimate Interface v9.1",
+    Text = "Ultimate Interface v10.0",
     Font = Enum.Font.Gotham,
     TextSize = 12,
     TextColor3 = Theme.Description,
@@ -1150,7 +1420,7 @@ local function CreateTab(name)
         Font = Enum.Font.GothamSemibold,
         TextSize = 14,
         TextColor3 = Theme.Text,
-    TextXAlignment = Enum.TextXAlignment.Left,
+        TextXAlignment = Enum.TextXAlignment.Left,
         Parent = Btn
     })
 
@@ -1158,10 +1428,6 @@ local function CreateTab(name)
     Tabs[name] = {Button = Btn, Render = nil}
 
     Btn.MouseButton1Click:Connect(function()
-        if name == "Aim-Bot" then
-            Notify("not available yet", Theme.RedNotif)
-            return
-        end
         SelectTab(name)
     end)
 
@@ -1277,7 +1543,61 @@ local function CreateToggle(page, title, desc, defaultState, onToggle)
     end)
 end
 
-local function CreateExpandable(page, title, desc, subOptions)
+local function CreateButton(page, title, desc, onClick)
+    local Container = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 65),
+        BackgroundColor3 = Theme.Element,
+        BorderSizePixel = 0,
+        Parent = page
+    })
+    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
+    Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = Container})
+
+    Create("TextLabel", {
+        Size = UDim2.new(1, -100, 0, 20),
+        Position = UDim2.new(0, 15, 0, 12),
+        BackgroundTransparency = 1,
+        Text = title,
+        Font = Enum.Font.GothamBold,
+        TextSize = 15,
+        TextColor3 = Theme.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Container
+    })
+    Create("TextLabel", {
+        Size = UDim2.new(1, -100, 0, 15),
+        Position = UDim2.new(0, 15, 0, 35),
+        BackgroundTransparency = 1,
+        Text = desc,
+        Font = Enum.Font.Gotham,
+        TextSize = 12,
+        TextColor3 = Theme.Description,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Container
+    })
+
+    local ActionBtn = Create("TextButton", {
+        Size = UDim2.new(0, 80, 0, 30),
+        Position = UDim2.new(1, -95, 0.5, -15),
+        BackgroundColor3 = Theme.Accent,
+        AutoButtonColor = false,
+        Text = "Execute",
+        Font = Enum.Font.GothamBold,
+        TextSize = 13,
+        TextColor3 = Theme.TextDark,
+        Active = true,
+        Parent = Container
+    })
+    Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = ActionBtn})
+    Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = ActionBtn})
+    AddRipple(ActionBtn)
+
+    ActionBtn.MouseButton1Click:Connect(function()
+        if onClick then onClick() end
+    end)
+end
+
+local function CreateExpandable(page, title, desc, subOptions, isNested)
     local Container = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 65),
         BackgroundColor3 = Theme.Element,
@@ -1352,7 +1672,7 @@ local function CreateExpandable(page, title, desc, subOptions)
     local SubContainer = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 0),
         Position = UDim2.new(0, 0, 0, 65),
-        BackgroundColor3 = Color3.fromRGB(16, 16, 20),
+        BackgroundColor3 = isNested and Color3.fromRGB(12, 12, 16) or Color3.fromRGB(16, 16, 20),
         BorderSizePixel = 0,
         Parent = Container
     })
@@ -1364,7 +1684,7 @@ local function CreateExpandable(page, title, desc, subOptions)
     
     local hasActiveOption = false
     for _, opt in ipairs(subOptions) do
-        if opt.Default then hasActiveOption = true break end
+        if opt.Default or (opt.Type == "Expandable" and opt.HasActive) then hasActiveOption = true break end
     end
 
     local function UpdateSize()
@@ -1404,93 +1724,99 @@ local function CreateExpandable(page, title, desc, subOptions)
     end)
 
     for _, opt in ipairs(subOptions) do
-        local SubFrame = Create("Frame", {
-            Size = UDim2.new(1, 0, 0, 50),
-            BackgroundColor3 = Color3.fromRGB(22, 22, 28),
-            BorderSizePixel = 0,
-            Parent = SubContainer
-        })
-        Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = SubFrame})
-        Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = SubFrame})
+        if opt.Type == "Button" then
+            CreateButton(SubContainer, opt.Name, opt.Desc, opt.Callback)
+        elseif opt.Type == "Expandable" then
+            CreateExpandable(SubContainer, opt.Name, opt.Desc, opt.SubOptions, true)
+        else
+            local SubFrame = Create("Frame", {
+                Size = UDim2.new(1, 0, 0, 50),
+                BackgroundColor3 = Color3.fromRGB(22, 22, 28),
+                BorderSizePixel = 0,
+                Parent = SubContainer
+            })
+            Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = SubFrame})
+            Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = SubFrame})
 
-        Create("TextLabel", {
-            Size = UDim2.new(1, -80, 0, 15),
-            Position = UDim2.new(0, 12, 0, 8),
-            BackgroundTransparency = 1,
-            Text = opt.Name,
-            Font = Enum.Font.GothamSemibold,
-            TextSize = 13,
-            TextColor3 = Theme.Text,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            Parent = SubFrame
-        })
-        Create("TextLabel", {
-            Size = UDim2.new(1, -80, 0, 15),
-            Position = UDim2.new(0, 12, 0, 26),
-            BackgroundTransparency = 1,
-            Text = opt.Desc,
-            Font = Enum.Font.Gotham,
-            TextSize = 11,
-            TextColor3 = Theme.Description,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            Parent = SubFrame
-        })
+            Create("TextLabel", {
+                Size = UDim2.new(1, -80, 0, 15),
+                Position = UDim2.new(0, 12, 0, 8),
+                BackgroundTransparency = 1,
+                Text = opt.Name,
+                Font = Enum.Font.GothamSemibold,
+                TextSize = 13,
+                TextColor3 = Theme.Text,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = SubFrame
+            })
+            Create("TextLabel", {
+                Size = UDim2.new(1, -80, 0, 15),
+                Position = UDim2.new(0, 12, 0, 26),
+                BackgroundTransparency = 1,
+                Text = opt.Desc,
+                Font = Enum.Font.Gotham,
+                TextSize = 11,
+                TextColor3 = Theme.Description,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = SubFrame
+            })
 
-        local SubBtn = Create("TextButton", {
-            Size = UDim2.new(0, 40, 0, 20),
-            Position = UDim2.new(1, -52, 0.5, -10),
-            BackgroundColor3 = Color3.fromRGB(10, 10, 12),
-            AutoButtonColor = false,
-            Text = "",
-            Parent = SubFrame
-        })
-        Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = SubBtn})
-        local SubStroke = Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = SubBtn})
-        local SubInd = Create("Frame", {
-            Size = UDim2.new(0, 14, 0, 14),
-            Position = UDim2.new(0, 3, 0.5, -7),
-            BackgroundColor3 = Theme.Text,
-            BorderSizePixel = 0,
-            Parent = SubBtn
-        })
-        Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = SubInd})
-        
-        local SubGlow = Create("ImageLabel", {
-            Size = UDim2.new(1, 15, 1, 15),
-            Position = UDim2.new(0, -7.5, 0, -7.5),
-            BackgroundTransparency = 1,
-            Image = "rbxassetid://5028857084",
-            ImageColor3 = Theme.Accent,
-            ImageTransparency = 1,
-            Parent = SubBtn
-        })
+            local SubBtn = Create("TextButton", {
+                Size = UDim2.new(0, 40, 0, 20),
+                Position = UDim2.new(1, -52, 0.5, -10),
+                BackgroundColor3 = Color3.fromRGB(10, 10, 12),
+                AutoButtonColor = false,
+                Text = "",
+                Parent = SubFrame
+            })
+            Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = SubBtn})
+            local SubStroke = Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = SubBtn})
+            local SubInd = Create("Frame", {
+                Size = UDim2.new(0, 14, 0, 14),
+                Position = UDim2.new(0, 3, 0.5, -7),
+                BackgroundColor3 = Theme.Text,
+                BorderSizePixel = 0,
+                Parent = SubBtn
+            })
+            Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = SubInd})
+            
+            local SubGlow = Create("ImageLabel", {
+                Size = UDim2.new(1, 15, 1, 15),
+                Position = UDim2.new(0, -7.5, 0, -7.5),
+                BackgroundTransparency = 1,
+                Image = "rbxassetid://5028857084",
+                ImageColor3 = Theme.Accent,
+                ImageTransparency = 1,
+                Parent = SubBtn
+            })
 
-        AddRipple(SubBtn)
-        local subState = opt.Default or false
-        
-        if subState then
-            SubBtn.BackgroundColor3 = Theme.Accent
-            SubStroke.Color = Theme.Accent
-            SubInd.Position = UDim2.new(1, -17, 0.5, -7)
-            SubInd.BackgroundColor3 = Theme.TextDark
-            SubGlow.ImageTransparency = 0.5
-        end
-
-        SubBtn.MouseButton1Click:Connect(function()
-            subState = not subState
+            AddRipple(SubBtn)
+            local subState = opt.Default or false
+            
             if subState then
-                TweenService:Create(SubBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent}):Play()
-                TweenService:Create(SubStroke, TweenInfo.new(0.3), {Color = Theme.Accent}):Play()
-                TweenService:Create(SubInd, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -17, 0.5, -7), BackgroundColor3 = Theme.TextDark}):Play()
-                TweenService:Create(SubGlow, TweenInfo.new(0.3), {ImageTransparency = 0.5}):Play()
-            else
-                TweenService:Create(SubBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(10, 10, 12)}):Play()
-                TweenService:Create(SubStroke, TweenInfo.new(0.3), {Color = Theme.Stroke}):Play()
-                TweenService:Create(SubInd, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Theme.Text}):Play()
-                TweenService:Create(SubGlow, TweenInfo.new(0.3), {ImageTransparency = 1}):Play()
+                SubBtn.BackgroundColor3 = Theme.Accent
+                SubStroke.Color = Theme.Accent
+                SubInd.Position = UDim2.new(1, -17, 0.5, -7)
+                SubInd.BackgroundColor3 = Theme.TextDark
+                SubGlow.ImageTransparency = 0.5
             end
-            if opt.Callback then opt.Callback(subState) end
-        end)
+
+            SubBtn.MouseButton1Click:Connect(function()
+                subState = not subState
+                if subState then
+                    TweenService:Create(SubBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent}):Play()
+                    TweenService:Create(SubStroke, TweenInfo.new(0.3), {Color = Theme.Accent}):Play()
+                    TweenService:Create(SubInd, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -17, 0.5, -7), BackgroundColor3 = Theme.TextDark}):Play()
+                    TweenService:Create(SubGlow, TweenInfo.new(0.3), {ImageTransparency = 0.5}):Play()
+                else
+                    TweenService:Create(SubBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(10, 10, 12)}):Play()
+                    TweenService:Create(SubStroke, TweenInfo.new(0.3), {Color = Theme.Stroke}):Play()
+                    TweenService:Create(SubInd, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Theme.Text}):Play()
+                    TweenService:Create(SubGlow, TweenInfo.new(0.3), {ImageTransparency = 1}):Play()
+                end
+                if opt.Callback then opt.Callback(subState) end
+            end)
+        end
     end
     
     if hasActiveOption then
@@ -1604,60 +1930,7 @@ local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged
     end)
 end
 
-local function CreateButton(page, title, desc, onClick)
-    local Container = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 65),
-        BackgroundColor3 = Theme.Element,
-        BorderSizePixel = 0,
-        Parent = page
-    })
-    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
-    Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = Container})
-
-    Create("TextLabel", {
-        Size = UDim2.new(1, -100, 0, 20),
-        Position = UDim2.new(0, 15, 0, 12),
-        BackgroundTransparency = 1,
-        Text = title,
-        Font = Enum.Font.GothamBold,
-        TextSize = 15,
-        TextColor3 = Theme.Text,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = Container
-    })
-    Create("TextLabel", {
-        Size = UDim2.new(1, -100, 0, 15),
-        Position = UDim2.new(0, 15, 0, 35),
-        BackgroundTransparency = 1,
-        Text = desc,
-        Font = Enum.Font.Gotham,
-        TextSize = 12,
-        TextColor3 = Theme.Description,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = Container
-    })
-
-    local ActionBtn = Create("TextButton", {
-        Size = UDim2.new(0, 80, 0, 30),
-        Position = UDim2.new(1, -95, 0.5, -15),
-        BackgroundColor3 = Theme.Accent,
-        AutoButtonColor = false,
-        Text = "Execute",
-        Font = Enum.Font.GothamBold,
-        TextSize = 13,
-        TextColor3 = Theme.TextDark,
-        Active = true,
-        Parent = Container
-    })
-    Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = ActionBtn})
-    Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = ActionBtn})
-    AddRipple(ActionBtn)
-
-    ActionBtn.MouseButton1Click:Connect(function()
-        if onClick then onClick() end
-    end)
-end
-
+-- FLING MODULE
 local function CreateFlingModule(page)
     local Container = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 65),
@@ -1682,7 +1955,7 @@ local function CreateFlingModule(page)
         Size = UDim2.new(1, -100, 0, 20),
         Position = UDim2.new(0, 15, 0, 12),
         BackgroundTransparency = 1,
-        Text = "Fling Player",
+        Text = L("FlingPlayer"),
         Font = Enum.Font.GothamBold,
         TextSize = 15,
         TextColor3 = Theme.Text,
@@ -1693,7 +1966,7 @@ local function CreateFlingModule(page)
         Size = UDim2.new(1, -100, 0, 15),
         Position = UDim2.new(0, 15, 0, 35),
         BackgroundTransparency = 1,
-        Text = "Select a player to fling them into space.",
+        Text = L("FlingPlayerDesc"),
         Font = Enum.Font.Gotham,
         TextSize = 12,
         TextColor3 = Theme.Description,
@@ -1900,50 +2173,72 @@ local function CreateFlingModule(page)
     end
 end
 
-CreateTab("Aim-Bot")
+-- ========================================================================================
+-- INIT & RENDER
+-- ========================================================================================
+CreateTab(L("MS_KILL"))
 
-local MiscTab = CreateTab("Misc")
-Tabs["Misc"].Render = function()
-    CreateCategory(PageContainer, "General")
-    CreateToggle(PageContainer, "WallShot", "Shoot and throw knives through walls.", mmState.wallShot, function(v)
+Tabs[L("MS_KILL")].Render = function()
+    CreateCategory(PageContainer, L("SheriffFeatures"))
+    CreateExpandable(PageContainer, L("TouchForSheriff"), L("TouchForSheriffDesc"), {
+        {Name = L("KillMurder"), Desc = L("KillMurderDesc"), Type = "Expandable", SubOptions = {
+            {Name = L("AddBtn"), Desc = L("AddBtnDesc"), Type = "Button", Callback = AddShotButton},
+            {Name = L("DeleteBtn"), Desc = L("DeleteBtnDesc"), Type = "Button", Callback = RemoveShotButton},
+            {Name = L("CustomizationBtn"), Desc = L("CustomizationBtnDesc"), Type = "Button", Callback = OpenCustomization}
+        }}
+    })
+end
+
+CreateTab(L("Misc"))
+Tabs[L("Misc")].Render = function()
+    CreateCategory(PageContainer, L("General"))
+    CreateToggle(PageContainer, L("WallShot"), L("WallShotDesc"), mmState.wallShot, function(v)
         mmState.wallShot = v
     end)
-    CreateToggle(PageContainer, "AntiFling", "Prevents other players from launching you.", mmState.antiFling, function(v)
+    CreateToggle(PageContainer, L("AntiFling"), L("AntiFlingDesc"), mmState.antiFling, function(v)
         ApplyAntiFling(v)
     end)
     
-    CreateCategory(PageContainer, "Gun Features")
-    CreateToggle(PageContainer, "AutoPickUpGun", "Instantly teleports to gun when dropped and picks it up.", mmState.autoPickUpGun, function(v)
+    CreateCategory(PageContainer, L("GunFeatures"))
+    CreateToggle(PageContainer, L("AutoPickUpGun"), L("AutoPickUpGunDesc"), mmState.autoPickUpGun, function(v)
         ApplyAutoPickUpGun(v)
     end)
-    CreateButton(PageContainer, "TpToGun", "Teleport to gun and return to your position.", function()
+    CreateButton(PageContainer, L("TpToGun"), L("TpToGunDesc"), function()
         TpToGunAndPickUp()
     end)
     
-    CreateCategory(PageContainer, "Trolling")
+    CreateCategory(PageContainer, L("Trolling"))
     CreateFlingModule(PageContainer)
 end
 
-local EspTab = CreateTab("Esp")
-Tabs["Esp"].Render = function()
-    CreateCategory(PageContainer, "Player Visuals")
-    CreateExpandable(PageContainer, "Chams", "Highlight players through walls.", {
-        {Name = "ChamsMurder", Desc = "Highlight only the murderer role.", Default = espState.chamsMurder, Callback = function(v)
+CreateTab(L("Esp"))
+Tabs[L("Esp")].Render = function()
+    CreateCategory(PageContainer, L("PlayerVisuals"))
+    CreateExpandable(PageContainer, L("Chams"), L("ChamsDesc"), {
+        {Name = L("ChamsMurder"), Desc = L("ChamsMurderDesc"), Default = espState.chamsMurder, Callback = function(v)
             espState.chamsMurder = v
         end},
-        {Name = "ChamsSherrif", Desc = "Highlight only the sheriff role.", Default = espState.chamsSherif, Callback = function(v)
+        {Name = L("ChamsSherif"), Desc = L("ChamsSherifDesc"), Default = espState.chamsSherif, Callback = function(v)
             espState.chamsSherif = v
         end},
-        {Name = "ChamsEnemies", Desc = "Highlight innocent players (green).", Default = espState.chamsEnemies, Callback = function(v)
+        {Name = L("ChamsEnemies"), Desc = L("ChamsEnemiesDesc"), Default = espState.chamsEnemies, Callback = function(v)
             espState.chamsEnemies = v
         end}
     })
 end
 
-local SettingsTab = CreateTab("Settings")
-Tabs["Settings"].Render = function()
-    CreateCategory(PageContainer, "Theme Customization")
-    CreateColorSlider(PageContainer, "Accent Color", "Change the main menu and UI accent color.", Theme.Accent, function(color)
+CreateTab(L("Settings"))
+Tabs[L("Settings")].Render = function()
+    CreateCategory(PageContainer, L("ThemeCustomization"))
+    CreateToggle(PageContainer, L("Language"), L("LanguageDesc"), currentLang == "RUS", function(v)
+        currentLang = v and "RUS" or "ENG"
+        -- Update tab names
+        for name, tab in pairs(Tabs) do
+            tab.Button.Title.Text = name
+        end
+        SelectTab(ActiveTab)
+    end)
+    CreateColorSlider(PageContainer, L("AccentColor"), L("AccentColorDesc"), Theme.Accent, function(color)
         Theme.Accent = color
         MainStroke.Color = color
         WmStroke.Color = color
@@ -1962,9 +2257,9 @@ Tabs["Settings"].Render = function()
         end
     end)
 
-    CreateColorSlider(PageContainer, "Watermark Text Color", "Change the text color of the watermark.", Theme.Text, function(color)
+    CreateColorSlider(PageContainer, L("WmTextColor"), L("WmTextColorDesc"), Theme.Text, function(color)
         WmText.TextColor3 = color
     end)
 end
 
-SelectTab("Settings")
+SelectTab(L("Settings"))

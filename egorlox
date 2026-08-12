@@ -11,31 +11,6 @@ local Lighting      = game:GetService("Lighting")
 local CoreGui       = game:GetService("CoreGui")
 local LocalPlayer   = Players.LocalPlayer
 
--- ─── XOR Key System ───────────────────────────────────────
-local XOR_KEY = 42
--- "beta" XOR 42 → {72,67,94,75}
--- "test" XOR 42 → {94,67,89,94}
-local ENCODED_KEYS = {
-    {72, 67, 94, 75},
-    {94, 67, 89, 94},
-}
-
-local function decodeXOR(tbl)
-    local s = ""
-    for _, b in ipairs(tbl) do
-        s = s .. string.char(bit32.bxor(b, XOR_KEY))
-    end
-    return s
-end
-
-local function validateKey(input)
-    local clean = input:lower():gsub("%s+", "")
-    for _, enc in ipairs(ENCODED_KEYS) do
-        if clean == decodeXOR(enc) then return true end
-    end
-    return false
-end
-
 -- ─── Config ───────────────────────────────────────────────
 local Config = {
     AccentColor        = Color3.fromRGB(138, 43, 226),
@@ -544,19 +519,7 @@ local function showKeySystem(cb)
                 for i = 15, 0, -1 do
                     status.Text = "Too many attempts — wait " .. i .. "s"
                     task.wait(1)
-                end
-                attempts   = 0
-                onCooldown = false
-                submitBtn.Active = true
-                submitBtn.BackgroundColor3 = Config.AccentColor
-                status.Text = ""
-            else
-                status.Text = "Invalid key — " .. (3 - attempts) .. " attempt(s) left"
-            end
-        end
-    end)
-end
-
+                
 -- ═══════════════════════════════════════════════════════════
 --  MAIN UI
 -- ═══════════════════════════════════════════════════════════

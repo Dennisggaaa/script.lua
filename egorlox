@@ -1,4 +1,4 @@
--- // SeraphiCA | Summer Maximalism UI v20 (Flick Edition)
+-- // SeraphiCA | Summer Maximalism UI v21 (Flick Edition)
 -- // 810px | Neon Sunsets, Heavy Glows, Max Effects
 
 local CoreGui = game:GetService("CoreGui")
@@ -8,7 +8,7 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
-local GuiService = game:GetService("GuiService") -- Added for UI detection
+local GuiService = game:GetService("GuiService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -204,7 +204,7 @@ if isClosed then return end
 -- ========================================================================================
 -- MAIN SCRIPT
 -- ========================================================================================
-local oldUi = CoreGui:FindFirstChild("SeraphiCA_Flick_v20")
+local oldUi = CoreGui:FindFirstChild("SeraphiCA_Flick_v21")
 if oldUi then oldUi:Destroy() end
 local oldBlur = Lighting:FindFirstChild("SeraphiCA_Summer_Blur")
 if oldBlur then oldBlur:Destroy() end
@@ -214,7 +214,7 @@ local Theme = {
 }
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphiCA_Flick_v20"
+ScreenGui.Name = "SeraphiCA_Flick_v21"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
@@ -365,14 +365,15 @@ local FovCircle = Create("Frame", {
 Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = FovCircle})
 local FovStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 1.5, Transparency = 0.2, Parent = FovCircle})
 
--- AutoFire Marker
+-- AutoFire Marker Logic
 local FireButton = nil
-local FireBtnPos = UDim2.new(0.8, -40, 0.8, -40) -- Default pos bottom right
+local FireBtnPos = UDim2.new(0.8, -40, 0.8, -40) -- Default bottom right
 local FireBtnSize = UDim2.new(0, 80, 0, 80)
 local isCustomizing = false
 local isDraggingMarker = false
 local dragStart, startPos
 local cachedGameFireBtn = nil
+local hasMoved = false
 
 local function AddFireButton()
     if FireButton then return end
@@ -408,6 +409,12 @@ UserInputService.InputChanged:Connect(function(input)
         local delta = input.Position - dragStart
         FireButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         FireBtnPos = FireButton.Position
+        
+        if not hasMoved then
+            hasMoved = true
+            ActionBtn.Text = "Apply ✅"
+            ActionBtn.BackgroundColor3 = Theme.Success
+        end
     end
 end)
 
@@ -418,36 +425,48 @@ Create("UICorner", {CornerRadius = UDim.new(0, 16), Parent = CustomMenu})
 Create("UIStroke", {Color = Theme.Accent, Thickness = 2, Transparency = 0.2, Parent = CustomMenu})
 local CustomTitle = Create("TextLabel", {Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, Text = "Move the black circle", Font = Enum.Font.GothamBold, TextSize = 16, TextColor3 = Theme.Text, Parent = CustomMenu})
 
-local ApplyBtn = Create("TextButton", {Size = UDim2.new(0, 100, 0, 35), Position = UDim2.new(0.5, -50, 1, -50), BackgroundColor3 = Theme.Success, Text = "Apply ✅", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.TextDark, Parent = CustomMenu})
-Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = ApplyBtn})
-AddRipple(ApplyBtn)
+ActionBtn = Create("TextButton", {Size = UDim2.new(0, 100, 0, 35), Position = UDim2.new(0.5, -50, 1, -50), BackgroundColor3 = Theme.Accent, Text = "Close", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.TextDark, Parent = CustomMenu})
+Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = ActionBtn})
+AddRipple(ActionBtn)
 
 local function OpenCustomization()
+    if not FireButton then
+        Notify("Add the marker first!", Theme.RedNotif)
+        return
+    end
     CustomFrame.Visible = true CustomBlur.Size = 24 isCustomizing = true
+    hasMoved = false
+    ActionBtn.Text = "Close"
+    ActionBtn.BackgroundColor3 = Theme.Accent
 end
 
-ApplyBtn.MouseButton1Click:Connect(function()
-    if not FireButton then return end
-    local pos = FireButton.AbsolutePosition
-    local size = FireButton.AbsoluteSize
-    local centerX = pos.X + size.X / 2
-    local centerY = pos.Y + size.Y / 2
-    
-    cachedGameFireBtn = nil
-    local objs = GuiService:GetGuiObjectsAtPosition(centerX, centerY)
-    for _, obj in ipairs(objs) do
-        if obj:IsA("GuiButton") and not obj:IsDescendantOf(ScreenGui) then
-            cachedGameFireBtn = obj
-            break
+ActionBtn.MouseButton1Click:Connect(function()
+    if ActionBtn.Text == "Apply ✅" then
+        local pos = FireButton.AbsolutePosition
+        local size = FireButton.AbsoluteSize
+        local centerX = pos.X + size.X / 2
+        local centerY = pos.Y + size.Y / 2
+        
+        cachedGameFireBtn = nil
+        local objs = GuiService:GetGuiObjectsAtPosition(centerX, centerY)
+        for _, obj in ipairs(objs) do
+            if obj:IsA("GuiButton") and not obj:IsDescendantOf(ScreenGui) then
+                cachedGameFireBtn = obj
+                break
+            end
         end
-    end
-    
-    CustomFrame.Visible = false CustomBlur.Size = 0 isCustomizing = false isDraggingMarker = false
-    
-    if cachedGameFireBtn then
-        Notify("Fire button locked!", Theme.Success)
+        
+        if cachedGameFireBtn then
+            Notify("Access!", Theme.Success)
+        else
+            Notify("No button found. Try again.", Theme.RedNotif)
+        end
+        
+        hasMoved = false
+        ActionBtn.Text = "Close"
+        ActionBtn.BackgroundColor3 = Theme.Accent
     else
-        Notify("No button found. Try again.", Theme.RedNotif)
+        CustomFrame.Visible = false CustomBlur.Size = 0 isCustomizing = false isDraggingMarker = false
     end
 end)
 
@@ -515,7 +534,7 @@ RunService.RenderStepped:Connect(function()
             
             if aimState.AutoFire and cachedGameFireBtn then
                 local currentTime = tick()
-                if currentTime - lastFireTime > 0.1 then -- 10 shots per second
+                if currentTime - lastFireTime > 0.1 then
                     lastFireTime = currentTime
                     pcall(function()
                         firesignal(cachedGameFireBtn.Activated)
@@ -603,7 +622,7 @@ Create("Frame", {Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0)
 
 local SideTitle = Create("TextLabel", {Size = UDim2.new(1, -30, 0, 35), Position = UDim2.new(0, 20, 0, 25), BackgroundTransparency = 1, Text = "SeraphiCA", Font = Enum.Font.GothamBlack, TextSize = 24, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
 AddShimmer(SideTitle)
-Create("TextLabel", {Size = UDim2.new(1, -30, 0, 15), Position = UDim2.new(0, 21, 0, 60), BackgroundTransparency = 1, Text = "Flick v20", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
+Create("TextLabel", {Size = UDim2.new(1, -30, 0, 15), Position = UDim2.new(0, 21, 0, 60), BackgroundTransparency = 1, Text = "Flick v21", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
 
 local TabContainer = Create("Frame", {Size = UDim2.new(1, 0, 1, -160), Position = UDim2.new(0, 0, 0, 100), BackgroundTransparency = 1, Parent = Sidebar})
 Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = TabContainer})

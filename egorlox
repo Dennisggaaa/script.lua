@@ -434,6 +434,7 @@ local function ShootMurderer()
     local mHumRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
     if not mHumRoot then return end
 
+    -- Anti-Idiot Check
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p ~= murderer and playerRoles[p] == "Innocent" and p.Character then
             local pHumRoot = p.Character:FindFirstChild("HumanoidRootPart")
@@ -458,8 +459,17 @@ local function ShootMurderer()
             task.wait(0.05)
         end
         
+        -- Устанавливаем цель для хука WallShot
         mmState.forceTarget = mHumRoot
+        
+        -- Напрямую вызываем FireServer с координатами мардера
+        pcall(function()
+            tool:FireServer(mHumRoot.Position, mHumRoot)
+        end)
+        
+        -- На всякий случай пробуем Activate (для некоторых систем оружия)
         tool:Activate()
+        
         task.wait(0.1)
         mmState.forceTarget = nil
     else

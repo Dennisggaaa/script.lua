@@ -1,4 +1,4 @@
--- // SeraphiCA | Summer Maximalism UI v16 (Flick Edition)
+-- // SeraphiCA | Summer Maximalism UI v18 (Flick Edition)
 -- // 810px | Neon Sunsets, Heavy Glows, Max Effects
 
 local CoreGui = game:GetService("CoreGui")
@@ -203,7 +203,7 @@ if isClosed then return end
 -- ========================================================================================
 -- MAIN SCRIPT
 -- ========================================================================================
-local oldUi = CoreGui:FindFirstChild("SeraphiCA_Flick_v16")
+local oldUi = CoreGui:FindFirstChild("SeraphiCA_Flick_v18")
 if oldUi then oldUi:Destroy() end
 local oldBlur = Lighting:FindFirstChild("SeraphiCA_Summer_Blur")
 if oldBlur then oldBlur:Destroy() end
@@ -213,7 +213,7 @@ local Theme = {
 }
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphiCA_Flick_v16"
+ScreenGui.Name = "SeraphiCA_Flick_v18"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
@@ -273,6 +273,7 @@ local Lang = {
     Fov = {ENG = "Fov", RUS = "Поле зрения"}, FovDesc = {ENG = "Max 360. Shows a circle on screen.", RUS = "Макс 360. Показывает круг на экране."},
     VisibleCheck = {ENG = "Visible Check", RUS = "Проверка видимости"}, VisibleCheckDesc = {ENG = "If on, won't aim through walls.", RUS = "Если вкл, не наводится сквозь стены."},
     Aim360 = {ENG = "360° Aim", RUS = "360° Аим"}, Aim360Desc = {ENG = "Aims at players behind you too.", RUS = "Наводится на игроков позади вас."},
+    AutoFire = {ENG = "Auto Fire", RUS = "Авто Выстрел"}, AutoFireDesc = {ENG = "Clicks the on-screen fire button. Doesn't break movement.", RUS = "Нажимает кнопку выстрела на экране. Не ломает управление."},
     AccentColor = {ENG = "Accent Color", RUS = "Акцентный Цвет"}, AccentColorDesc = {ENG = "Change the main menu and UI accent color.", RUS = "Изменить цвет меню."},
     WmTextColor = {ENG = "Watermark Text Color", RUS = "Цвет Водяного Знака"}, WmTextColorDesc = {ENG = "Change the text color of the watermark.", RUS = "Изменить цвет текста вотермарка."},
     Language = {ENG = "Language", RUS = "Язык"}, LanguageDesc = {ENG = "Switch between RUS and ENG.", RUS = "Переключить между RUS и ENG."},
@@ -284,7 +285,8 @@ local aimState = {
     Enabled = false,
     Fov = 90,
     VisibleCheck = false,
-    Aim360 = false
+    Aim360 = false,
+    AutoFire = false
 }
 
 -- INTRO
@@ -354,11 +356,38 @@ local FovCircle = Create("Frame", {
 Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = FovCircle})
 local FovStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 1.5, Transparency = 0.2, Parent = FovCircle})
 
+-- AutoFire Logic (Safe for tablets, finds the UI button)
+local cachedFireButton = nil
+local function getFireButton()
+    if cachedFireButton and cachedFireButton.Parent then return cachedFireButton end
+    local pg = LocalPlayer:FindFirstChild("PlayerGui")
+    if not pg then return nil end
+    for _, gui in ipairs(pg:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Enabled then
+            for _, obj in ipairs(gui:GetDescendants()) do
+                if obj:IsA("GuiButton") then
+                    local txt = ""
+                    if obj:IsA("TextButton") then txt = obj.Text or "" end
+                    for _, child in ipairs(obj:GetDescendants()) do
+                        if child:IsA("TextLabel") then txt = txt .. (child.Text or "") end
+                    end
+                    if txt:lower():find("стрелять") or txt:lower():find("fire") or txt:lower():find("shoot") then
+                        cachedFireButton = obj
+                        return obj
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local lastFireTime = 0
 local function getClosestPlayer()
     local closestPlayer = nil
     local shortestDist = aimState.Fov
     local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    local shortest3DDist = 500 -- Радиус для 360 аима
+    local shortest3DDist = 500
     
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
@@ -412,9 +441,25 @@ RunService.RenderStepped:Connect(function()
             local hrp = target.Character.HumanoidRootPart
             local targetPos = hrp.Position
             local currentCFrame = Camera.CFrame
-            -- Мгновенная наводка (Lerp с фактором 1 = 100% поворот)
             local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPos)
+            -- Мгновенная наводка
             Camera.CFrame = currentCFrame:Lerp(targetCFrame, 1)
+            
+            if aimState.AutoFire then
+                local currentTime = tick()
+                if currentTime - lastFireTime > 0.1 then -- 10 shots per second
+                    lastFireTime = currentTime
+                    local btn = getFireButton()
+                    if btn then
+                        pcall(function()
+                            if firesignal then
+                                firesignal(btn.Activated)
+                                firesignal(btn.MouseButton1Click)
+                            end
+                        end)
+                    end
+                end
+            end
         end
     else
         FovCircle.Visible = false
@@ -495,7 +540,7 @@ Create("Frame", {Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0)
 
 local SideTitle = Create("TextLabel", {Size = UDim2.new(1, -30, 0, 35), Position = UDim2.new(0, 20, 0, 25), BackgroundTransparency = 1, Text = "SeraphiCA", Font = Enum.Font.GothamBlack, TextSize = 24, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
 AddShimmer(SideTitle)
-Create("TextLabel", {Size = UDim2.new(1, -30, 0, 15), Position = UDim2.new(0, 21, 0, 60), BackgroundTransparency = 1, Text = "Flick v16", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
+Create("TextLabel", {Size = UDim2.new(1, -30, 0, 15), Position = UDim2.new(0, 21, 0, 60), BackgroundTransparency = 1, Text = "Flick v18", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
 
 local TabContainer = Create("Frame", {Size = UDim2.new(1, 0, 1, -160), Position = UDim2.new(0, 0, 0, 100), BackgroundTransparency = 1, Parent = Sidebar})
 Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = TabContainer})
@@ -648,6 +693,7 @@ Tabs[L("AimBot")].Render = function()
     CreateSlider(PageContainer, L("Fov"), L("FovDesc"), 360, aimState.Fov, function(v) aimState.Fov = v end)
     CreateToggle(PageContainer, L("VisibleCheck"), L("VisibleCheckDesc"), aimState.VisibleCheck, function(v) aimState.VisibleCheck = v end)
     CreateToggle(PageContainer, L("Aim360"), L("Aim360Desc"), aimState.Aim360, function(v) aimState.Aim360 = v end)
+    CreateToggle(PageContainer, L("AutoFire"), L("AutoFireDesc"), aimState.AutoFire, function(v) aimState.AutoFire = v end)
 end
 
 CreateTab(L("Settings"))

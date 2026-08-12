@@ -1,5 +1,5 @@
--- // SeraphiCA | Absolute God Tier UI v10.2
--- // Fixed Nested Expandables, CFG Sync, WallShot & Drag Logic
+-- // SeraphiCA | Absolute God Tier UI v11.0
+-- // MS-KILL: Sheriff & Murderer, AutoPickUp Fix
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -48,10 +48,7 @@ task.spawn(function()
         flake.BorderSizePixel = 0
         flake.Parent = SnowHolder
         Instance.new("UICorner", flake).CornerRadius = UDim.new(1, 0)
-        
-        local tween = TweenService:Create(flake, TweenInfo.new(math.random(4, 8), Enum.EasingStyle.Linear), {
-            Position = UDim2.new(flake.Position.X.Scale + math.random(-10, 10)/100, 0, 1.1, 20)
-        })
+        local tween = TweenService:Create(flake, TweenInfo.new(math.random(4, 8), Enum.EasingStyle.Linear), {Position = UDim2.new(flake.Position.X.Scale + math.random(-10, 10)/100, 0, 1.1, 20)})
         tween:Play()
         tween.Completed:Connect(function() flake:Destroy() end)
         task.wait(0.1)
@@ -185,7 +182,7 @@ end)
 while not isUnlocked and not isClosed do task.wait(0.1) end
 if isClosed then return end
 
-local oldUi = CoreGui:FindFirstChild("SeraphiCA_GodTier_v10")
+local oldUi = CoreGui:FindFirstChild("SeraphiCA_GodTier_v11")
 if oldUi then oldUi:Destroy() end
 
 local Theme = {
@@ -205,7 +202,7 @@ local Theme = {
 }
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphiCA_GodTier_v10"
+ScreenGui.Name = "SeraphiCA_GodTier_v11"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
@@ -221,22 +218,12 @@ end
 local function AddRipple(btn)
     btn.ClipsDescendants = true
     btn.MouseButton1Down:Connect(function(x, y)
-        local ripple = Create("Frame", {
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 0.8,
-            BorderSizePixel = 0,
-            Parent = btn
-        })
+        local ripple = Create("Frame", {BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.8, BorderSizePixel = 0, Parent = btn})
         Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = ripple})
-        local btnPos = btn.AbsolutePosition
-        local btnSize = btn.AbsoluteSize
-        local maxSize = math.max(btnSize.X, btnSize.Y) * 2
+        local btnPos = btn.AbsolutePosition local btnSize = btn.AbsoluteSize local maxSize = math.max(btnSize.X, btnSize.Y) * 2
         ripple.Position = UDim2.new(0, (x - btnPos.X) - maxSize/2, 0, (y - btnPos.Y) - maxSize/2)
         ripple.Size = UDim2.new(0, 0, 0, 0)
-        TweenService:Create(ripple, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, maxSize, 0, maxSize),
-            BackgroundTransparency = 1
-        }):Play()
+        TweenService:Create(ripple, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, maxSize, 0, maxSize), BackgroundTransparency = 1}):Play()
         task.delay(0.6, function() ripple:Destroy() end)
     end)
 end
@@ -251,131 +238,53 @@ CustomBlur.Name = "SeraphiCA_Custom_Blur"
 CustomBlur.Size = 0
 CustomBlur.Parent = Lighting
 
-local NotifHolder = Create("Frame", {
-    Size = UDim2.new(0, 350, 1, 0),
-    Position = UDim2.new(1, -370, 0, 0),
-    BackgroundTransparency = 1,
-    Parent = ScreenGui
-})
-Create("UIListLayout", {
-    Padding = UDim.new(0, 10),
-    VerticalAlignment = Enum.VerticalAlignment.Bottom,
-    HorizontalAlignment = Enum.HorizontalAlignment.Right,
-    Parent = NotifHolder
-})
+local NotifHolder = Create("Frame", {Size = UDim2.new(0, 350, 1, 0), Position = UDim2.new(1, -370, 0, 0), BackgroundTransparency = 1, Parent = ScreenGui})
+Create("UIListLayout", {Padding = UDim.new(0, 10), VerticalAlignment = Enum.VerticalAlignment.Bottom, HorizontalAlignment = Enum.HorizontalAlignment.Right, Parent = NotifHolder})
 
 local function Notify(text, color)
-    local Notif = Create("Frame", {
-        Size = UDim2.new(0, 320, 0, 55),
-        BackgroundColor3 = Theme.Background,
-        BorderSizePixel = 0,
-        Parent = NotifHolder
-    })
+    local Notif = Create("Frame", {Size = UDim2.new(0, 320, 0, 55), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, Parent = NotifHolder})
     Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Notif})
     Create("UIStroke", {Color = color, Thickness = 1.5, Transparency = 0.3, Parent = Notif})
-    Create("UIGradient", {
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 18, 22)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 10))
-        }),
-        Rotation = 90,
-        Parent = Notif
-    })
-    Create("Frame", {
-        Size = UDim2.new(0, 4, 0, 30),
-        Position = UDim2.new(0, 10, 0.5, -15),
-        BackgroundColor3 = color,
-        BorderSizePixel = 0,
-        Parent = Notif
-    }, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
-    Create("TextLabel", {
-        Size = UDim2.new(1, -30, 1, 0),
-        Position = UDim2.new(0, 25, 0, 0),
-        BackgroundTransparency = 1,
-        Text = text,
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextColor3 = color,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = Notif
-    })
+    Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 18, 22)), ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 10))}), Rotation = 90, Parent = Notif})
+    Create("Frame", {Size = UDim2.new(0, 4, 0, 30), Position = UDim2.new(0, 10, 0.5, -15), BackgroundColor3 = color, BorderSizePixel = 0, Parent = Notif}, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
+    Create("TextLabel", {Size = UDim2.new(1, -30, 1, 0), Position = UDim2.new(0, 25, 0, 0), BackgroundTransparency = 1, Text = text, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Left, Parent = Notif})
     Notif.Position = UDim2.new(0, 350, 0, 0)
     TweenService:Create(Notif, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
     task.delay(3, function()
         TweenService:Create(Notif, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0, 350, 0, 0)}):Play()
-        task.wait(0.5)
-        Notif:Destroy()
+        task.wait(0.5) Notif:Destroy()
     end)
 end
 
 local currentLang = "ENG"
-
 local Lang = {
-    MS_KILL = {ENG = "MS-KILL", RUS = "MS-KILL"},
-    Misc = {ENG = "Misc", RUS = "Разное"},
-    Esp = {ENG = "Esp", RUS = "Есп"},
-    Settings = {ENG = "Settings", RUS = "Настройки"},
-    General = {ENG = "General", RUS = "Основное"},
-    GunFeatures = {ENG = "Gun Features", RUS = "Оружие"},
-    Trolling = {ENG = "Trolling", RUS = "Троллинг"},
-    PlayerVisuals = {ENG = "Player Visuals", RUS = "Игроки"},
-    ThemeCustomization = {ENG = "Theme Customization", RUS = "Тема"},
-    SheriffFeatures = {ENG = "Sheriff Features", RUS = "Функции Шерифа"},
-    WallShot = {ENG = "WallShot", RUS = "Валлшот"},
-    WallShotDesc = {ENG = "Shoot and throw knives through walls.", RUS = "Стрелять и кидать ножи сквозь стены."},
-    AntiFling = {ENG = "AntiFling", RUS = "АнтиФлинг"},
-    AntiFlingDesc = {ENG = "Prevents other players from launching you.", RUS = "Защита от отправки в полёт."},
-    AutoPickUpGun = {ENG = "AutoPickUpGun", RUS = "АвтоПодборПушки"},
-    AutoPickUpGunDesc = {ENG = "Instantly teleports to gun when dropped and picks it up.", RUS = "Мгновенно телепортирует к пушке и подбирает её."},
-    TpToGun = {ENG = "TpToGun", RUS = "ТелепортКПушке"},
-    TpToGunDesc = {ENG = "Teleport to gun and return to your position.", RUS = "Телепорт к пушке и возврат на место."},
-    TouchForSheriff = {ENG = "Touch For Sheriff", RUS = "Touch For Sheriff"},
-    TouchForSheriffDesc = {ENG = "Enable to setup the kill button.", RUS = "Настройка кнопки убийства."},
-    KillMurder = {ENG = "KillMurder", RUS = "KillMurder"},
-    KillMurderDesc = {ENG = "Enable to show kill buttons.", RUS = "Показать кнопки убийства."},
-    AddBtn = {ENG = "Add", RUS = "Добавить"},
-    AddBtnDesc = {ENG = "Add the shoot button.", RUS = "Добавить кнопку выстрела."},
-    DeleteBtn = {ENG = "Delete", RUS = "Удалить"},
-    DeleteBtnDesc = {ENG = "Delete the shoot button.", RUS = "Удалить кнопку выстрела."},
-    CustomizationBtn = {ENG = "Customization", RUS = "Настройка"},
-    CustomizationBtnDesc = {ENG = "Change size and position.", RUS = "Изменить размер и позицию."},
-    FlingPlayer = {ENG = "Fling Player", RUS = "Флинг Игрока"},
-    FlingPlayerDesc = {ENG = "Select a player to fling them into space.", RUS = "Выбрать игрока для флинга."},
-    Chams = {ENG = "Chams", RUS = "Чамсы"},
-    ChamsDesc = {ENG = "Highlight players through walls.", RUS = "Подсветка игроков сквозь стены."},
-    ChamsMurder = {ENG = "ChamsMurder", RUS = "ЧамсыМардера"},
-    ChamsMurderDesc = {ENG = "Highlight only the murderer role.", RUS = "Подсветить только убийцу."},
-    ChamsSherif = {ENG = "ChamsSherif", RUS = "ЧамсыШерифа"},
-    ChamsSherifDesc = {ENG = "Highlight only the sheriff role.", RUS = "Подсветить только шерифа."},
-    ChamsEnemies = {ENG = "ChamsEnemies", RUS = "ЧамсыНевинных"},
-    ChamsEnemiesDesc = {ENG = "Highlight innocent players (green).", RUS = "Подсветить невинных (зеленый)."},
-    AccentColor = {ENG = "Accent Color", RUS = "Акцентный Цвет"},
-    AccentColorDesc = {ENG = "Change the main menu and UI accent color.", RUS = "Изменить цвет меню."},
-    WmTextColor = {ENG = "Watermark Text Color", RUS = "Цвет Водяного Знака"},
-    WmTextColorDesc = {ENG = "Change the text color of the watermark.", RUS = "Изменить цвет текста вотермарка."},
-    Language = {ENG = "Language", RUS = "Язык"},
-    LanguageDesc = {ENG = "Switch between RUS and ENG.", RUS = "Переключить между RUS и ENG."}
+    MS_KILL = {ENG = "MS-KILL", RUS = "MS-KILL"}, Misc = {ENG = "Misc", RUS = "Разное"}, Esp = {ENG = "Esp", RUS = "Есп"}, Settings = {ENG = "Settings", RUS = "Настройки"},
+    General = {ENG = "General", RUS = "Основное"}, GunFeatures = {ENG = "Gun Features", RUS = "Оружие"}, Trolling = {ENG = "Trolling", RUS = "Троллинг"}, PlayerVisuals = {ENG = "Player Visuals", RUS = "Игроки"}, ThemeCustomization = {ENG = "Theme Customization", RUS = "Тема"},
+    SheriffFeatures = {ENG = "Sheriff Features", RUS = "Функции Шерифа"}, MurdererFeatures = {ENG = "Murderer Features", RUS = "Функции Мардера"},
+    WallShot = {ENG = "WallShot", RUS = "Валлшот"}, WallShotDesc = {ENG = "Shoot and throw knives through walls.", RUS = "Стрелять и кидать ножи сквозь стены."},
+    AntiFling = {ENG = "AntiFling", RUS = "АнтиФлинг"}, AntiFlingDesc = {ENG = "Prevents other players from launching you.", RUS = "Защита от отправки в полёт."},
+    AutoPickUpGun = {ENG = "AutoPickUpGun", RUS = "АвтоПодборПушки"}, AutoPickUpGunDesc = {ENG = "Instantly teleports to gun when dropped and picks it up.", RUS = "Мгновенно телепортирует к пушке и подбирает её."},
+    TpToGun = {ENG = "TpToGun", RUS = "ТелепортКПушке"}, TpToGunDesc = {ENG = "Teleport to gun and return to your position.", RUS = "Телепорт к пушке и возврат на место."},
+    TouchForSheriff = {ENG = "Touch For Sheriff", RUS = "Touch For Sheriff"}, TouchForSheriffDesc = {ENG = "Enable to setup the kill button.", RUS = "Настройка кнопки убийства."},
+    KillMurder = {ENG = "KillMurder", RUS = "KillMurder"}, KillMurderDesc = {ENG = "Enable to show kill buttons.", RUS = "Показать кнопки убийства."},
+    ForMurder = {ENG = "For Murder", RUS = "Для Мардера"}, ForMurderDesc = {ENG = "Enable to setup the kill all button.", RUS = "Настройка кнопки убийства всех."},
+    KillAll = {ENG = "KillAll", RUS = "KillAll"}, KillAllDesc = {ENG = "Enable to show kill all buttons.", RUS = "Показать кнопки убийства всех."},
+    AddBtn = {ENG = "Add", RUS = "Добавить"}, AddBtnDesc = {ENG = "Add the button.", RUS = "Добавить кнопку."},
+    DeleteBtn = {ENG = "Delete", RUS = "Удалить"}, DeleteBtnDesc = {ENG = "Delete the button.", RUS = "Удалить кнопку."},
+    CustomizationBtn = {ENG = "Customization", RUS = "Настройка"}, CustomizationBtnDesc = {ENG = "Change size and position.", RUS = "Изменить размер и позицию."},
+    FlingPlayer = {ENG = "Fling Player", RUS = "Флинг Игрока"}, FlingPlayerDesc = {ENG = "Select a player to fling them into space.", RUS = "Выбрать игрока для флинга."},
+    Chams = {ENG = "Chams", RUS = "Чамсы"}, ChamsDesc = {ENG = "Highlight players through walls.", RUS = "Подсветка игроков сквозь стены."},
+    ChamsMurder = {ENG = "ChamsMurder", RUS = "ЧамсыМардера"}, ChamsMurderDesc = {ENG = "Highlight only the murderer role.", RUS = "Подсветить только убийцу."},
+    ChamsSherif = {ENG = "ChamsSherif", RUS = "ЧамсыШерифа"}, ChamsSherifDesc = {ENG = "Highlight only the sheriff role.", RUS = "Подсветить только шерифа."},
+    ChamsEnemies = {ENG = "ChamsEnemies", RUS = "ЧамсыНевинных"}, ChamsEnemiesDesc = {ENG = "Highlight innocent players (green).", RUS = "Подсветить невинных (зеленый)."},
+    AccentColor = {ENG = "Accent Color", RUS = "Акцентный Цвет"}, AccentColorDesc = {ENG = "Change the main menu and UI accent color.", RUS = "Изменить цвет меню."},
+    WmTextColor = {ENG = "Watermark Text Color", RUS = "Цвет Водяного Знака"}, WmTextColorDesc = {ENG = "Change the text color of the watermark.", RUS = "Изменить цвет текста вотермарка."},
+    Language = {ENG = "Language", RUS = "Язык"}, LanguageDesc = {ENG = "Switch between RUS and ENG.", RUS = "Переключить между RUS и ENG."}
 }
-
 local function L(key) return Lang[key][currentLang] end
 
-local mmState = {
-    wallShot = false,
-    antiFling = false,
-    autoPickUpGun = false,
-    isFlinging = false,
-    flingTarget = nil,
-    forceTarget = nil,
-    touchForSheriff = false,
-    killMurder = false,
-}
-
-local espState = {
-    chamsMurder = false,
-    chamsSherif = false,
-    chamsEnemies = false,
-}
-
+local mmState = {wallShot = false, antiFling = false, autoPickUpGun = false, isFlinging = false, flingTarget = nil, forceTarget = nil, touchForSheriff = false, killMurder = false, forMurder = false, killAll = false}
+local espState = {chamsMurder = false, chamsSherif = false, chamsEnemies = false}
 local playerRoles = {}
 
 local function detectRole(player)
@@ -403,12 +312,8 @@ local function detectRole(player)
 end
 
 local function setupRoleReset(player)
-    player.CharacterAdded:Connect(function()
-        task.wait(1)
-        playerRoles[player] = nil
-    end)
+    player.CharacterAdded:Connect(function() task.wait(1) playerRoles[player] = nil end)
 end
-
 for _, p in ipairs(Players:GetPlayers()) do setupRoleReset(p) end
 Players.PlayerAdded:Connect(setupRoleReset)
 
@@ -416,34 +321,31 @@ Players.PlayerAdded:Connect(setupRoleReset)
 local ShotButton = nil
 local ShotBtnPos = UDim2.new(0.5, -50, 0.5, -50)
 local ShotBtnSize = UDim2.new(0, 100, 0, 100)
-local isDraggingShot = false
+
+local KillAllButton = nil
+local KillAllBtnPos = UDim2.new(0.5, -50, 0.5, 50)
+local KillAllBtnSize = UDim2.new(0, 100, 0, 100)
+
 local isCustomizing = false
+local isDraggingShot = false
 local dragStart, startPos
+local ActiveCustomBtn = nil
 
 local function ShootMurderer()
     local murderer = nil
     for _, p in ipairs(Players:GetPlayers()) do
         if playerRoles[p] == "Murderer" then murderer = p break end
     end
-
-    if not murderer or not murderer.Character then
-        Notify("Murderer not found", Theme.RedNotif)
-        return
-    end
-
+    if not murderer or not murderer.Character then Notify("Murderer not found", Theme.RedNotif) return end
     local mHumRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
     if not mHumRoot then return end
 
-    -- Anti-Idiot Check
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p ~= murderer and playerRoles[p] == "Innocent" and p.Character then
             local pHumRoot = p.Character:FindFirstChild("HumanoidRootPart")
-            if pHumRoot then
-                local dist = (pHumRoot.Position - mHumRoot.Position).Magnitude
-                if dist < 15 then
-                    Notify("There's an idiot standing next to the murder, wait until he moves away.", Theme.RedNotif)
-                    return
-                end
+            if pHumRoot and (pHumRoot.Position - mHumRoot.Position).Magnitude < 15 then
+                Notify("There's an idiot standing next to the murder, wait until he moves away.", Theme.RedNotif)
+                return
             end
         end
     end
@@ -454,27 +356,44 @@ local function ShootMurderer()
     local tool = char:FindFirstChildOfClass("Tool") or (LocalPlayer.Backpack and LocalPlayer.Backpack:FindFirstChildOfClass("Tool"))
     
     if tool and hum and tool.Name:lower():find("gun") then
-        if tool.Parent == LocalPlayer.Backpack then
-            hum:EquipTool(tool)
-            task.wait(0.05)
-        end
-        
-        -- Устанавливаем цель для хука WallShot
+        if tool.Parent == LocalPlayer.Backpack then hum:EquipTool(tool) task.wait(0.05) end
         mmState.forceTarget = mHumRoot
-        
-        -- Напрямую вызываем FireServer с координатами мардера
-        pcall(function()
-            tool:FireServer(mHumRoot.Position, mHumRoot)
-        end)
-        
-        -- На всякий случай пробуем Activate (для некоторых систем оружия)
+        pcall(function() tool:FireServer(mHumRoot.Position, mHumRoot) end)
         tool:Activate()
-        
         task.wait(0.1)
         mmState.forceTarget = nil
     else
         Notify("You don't have a gun!", Theme.RedNotif)
     end
+end
+
+local function KillAllPlayers()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local tool = char:FindFirstChildOfClass("Tool") or (LocalPlayer.Backpack and LocalPlayer.Backpack:FindFirstChildOfClass("Tool"))
+    
+    if not (tool and hum and hrp and tool.Name:lower():find("knife")) then
+        Notify("You need a knife!", Theme.RedNotif)
+        return
+    end
+    
+    if tool.Parent == LocalPlayer.Backpack then hum:EquipTool(tool) task.wait(0.05) end
+    
+    for _, target in ipairs(Players:GetPlayers()) do
+        if target ~= LocalPlayer and target.Character then
+            local tHum = target.Character:FindFirstChildOfClass("Humanoid")
+            local tHrp = target.Character:FindFirstChild("HumanoidRootPart")
+            if tHum and tHrp and tHum.Health > 0 then
+                hrp.CFrame = CFrame.lookAt(hrp.Position, tHrp.Position)
+                pcall(function() tool:FireServer() end)
+                tool:Activate()
+                task.wait(0.05)
+            end
+        end
+    end
+    Notify("Killed everyone!", Theme.Success)
 end
 
 local function AddShotButton()
@@ -490,207 +409,134 @@ local function AddShotButton()
     ShotButton.Parent = ScreenGui
     Instance.new("UICorner", ShotButton).CornerRadius = UDim.new(0, 15)
     
-    -- Drag Logic (Only when customizing)
     ShotButton.InputBegan:Connect(function(input)
-        if isCustomizing and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-            isDraggingShot = true
-            dragStart = input.Position
-            startPos = ShotButton.Position
+        if isCustomizing and ActiveCustomBtn == ShotButton and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            isDraggingShot = true dragStart = input.Position startPos = ShotButton.Position
         end
     end)
+    ShotButton.MouseButton1Click:Connect(function() if not isCustomizing then ShootMurderer() end end)
+end
 
-    -- Click to Shoot (Only when NOT customizing)
-    ShotButton.MouseButton1Click:Connect(function()
-        if not isCustomizing then
-            ShootMurderer()
+local function AddKillAllButton()
+    if KillAllButton then return end
+    KillAllButton = Instance.new("TextButton")
+    KillAllButton.Size = KillAllBtnSize
+    KillAllButton.Position = KillAllBtnPos
+    KillAllButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    KillAllButton.Text = "KillAll"
+    KillAllButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KillAllButton.Font = Enum.Font.GothamBold
+    KillAllButton.TextSize = 20
+    KillAllButton.Parent = ScreenGui
+    Instance.new("UICorner", KillAllButton).CornerRadius = UDim.new(0, 15)
+    
+    KillAllButton.InputBegan:Connect(function(input)
+        if isCustomizing and ActiveCustomBtn == KillAllButton and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            isDraggingShot = true dragStart = input.Position startPos = KillAllButton.Position
         end
     end)
+    KillAllButton.MouseButton1Click:Connect(function() if not isCustomizing then KillAllPlayers() end end)
 end
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDraggingShot = false
-    end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDraggingShot = false end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
     if isDraggingShot and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
-        ShotButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        ShotBtnPos = ShotButton.Position
+        if ActiveCustomBtn == ShotButton then
+            ShotButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            ShotBtnPos = ShotButton.Position
+        elseif ActiveCustomBtn == KillAllButton then
+            KillAllButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            KillAllBtnPos = KillAllButton.Position
+        end
     end
 end)
 
-local function RemoveShotButton()
-    if ShotButton then
-        ShotButton:Destroy()
-        ShotButton = nil
-    end
-end
+local function RemoveShotButton() if ShotButton then ShotButton:Destroy() ShotButton = nil end end
+local function RemoveKillAllButton() if KillAllButton then KillAllButton:Destroy() KillAllButton = nil end end
 
 -- Customization Screen
-local CustomFrame = Create("Frame", {
-    Size = UDim2.new(1, 0, 1, 0),
-    BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-    BackgroundTransparency = 0.4,
-    Visible = false,
-    ZIndex = 100,
-    Parent = ScreenGui
-})
-
-local CustomMenu = Create("Frame", {
-    Size = UDim2.new(0, 300, 0, 200),
-    Position = UDim2.new(0.5, -150, 0.5, -100),
-    BackgroundColor3 = Theme.Background,
-    Parent = CustomFrame
-})
+local CustomFrame = Create("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.4, Visible = false, ZIndex = 100, Parent = ScreenGui})
+local CustomMenu = Create("Frame", {Size = UDim2.new(0, 300, 0, 200), Position = UDim2.new(0.5, -150, 0.5, -100), BackgroundColor3 = Theme.Background, Parent = CustomFrame})
 Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = CustomMenu})
 Create("UIStroke", {Color = Theme.Accent, Thickness = 1.5, Parent = CustomMenu})
-
-local CustomTitle = Create("TextLabel", {
-    Size = UDim2.new(1, 0, 0, 40),
-    BackgroundTransparency = 1,
-    Text = "Customization",
-    Font = Enum.Font.GothamBold,
-    TextSize = 16,
-    TextColor3 = Theme.Text,
-    Parent = CustomMenu
-})
-
-local SizeSlider = Create("TextButton", {
-    Size = UDim2.new(1, -40, 0, 15),
-    Position = UDim2.new(0, 20, 0, 60),
-    BackgroundColor3 = Theme.Element,
-    Text = "",
-    AutoButtonColor = false,
-    Parent = CustomMenu
-})
+local CustomTitle = Create("TextLabel", {Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, Text = "Customization", Font = Enum.Font.GothamBold, TextSize = 16, TextColor3 = Theme.Text, Parent = CustomMenu})
+local SizeSlider = Create("TextButton", {Size = UDim2.new(1, -40, 0, 15), Position = UDim2.new(0, 20, 0, 60), BackgroundColor3 = Theme.Element, Text = "", AutoButtonColor = false, Parent = CustomMenu})
 Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = SizeSlider})
-local SizeKnob = Create("Frame", {
-    Size = UDim2.new(0, 20, 0, 20),
-    Position = UDim2.new(0.5, -10, 0.5, -10),
-    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-    Parent = SizeSlider
-})
+local SizeKnob = Create("Frame", {Size = UDim2.new(0, 20, 0, 20), Position = UDim2.new(0.5, -10, 0.5, -10), BackgroundColor3 = Color3.fromRGB(255, 255, 255), Parent = SizeSlider})
 Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = SizeKnob})
-
-local CloseCustomBtn = Create("TextButton", {
-    Size = UDim2.new(0, 80, 0, 30),
-    Position = UDim2.new(0.5, -40, 1, -40),
-    BackgroundColor3 = Theme.Accent,
-    Text = "Close",
-    Font = Enum.Font.GothamBold,
-    TextSize = 14,
-    TextColor3 = Theme.TextDark,
-    Parent = CustomMenu
-})
+local CloseCustomBtn = Create("TextButton", {Size = UDim2.new(0, 80, 0, 30), Position = UDim2.new(0.5, -40, 1, -40), BackgroundColor3 = Theme.Accent, Text = "Close", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.TextDark, Parent = CustomMenu})
 Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = CloseCustomBtn})
 
-local function OpenCustomization()
-    CustomFrame.Visible = true
-    CustomBlur.Size = 24
-    isCustomizing = true
-    
+local function OpenCustomization(btn)
+    CustomFrame.Visible = true CustomBlur.Size = 24 isCustomizing = true ActiveCustomBtn = btn
     local draggingSlider = false
     SizeSlider.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             draggingSlider = true
             local pos = math.clamp((input.Position.X - SizeSlider.AbsolutePosition.X) / SizeSlider.AbsoluteSize.X, 0, 1)
             SizeKnob.Position = UDim2.new(pos, -10, 0.5, -10)
-            ShotBtnSize = UDim2.new(0, 50 + pos * 150, 0, 50 + pos * 150)
-            if ShotButton then ShotButton.Size = ShotBtnSize end
+            local sz = UDim2.new(0, 50 + pos * 150, 0, 50 + pos * 150)
+            if ActiveCustomBtn == ShotButton then ShotBtnSize = sz ShotButton.Size = sz
+            elseif ActiveCustomBtn == KillAllButton then KillAllBtnSize = sz KillAllButton.Size = sz end
         end
     end)
     SizeSlider.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingSlider = false
-        end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingSlider = false end
     end)
     UserInputService.InputChanged:Connect(function(input)
         if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local pos = math.clamp((input.Position.X - SizeSlider.AbsolutePosition.X) / SizeSlider.AbsoluteSize.X, 0, 1)
             SizeKnob.Position = UDim2.new(pos, -10, 0.5, -10)
-            ShotBtnSize = UDim2.new(0, 50 + pos * 150, 0, 50 + pos * 150)
-            if ShotButton then ShotButton.Size = ShotBtnSize end
+            local sz = UDim2.new(0, 50 + pos * 150, 0, 50 + pos * 150)
+            if ActiveCustomBtn == ShotButton then ShotBtnSize = sz ShotButton.Size = sz
+            elseif ActiveCustomBtn == KillAllButton then KillAllBtnSize = sz KillAllButton.Size = sz end
         end
     end)
 end
 
 CloseCustomBtn.MouseButton1Click:Connect(function()
-    CustomFrame.Visible = false
-    CustomBlur.Size = 0
-    isCustomizing = false
-    isDraggingShot = false
+    CustomFrame.Visible = false CustomBlur.Size = 0 isCustomizing = false isDraggingShot = false ActiveCustomBtn = nil
 end)
 
 -- ESP SYSTEM
 local espObjects = {}
-
 local function createEspForPlayer(player)
     if espObjects[player] then return espObjects[player] end
     local highlight = Instance.new("Highlight")
     highlight.Name = "Chams_" .. player.Name
-    highlight.FillColor = Color3.new(1, 1, 1)
-    highlight.OutlineColor = Color3.new(0, 0, 0)
-    highlight.FillTransparency = 0.5
-    highlight.OutlineTransparency = 0
-    highlight.Enabled = false
-    highlight.Parent = nil
+    highlight.FillColor = Color3.new(1, 1, 1) highlight.OutlineColor = Color3.new(0, 0, 0)
+    highlight.FillTransparency = 0.5 highlight.OutlineTransparency = 0 highlight.Enabled = false highlight.Parent = nil
     espObjects[player] = { highlight = highlight }
     return espObjects[player]
 end
 
 local function removeEspForPlayer(player)
     local data = espObjects[player]
-    if data and data.highlight then
-        data.highlight:Destroy()
-        espObjects[player] = nil
-    end
+    if data and data.highlight then data.highlight:Destroy() espObjects[player] = nil end
 end
 
 local function updateEspForPlayer(player)
     local data = espObjects[player]
     if not data then return end
-
     local role = playerRoles[player]
-    
     if role ~= "Murderer" and role ~= "Sheriff" then
         local detectedRole = detectRole(player)
-        if detectedRole == "Murderer" or detectedRole == "Sheriff" then
-            playerRoles[player] = detectedRole
-            role = detectedRole
-        else
-            role = "Innocent"
-        end
+        if detectedRole == "Murderer" or detectedRole == "Sheriff" then playerRoles[player] = detectedRole role = detectedRole else role = "Innocent" end
     end
-
-    local shouldHighlight = false
-    local color = Color3.new(1, 1, 1)
-
-    if role == "Murderer" and espState.chamsMurder then
-        shouldHighlight = true
-        color = Color3.fromRGB(255, 0, 64)
-    elseif role == "Sheriff" and espState.chamsSherif then
-        shouldHighlight = true
-        color = Color3.fromRGB(0, 170, 255)
-    elseif role == "Innocent" and espState.chamsEnemies then
-        shouldHighlight = true
-        color = Color3.fromRGB(0, 255, 0)
-    end
-
+    local shouldHighlight = false local color = Color3.new(1, 1, 1)
+    if role == "Murderer" and espState.chamsMurder then shouldHighlight = true color = Color3.fromRGB(255, 0, 64)
+    elseif role == "Sheriff" and espState.chamsSherif then shouldHighlight = true color = Color3.fromRGB(0, 170, 255)
+    elseif role == "Innocent" and espState.chamsEnemies then shouldHighlight = true color = Color3.fromRGB(0, 255, 0) end
     if shouldHighlight then
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            if data.highlight.Parent ~= player.Character then
-                data.highlight.Parent = player.Character
-            end
-            data.highlight.Enabled = true
-            data.highlight.FillColor = color
-        else
-            data.highlight.Enabled = false
-        end
-    else
-        data.highlight.Enabled = false
-    end
+            if data.highlight.Parent ~= player.Character then data.highlight.Parent = player.Character end
+            data.highlight.Enabled = true data.highlight.FillColor = color
+        else data.highlight.Enabled = false end
+    else data.highlight.Enabled = false end
 end
 
 RunService.RenderStepped:Connect(function()
@@ -700,11 +546,8 @@ RunService.RenderStepped:Connect(function()
             updateEspForPlayer(player)
         end
     end
-    for player, _ in pairs(espObjects) do
-        if not Players:FindFirstChild(player.Name) then removeEspForPlayer(player) end
-    end
+    for player, _ in pairs(espObjects) do if not Players:FindFirstChild(player.Name) then removeEspForPlayer(player) end end
 end)
-
 Players.PlayerRemoving:Connect(removeEspForPlayer)
 
 -- WALLSHOT HOOK
@@ -734,10 +577,7 @@ mt.__namecall = function(self, ...)
                                         local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
                                         if onScreen then
                                             local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-                                            if dist < closestDist then
-                                                closestDist = dist
-                                                closestPart = part
-                                            end
+                                            if dist < closestDist then closestDist = dist closestPart = part end
                                         end
                                     end
                                 end
@@ -746,15 +586,11 @@ mt.__namecall = function(self, ...)
                     end
                     targetPart = closestPart
                 end
-                
                 if targetPart then
                     local args = {...}
                     for i = 1, #args do
-                        if typeof(args[i]) == "Instance" and args[i]:IsA("BasePart") then
-                            args[i] = targetPart
-                        elseif typeof(args[i]) == "Vector3" then
-                            args[i] = targetPart.Position
-                        end
+                        if typeof(args[i]) == "Instance" and args[i]:IsA("BasePart") then args[i] = targetPart
+                        elseif typeof(args[i]) == "Vector3" then args[i] = targetPart.Position end
                     end
                     return oldNamecall(self, unpack(args))
                 end
@@ -762,73 +598,45 @@ mt.__namecall = function(self, ...)
         elseif self == workspace and method == "Raycast" then
             if mmState.forceTarget then
                 local result = Instance.new("RaycastResult")
-                result.Instance = mmState.forceTarget
-                result.Position = mmState.forceTarget.Position
-                result.Normal = Vector3.new(0, 1, 0)
-                result.Material = Enum.Material.Plastic
+                result.Instance = mmState.forceTarget result.Position = mmState.forceTarget.Position result.Normal = Vector3.new(0, 1, 0) result.Material = Enum.Material.Plastic
                 return result
             end
             if mmState.wallShot then
-                local args = {...}
-                local origin = args[1]
-                local direction = args[2]
-                local params = args[3] or RaycastParams.new()
-                
-                local newParams = RaycastParams.new()
-                newParams.FilterType = Enum.RaycastFilterType.Exclude
+                local args = {...} local origin = args[1] local direction = args[2] local params = args[3] or RaycastParams.new()
+                local newParams = RaycastParams.new() newParams.FilterType = Enum.RaycastFilterType.Exclude
                 local filter = {}
-                if params.FilterDescendantsInstances then
-                    for _, v in ipairs(params.FilterDescendantsInstances) do table.insert(filter, v) end
-                end
+                if params.FilterDescendantsInstances then for _, v in ipairs(params.FilterDescendantsInstances) do table.insert(filter, v) end end
                 if LocalPlayer.Character then table.insert(filter, LocalPlayer.Character) end
                 newParams.FilterDescendantsInstances = filter
-                
-                local currentOrigin = origin
-                local remainingDir = direction
+                local currentOrigin = origin local remainingDir = direction
                 for i = 1, 15 do
                     local result = oldNamecall(self, currentOrigin, remainingDir, newParams)
                     if not result then return nil end
                     local model = result.Instance:FindFirstAncestorOfClass("Model")
-                    if model and model:FindFirstChildOfClass("Humanoid") then
-                        return result
+                    if model and model:FindFirstChildOfClass("Humanoid") then return result
                     else
-                        table.insert(filter, result.Instance)
-                        currentOrigin = result.Position
-                        remainingDir = origin + direction - currentOrigin
+                        table.insert(filter, result.Instance) currentOrigin = result.Position remainingDir = origin + direction - currentOrigin
                         if remainingDir.Magnitude < 0.1 then return nil end
                     end
                 end
                 return oldNamecall(self, origin, direction, params)
             end
         elseif self == workspace and (method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList") then
-            if mmState.forceTarget then
-                return mmState.forceTarget, mmState.forceTarget.Position, Vector3.new(0, 1, 0)
-            end
+            if mmState.forceTarget then return mmState.forceTarget, mmState.forceTarget.Position, Vector3.new(0, 1, 0) end
             if mmState.wallShot then
-                local args = {...}
-                local ray = args[1]
-                local ignoreList = args[2] or {}
+                local args = {...} local ray = args[1] local ignoreList = args[2] or {}
                 if LocalPlayer.Character then table.insert(ignoreList, LocalPlayer.Character) end
-                
-                local currentOrigin = ray.Origin
-                local remainingDir = ray.Direction
+                local currentOrigin = ray.Origin local remainingDir = ray.Direction
                 for i = 1, 15 do
                     local newRay = Ray.new(currentOrigin, remainingDir)
                     local part, pos, normal
-                    if method == "FindPartOnRay" then
-                        part, pos, normal = oldNamecall(self, newRay)
-                    else
-                        part, pos, normal = oldNamecall(self, newRay, ignoreList, args[3], args[4])
-                    end
-                    
+                    if method == "FindPartOnRay" then part, pos, normal = oldNamecall(self, newRay)
+                    else part, pos, normal = oldNamecall(self, newRay, ignoreList, args[3], args[4]) end
                     if not part then return nil end
                     local model = part:FindFirstAncestorOfClass("Model")
-                    if model and model:FindFirstChildOfClass("Humanoid") then
-                        return part, pos, normal
+                    if model and model:FindFirstChildOfClass("Humanoid") then return part, pos, normal
                     else
-                        table.insert(ignoreList, part)
-                        currentOrigin = pos
-                        remainingDir = ray.Origin + ray.Direction - currentOrigin
+                        table.insert(ignoreList, part) currentOrigin = pos remainingDir = ray.Origin + ray.Direction - currentOrigin
                         if remainingDir.Magnitude < 0.1 then return nil end
                     end
                 end
@@ -852,11 +660,9 @@ local function ApplyAntiFling(state)
                 local hrp = char:FindFirstChild("HumanoidRootPart")
                 local hum = char:FindFirstChildOfClass("Humanoid")
                 if hrp and hum and hum.Health > 0 then
-                    local linVel = hrp.AssemblyLinearVelocity
-                    local angVel = hrp.AssemblyAngularVelocity
+                    local linVel = hrp.AssemblyLinearVelocity local angVel = hrp.AssemblyAngularVelocity
                     if linVel.Magnitude > 200 or angVel.Magnitude > 100 then
-                        hrp.AssemblyLinearVelocity = Vector3.new(0, linVel.Y, 0)
-                        hrp.AssemblyAngularVelocity = Vector3.zero
+                        hrp.AssemblyLinearVelocity = Vector3.new(0, linVel.Y, 0) hrp.AssemblyAngularVelocity = Vector3.zero
                     end
                 end
             end
@@ -885,21 +691,14 @@ local function TpToGunAndPickUp()
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-
     local tool, handle = FindGun()
     if tool and handle then
         local originalCFrame = hrp.CFrame
         hrp.CFrame = handle.CFrame * CFrame.new(0, 0, -2)
-        task.wait(0.05)
-        firetouchinterest(hrp, handle, 0)
-        task.wait(0.05)
-        firetouchinterest(hrp, handle, 1)
-        task.wait(0.05)
+        task.wait(0.05) firetouchinterest(hrp, handle, 0) task.wait(0.05) firetouchinterest(hrp, handle, 1) task.wait(0.05)
         hrp.CFrame = originalCFrame
         Notify("Gun picked up!", Theme.Success)
-    else
-        Notify("No gun found on the ground", Theme.RedNotif)
-    end
+    else Notify("No gun found on the ground", Theme.RedNotif) end
 end
 
 local autoPickUpConnection
@@ -912,20 +711,20 @@ local function ApplyAutoPickUpGun(state)
                 local name = child.Name:lower()
                 if name:find("gun") or name:find("revolver") or name:find("pistol") or name:find("colt") then
                     task.spawn(function()
-                        local handle = child:WaitForChild("Handle", 2)
+                        local handle = child:FindFirstChild("Handle") or child:WaitForChild("Handle", 1)
                         local char = LocalPlayer.Character
                         if handle and char then
                             local hrp = char:FindFirstChild("HumanoidRootPart")
                             local hum = char:FindFirstChildOfClass("Humanoid")
                             if hrp and hum and hum.Health > 0 then
-                                task.wait(0.1)
+                                task.wait(0.05)
                                 if not child.Parent then return end
                                 local originalCFrame = hrp.CFrame
-                                hrp.CFrame = handle.CFrame
+                                hrp.CFrame = handle.CFrame * CFrame.new(0, 0, -2)
                                 firetouchinterest(hrp, handle, 0)
-                                task.wait(0.05)
+                                task.wait()
                                 firetouchinterest(hrp, handle, 1)
-                                task.wait(0.05)
+                                task.wait()
                                 hrp.CFrame = originalCFrame
                             end
                         end
@@ -939,64 +738,30 @@ end
 -- FLING LOGIC
 local flingConnection
 local function StopFlinging()
-    if flingConnection then
-        flingConnection:Disconnect()
-        flingConnection = nil
-    end
-    mmState.isFlinging = false
-    mmState.flingTarget = nil
+    if flingConnection then flingConnection:Disconnect() flingConnection = nil end
+    mmState.isFlinging = false mmState.flingTarget = nil
 end
 
 local function StartFlinging(target)
     StopFlinging()
-    mmState.flingTarget = target
-    mmState.isFlinging = true
-    
+    mmState.flingTarget = target mmState.isFlinging = true
     flingConnection = RunService.Heartbeat:Connect(function()
         if mmState.flingTarget and mmState.flingTarget.Character then
             local hrp = mmState.flingTarget.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
-                pcall(function()
-                    if mmState.flingTarget ~= LocalPlayer then hrp:SetNetworkOwner(LocalPlayer) end
-                end)
+                pcall(function() if mmState.flingTarget ~= LocalPlayer then hrp:SetNetworkOwner(LocalPlayer) end end)
                 hrp.AssemblyLinearVelocity = Vector3.new(99999, 99999, 99999)
                 hrp.AssemblyAngularVelocity = Vector3.new(99999, 99999, 99999)
                 hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(9999), math.rad(9999), math.rad(9999))
-            else
-                StopFlinging()
-            end
-        else
-            StopFlinging()
-        end
+            else StopFlinging() end
+        else StopFlinging() end
     end)
 end
 
 -- UI ELEMENTS
-local Intro = Create("Frame", {
-    Size = UDim2.new(1, 0, 1, 0),
-    BackgroundColor3 = Theme.Background,
-    ZIndex = 100,
-    Parent = ScreenGui
-})
-Create("UIGradient", {
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 20)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 5, 8))
-    }),
-    Rotation = 45,
-    Parent = Intro
-})
-local IntroLogo = Create("TextLabel", {
-    Size = UDim2.new(0, 500, 0, 80),
-    Position = UDim2.new(0.5, -250, 0.4, -40),
-    BackgroundTransparency = 1,
-    Text = "SeraphiCA",
-    Font = Enum.Font.GothamBlack,
-    TextSize = 60,
-    TextColor3 = Theme.Text,
-    ZIndex = 101,
-    Parent = Intro
-})
+local Intro = Create("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Theme.Background, ZIndex = 100, Parent = ScreenGui})
+Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 20)), ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 5, 8))}), Rotation = 45, Parent = Intro})
+local IntroLogo = Create("TextLabel", {Size = UDim2.new(0, 500, 0, 80), Position = UDim2.new(0.5, -250, 0.4, -40), BackgroundTransparency = 1, Text = "SeraphiCA", Font = Enum.Font.GothamBlack, TextSize = 60, TextColor3 = Theme.Text, ZIndex = 101, Parent = Intro})
 local IntroGlow = Create("UIStroke", {Color = Theme.Accent, Thickness = 2, Transparency = 0.3, Parent = IntroLogo})
 task.spawn(function()
     while Intro.Parent do
@@ -1006,23 +771,10 @@ task.spawn(function()
         task.wait(1)
     end
 end)
-local IntroSub = Create("TextLabel", {
-    Size = UDim2.new(0, 500, 0, 25),
-    Position = UDim2.new(0.5, -250, 0.4, 45),
-    BackgroundTransparency = 1,
-    Text = "Initializing modules for " .. LocalPlayer.Name,
-    Font = Enum.Font.Gotham, TextSize = 14, TextColor3 = Theme.Description, ZIndex = 101, Parent = Intro
-})
-local LoadBarBg = Create("Frame", {
-    Size = UDim2.new(0, 400, 0, 4),
-    Position = UDim2.new(0.5, -200, 0.4, 90),
-    BackgroundColor3 = Theme.DarkStroke, BorderSizePixel = 0, ZIndex = 101, Parent = Intro
-})
+local IntroSub = Create("TextLabel", {Size = UDim2.new(0, 500, 0, 25), Position = UDim2.new(0.5, -250, 0.4, 45), BackgroundTransparency = 1, Text = "Initializing modules for " .. LocalPlayer.Name, Font = Enum.Font.Gotham, TextSize = 14, TextColor3 = Theme.Description, ZIndex = 101, Parent = Intro})
+local LoadBarBg = Create("Frame", {Size = UDim2.new(0, 400, 0, 4), Position = UDim2.new(0.5, -200, 0.4, 90), BackgroundColor3 = Theme.DarkStroke, BorderSizePixel = 0, ZIndex = 101, Parent = Intro})
 Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = LoadBarBg})
-local LoadBarFill = Create("Frame", {
-    Size = UDim2.new(0, 0, 1, 0),
-    BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = 102, Parent = LoadBarBg
-})
+local LoadBarFill = Create("Frame", {Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = 102, Parent = LoadBarBg})
 Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = LoadBarFill})
 TweenService:Create(LoadBarFill, TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
 task.delay(2.2, function()
@@ -1032,31 +784,15 @@ task.delay(2.2, function()
     TweenService:Create(LoadBarBg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
     TweenService:Create(LoadBarFill, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
     TweenService:Create(Intro, TweenInfo.new(0.7), {BackgroundTransparency = 1}):Play()
-    task.wait(0.7)
-    Intro.Visible = false
+    task.wait(0.7) Intro.Visible = false
 end)
 
-local Watermark = Create("TextButton", {
-    Size = UDim2.new(0, 260, 0, 40),
-    Position = UDim2.new(0.5, -130, 0, 15),
-    BackgroundColor3 = Theme.Background, AutoButtonColor = false, Text = "", Parent = ScreenGui
-})
+local Watermark = Create("TextButton", {Size = UDim2.new(0, 260, 0, 40), Position = UDim2.new(0.5, -130, 0, 15), BackgroundColor3 = Theme.Background, AutoButtonColor = false, Text = "", Parent = ScreenGui})
 Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Watermark})
 local WmStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 1.5, Transparency = 0.2, Parent = Watermark})
-Create("UIGradient", {
-    Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 24)), ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 14))}),
-    Rotation = 90, Parent = Watermark
-})
-local WmIndicator = Create("Frame", {
-    Size = UDim2.new(0, 4, 0, 20), Position = UDim2.new(0, 10, 0.5, -10),
-    BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, Parent = Watermark
-}, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
-local WmText = Create("TextLabel", {
-    Size = UDim2.new(1, -30, 1, 0), Position = UDim2.new(0, 22, 0, 0),
-    BackgroundTransparency = 1, Text = "SeraphiCA | 00:00:00 | 60 FPS",
-    Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = Theme.Text,
-    TextXAlignment = Enum.TextXAlignment.Left, Parent = Watermark
-})
+Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 24)), ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 14))}), Rotation = 90, Parent = Watermark})
+local WmIndicator = Create("Frame", {Size = UDim2.new(0, 4, 0, 20), Position = UDim2.new(0, 10, 0.5, -10), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, Parent = Watermark}, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
+local WmText = Create("TextLabel", {Size = UDim2.new(1, -30, 1, 0), Position = UDim2.new(0, 22, 0, 0), BackgroundTransparency = 1, Text = "SeraphiCA | 00:00:00 | 60 FPS", Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Watermark})
 local fps = 60 local frames = 0 local lastTime = tick()
 RunService.RenderStepped:Connect(function()
     frames = frames + 1
@@ -1066,21 +802,12 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local MainShadow = Create("Frame", {
-    Size = UDim2.new(0, 820, 0, 520), Position = UDim2.new(0.5, -410, 0.5, -260),
-    BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, Parent = ScreenGui
-})
+local MainShadow = Create("Frame", {Size = UDim2.new(0, 820, 0, 520), Position = UDim2.new(0.5, -410, 0.5, -260), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, Parent = ScreenGui})
 Create("UICorner", {CornerRadius = UDim.new(0, 16), Parent = MainShadow})
-local MainFrame = Create("Frame", {
-    Size = UDim2.new(0, 800, 0, 500), Position = UDim2.new(0.5, -400, 0.5, -250),
-    BackgroundColor3 = Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, Visible = false, Parent = ScreenGui
-})
+local MainFrame = Create("Frame", {Size = UDim2.new(0, 800, 0, 500), Position = UDim2.new(0.5, -400, 0.5, -250), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, Visible = false, Parent = ScreenGui})
 Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = MainFrame})
 local MainStroke = Create("UIStroke", {Color = Theme.Stroke, Thickness = 1.5, Parent = MainFrame})
-Create("UIGradient", {
-    Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(14, 14, 18)), ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 10))}),
-    Rotation = 90, Parent = MainFrame
-})
+Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(14, 14, 18)), ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 10))}), Rotation = 90, Parent = MainFrame})
 
 local MenuOpen = false
 local function ToggleMenu()
@@ -1095,9 +822,7 @@ local function ToggleMenu()
         TweenService:Create(MenuBlur, TweenInfo.new(0.4), {Size = 0}):Play()
         TweenService:Create(MainShadow, TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {Size = UDim2.new(0, 820, 0, 20), BackgroundTransparency = 1}):Play()
         TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {Size = UDim2.new(0, 800, 0, 0)}):Play()
-        task.delay(0.4, function()
-            if not MenuOpen then MainFrame.Visible = false MainShadow.Visible = false end
-        end)
+        task.delay(0.4, function() if not MenuOpen then MainFrame.Visible = false MainShadow.Visible = false end end)
     end
 end
 Watermark.MouseButton1Click:Connect(ToggleMenu)
@@ -1106,33 +831,25 @@ task.delay(2.5, function() ToggleMenu() end)
 local dragging, dragInput, dragStart, startPos
 local function updateDrag(input)
     local delta = input.Position - dragStart
-    TweenService:Create(MainFrame, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    }):Play()
-    TweenService:Create(MainShadow, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X - 10, startPos.Y.Scale, startPos.Y.Offset + delta.Y - 10)
-    }):Play()
+    TweenService:Create(MainFrame, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}):Play()
+    TweenService:Create(MainShadow, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X - 10, startPos.Y.Scale, startPos.Y.Offset + delta.Y - 10)}):Play()
 end
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true dragStart = input.Position startPos = MainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then dragging = false end
-        end)
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
     end
 end)
 MainFrame.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
 end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then updateDrag(input) end
-end)
+UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then updateDrag(input) end end)
 
 local Sidebar = Create("Frame", {Size = UDim2.new(0, 240, 1, 0), BackgroundColor3 = Theme.Sidebar, BorderSizePixel = 0, Parent = MainFrame})
 Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(16, 16, 20)), ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 14))}), Parent = Sidebar})
 Create("Frame", {Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0), BackgroundColor3 = Theme.DarkStroke, BorderSizePixel = 0, Parent = Sidebar})
 Create("TextLabel", {Size = UDim2.new(1, -30, 0, 35), Position = UDim2.new(0, 20, 0, 25), BackgroundTransparency = 1, Text = "SeraphiCA", Font = Enum.Font.GothamBlack, TextSize = 26, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
-Create("TextLabel", {Size = UDim2.new(1, -30, 0, 15), Position = UDim2.new(0, 21, 0, 60), BackgroundTransparency = 1, Text = "Ultimate Interface v10.2", Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
+Create("TextLabel", {Size = UDim2.new(1, -30, 0, 15), Position = UDim2.new(0, 21, 0, 60), BackgroundTransparency = 1, Text = "Ultimate Interface v11.0", Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
 Create("Frame", {Size = UDim2.new(1, -40, 0, 1), Position = UDim2.new(0, 20, 0, 85), BackgroundColor3 = Theme.DarkStroke, BorderSizePixel = 0, Parent = Sidebar})
 local TabContainer = Create("Frame", {Size = UDim2.new(1, 0, 1, -160), Position = UDim2.new(0, 0, 0, 100), BackgroundTransparency = 1, Parent = Sidebar})
 Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = TabContainer})
@@ -1148,9 +865,7 @@ local ContentArea = Create("Frame", {Size = UDim2.new(1, -240, 1, 0), Position =
 local PageTitle = Create("TextLabel", {Size = UDim2.new(1, -40, 0, 40), Position = UDim2.new(0, 25, 0, 20), BackgroundTransparency = 1, Text = "Settings", Font = Enum.Font.GothamBold, TextSize = 22, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = ContentArea})
 Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Theme.Accent), ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 100, 255))}), Parent = PageTitle})
 local PageContainer = Create("ScrollingFrame", {Size = UDim2.new(1, -40, 1, -90), Position = UDim2.new(0, 25, 0, 75), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = Theme.Accent, CanvasSize = UDim2.new(0, 0, 0, 0), Parent = ContentArea})
-Create("UIListLayout", {Padding = UDim.new(0, 10), Parent = PageContainer}):GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    PageContainer.CanvasSize = UDim2.new(0, 0, 0, PageContainer.UIListLayout.AbsoluteContentSize.Y + 20)
-end)
+Create("UIListLayout", {Padding = UDim.new(0, 10), Parent = PageContainer}):GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() PageContainer.CanvasSize = UDim2.new(0, 0, 0, PageContainer.UIListLayout.AbsoluteContentSize.Y + 20) end)
 
 local Tabs = {}
 local ActiveTab = nil
@@ -1163,16 +878,13 @@ local function SelectTab(name)
             TweenService:Create(tabData.Button, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent}):Play()
             TweenService:Create(tabData.Button.Title, TweenInfo.new(0.3), {TextColor3 = Theme.TextDark}):Play()
             SlideIndicator.Visible = true
-            TweenService:Create(SlideIndicator, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                Position = UDim2.new(0, 15, 0, tabData.Button.AbsolutePosition.Y - Sidebar.AbsolutePosition.Y + 7.5)
-            }):Play()
+            TweenService:Create(SlideIndicator, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 15, 0, tabData.Button.AbsolutePosition.Y - Sidebar.AbsolutePosition.Y + 7.5)}):Play()
         else
             TweenService:Create(tabData.Button, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element}):Play()
             TweenService:Create(tabData.Button.Title, TweenInfo.new(0.3), {TextColor3 = Theme.Text}):Play()
         end
     end
-    PageTitle.Text = name
-    PageTitle.TextColor3 = Theme.Text 
+    PageTitle.Text = name PageTitle.TextColor3 = Theme.Text 
     ActiveTab = name
     if Tabs[name].Render then Tabs[name].Render() end
 end
@@ -1246,31 +958,25 @@ local function CreateExpandable(page, title, desc, subOptions, isNested, parentU
     Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
     Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = Container})
     Container.ClipsDescendants = true
-
     local Header = Create("TextButton", {Size = UDim2.new(1, 0, 0, 65), BackgroundTransparency = 1, AutoButtonColor = false, Text = "", Parent = Container})
     AddRipple(Header)
     Create("TextLabel", {Size = UDim2.new(1, -100, 0, 20), Position = UDim2.new(0, 15, 0, 12), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header})
     Create("TextLabel", {Size = UDim2.new(1, -100, 0, 15), Position = UDim2.new(0, 15, 0, 35), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header})
-
     local ToggleBtn = Create("TextButton", {Size = UDim2.new(0, 50, 0, 24), Position = UDim2.new(1, -65, 0.5, -12), BackgroundColor3 = Color3.fromRGB(10, 10, 12), AutoButtonColor = false, Text = "", Parent = Header})
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = ToggleBtn})
     local TogStroke = Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = ToggleBtn})
     local Indicator = Create("Frame", {Size = UDim2.new(0, 18, 0, 18), Position = UDim2.new(0, 3, 0.5, -9), BackgroundColor3 = Theme.Text, BorderSizePixel = 0, Parent = ToggleBtn})
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Indicator})
     local TogGlow = Create("ImageLabel", {Size = UDim2.new(1, 20, 1, 20), Position = UDim2.new(0, -10, 0, -10), BackgroundTransparency = 1, Image = "rbxassetid://5028857084", ImageColor3 = Theme.Accent, ImageTransparency = 1, Parent = ToggleBtn})
-
     local SubContainer = Create("Frame", {Size = UDim2.new(1, 0, 0, 0), Position = UDim2.new(0, 0, 0, 65), BackgroundColor3 = isNested and Color3.fromRGB(12, 12, 16) or Color3.fromRGB(16, 16, 20), BorderSizePixel = 0, Parent = Container})
     Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = SubContainer})
     Create("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), Parent = SubContainer})
-
     local state = defaultState or false
     local expanded = false
-    
     local hasActiveOption = false
     for _, opt in ipairs(subOptions) do
         if opt.Default or (opt.Type == "Expandable" and (opt.DefaultState or opt.HasActive)) then hasActiveOption = true break end
     end
-
     local function UpdateSize()
         local baseHeight = 65
         local subHeight = expanded and (SubContainer.UIListLayout.AbsoluteContentSize.Y + 20) or 0
@@ -1278,13 +984,11 @@ local function CreateExpandable(page, title, desc, subOptions, isNested, parentU
         TweenService:Create(SubContainer, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, subHeight)}):Play()
         if parentUpdate then task.delay(0.45, parentUpdate) end
     end
-
     if state or hasActiveOption then
         state = true expanded = true
         ToggleBtn.BackgroundColor3 = Theme.Accent TogStroke.Color = Theme.Accent
         Indicator.Position = UDim2.new(1, -21, 0.5, -9) Indicator.BackgroundColor3 = Theme.TextDark TogGlow.ImageTransparency = 0.5
     end
-
     AddRipple(ToggleBtn)
     ToggleBtn.MouseButton1Click:Connect(function()
         state = not state
@@ -1305,7 +1009,6 @@ local function CreateExpandable(page, title, desc, subOptions, isNested, parentU
         end
         UpdateSize()
     end)
-
     for _, opt in ipairs(subOptions) do
         if opt.Type == "Button" then
             CreateButton(SubContainer, opt.Name, opt.Desc, opt.Callback)
@@ -1346,12 +1049,8 @@ local function CreateExpandable(page, title, desc, subOptions, isNested, parentU
             end)
         end
     end
-    
     if state or hasActiveOption then
-        task.spawn(function()
-            task.wait(0.1)
-            UpdateSize()
-        end)
+        task.spawn(function() task.wait(0.1) UpdateSize() end)
     end
 end
 
@@ -1376,15 +1075,9 @@ local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged
         KnobGlow.ImageColor3 = color
         onColorChanged(color)
     end
-    Bar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = true update(input) end
-    end)
-    Bar.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = false end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if draggingSlider and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then update(input) end
-    end)
+    Bar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = true update(input) end end)
+    Bar.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = false end end)
+    UserInputService.InputChanged:Connect(function(input) if draggingSlider and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then update(input) end end)
 end
 
 -- FLING MODULE
@@ -1440,9 +1133,7 @@ local function CreateFlingModule(page)
     Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = PlayerList})
     Create("UIListLayout", {Padding = UDim.new(0, 5), Parent = PlayerList})
     Create("UIPadding", {PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), Parent = PlayerList})
-    PlayerList.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        PlayerList.CanvasSize = UDim2.new(0, 0, 0, PlayerList.UIListLayout.AbsoluteContentSize.Y + 10)
-    end)
+    PlayerList.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() PlayerList.CanvasSize = UDim2.new(0, 0, 0, PlayerList.UIListLayout.AbsoluteContentSize.Y + 10) end)
     local ActionBtn = Create("TextButton", {Size = UDim2.new(1, 0, 0, 35), BackgroundColor3 = Theme.Disabled, AutoButtonColor = false, Text = "Fling!", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Description, Active = false, Parent = SubContainer})
     Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = ActionBtn})
     Create("UIStroke", {Color = Theme.DarkStroke, Thickness = 1, Parent = ActionBtn})
@@ -1502,10 +1193,7 @@ local function CreateFlingModule(page)
     end)
     UpdateActionBtn()
     if expanded then
-        task.spawn(function()
-            task.wait(0.1)
-            UpdateSize()
-        end)
+        task.spawn(function() task.wait(0.1) UpdateSize() end)
     end
 end
 
@@ -1517,9 +1205,18 @@ Tabs[L("MS_KILL")].Render = function()
         {Name = L("KillMurder"), Desc = L("KillMurderDesc"), Type = "Expandable", DefaultState = mmState.killMurder, onToggle = function(v) mmState.killMurder = v end, SubOptions = {
             {Name = L("AddBtn"), Desc = L("AddBtnDesc"), Type = "Button", Callback = AddShotButton},
             {Name = L("DeleteBtn"), Desc = L("DeleteBtnDesc"), Type = "Button", Callback = RemoveShotButton},
-            {Name = L("CustomizationBtn"), Desc = L("CustomizationBtnDesc"), Type = "Button", Callback = OpenCustomization}
+            {Name = L("CustomizationBtn"), Desc = L("CustomizationBtnDesc"), Type = "Button", Callback = function() OpenCustomization(ShotButton) end}
         }}
     }, false, nil, mmState.touchForSheriff, function(v) mmState.touchForSheriff = v end)
+    
+    CreateCategory(PageContainer, L("MurdererFeatures"))
+    CreateExpandable(PageContainer, L("ForMurder"), L("ForMurderDesc"), {
+        {Name = L("KillAll"), Desc = L("KillAllDesc"), Type = "Expandable", DefaultState = mmState.killAll, onToggle = function(v) mmState.killAll = v end, SubOptions = {
+            {Name = L("AddBtn"), Desc = L("AddBtnDesc"), Type = "Button", Callback = AddKillAllButton},
+            {Name = L("DeleteBtn"), Desc = L("DeleteBtnDesc"), Type = "Button", Callback = RemoveKillAllButton},
+            {Name = L("CustomizationBtn"), Desc = L("CustomizationBtnDesc"), Type = "Button", Callback = function() OpenCustomization(KillAllButton) end}
+        }}
+    }, false, nil, mmState.forMurder, function(v) mmState.forMurder = v end)
 end
 
 CreateTab(L("Misc"))

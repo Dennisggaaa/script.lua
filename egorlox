@@ -1,5 +1,5 @@
--- // SeraphiCA | Summer Maximalism UI v23 (Flick Edition)
--- // 810px | Neon Sunsets, Heavy Glows, Max Effects
+-- // SeraphiCA | The Absolute Masterpiece v15 (Flick Edition)
+-- // Interactive Watermark, Frame-based Icons, Glassmorphism & Full Logic
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -67,16 +67,15 @@ end)
 local KeyFrame = Instance.new("Frame")
 KeyFrame.Size = UDim2.new(0, 350, 0, 180)
 KeyFrame.Position = UDim2.new(0.5, -175, 0.5, -90)
-KeyFrame.BackgroundColor3 = Color3.fromRGB(20, 15, 25)
+KeyFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 KeyFrame.BackgroundTransparency = 0.1
 KeyFrame.BorderSizePixel = 0
 KeyFrame.Parent = KeyGui
-Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 16)
+Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
 
 local KeyStroke = Instance.new("UIStroke")
-KeyStroke.Color = Color3.fromRGB(255, 0, 140)
-KeyStroke.Thickness = 1
-KeyStroke.Transparency = 0.5
+KeyStroke.Color = Color3.fromRGB(168, 85, 247) -- Accent
+KeyStroke.Thickness = 1.5
 KeyStroke.Parent = KeyFrame
 
 task.spawn(function()
@@ -94,7 +93,7 @@ Title.BackgroundTransparency = 1
 Title.Text = "SeraphiCA | Key System"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 18
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextColor3 = Color3.fromRGB(245, 245, 250)
 Title.Parent = KeyFrame
 
 local CloseBtn = Instance.new("TextButton")
@@ -111,26 +110,26 @@ Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
 local InputBox = Instance.new("TextBox")
 InputBox.Size = UDim2.new(1, -40, 0, 40)
 InputBox.Position = UDim2.new(0, 20, 0, 60)
-InputBox.BackgroundColor3 = Color3.fromRGB(30, 20, 40)
+InputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
 InputBox.BackgroundTransparency = 0.2
 InputBox.PlaceholderText = "Enter Key..."
 InputBox.Text = ""
 InputBox.Font = Enum.Font.GothamMedium
 InputBox.TextSize = 14
-InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+InputBox.TextColor3 = Color3.fromRGB(245, 245, 250)
 InputBox.Parent = KeyFrame
-Instance.new("UICorner", InputBox).CornerRadius = UDim.new(1, 0)
+Instance.new("UICorner", InputBox).CornerRadius = UDim.new(0, 6)
 
 local SubmitBtn = Instance.new("TextButton")
 SubmitBtn.Size = UDim2.new(1, -40, 0, 40)
 SubmitBtn.Position = UDim2.new(0, 20, 0, 110)
-SubmitBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 140)
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(168, 85, 247)
 SubmitBtn.Text = "Submit"
 SubmitBtn.Font = Enum.Font.GothamBold
 SubmitBtn.TextSize = 14
-SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitBtn.TextColor3 = Color3.fromRGB(12, 12, 16)
 SubmitBtn.Parent = KeyFrame
-Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(1, 0)
+Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 6)
 
 local StatusLbl = Instance.new("TextLabel")
 StatusLbl.Size = UDim2.new(1, -40, 0, 20)
@@ -139,7 +138,7 @@ StatusLbl.BackgroundTransparency = 1
 StatusLbl.Text = ""
 StatusLbl.Font = Enum.Font.GothamMedium
 StatusLbl.TextSize = 12
-StatusLbl.TextColor3 = Color3.fromRGB(200, 180, 220)
+StatusLbl.TextColor3 = Color3.fromRGB(140, 140, 155)
 StatusLbl.Parent = KeyFrame
 
 local attempts = 3
@@ -192,7 +191,7 @@ SubmitBtn.MouseButton1Click:Connect(function()
             SubmitBtn.Active = true
             InputBox.Active = true
             StatusLbl.Text = "Try again."
-            StatusLbl.TextColor3 = Color3.fromRGB(200, 180, 220)
+            StatusLbl.TextColor3 = Color3.fromRGB(140, 140, 155)
         end
     end
 end)
@@ -203,17 +202,17 @@ if isClosed then return end
 -- ========================================================================================
 -- MAIN SCRIPT
 -- ========================================================================================
-local oldUi = CoreGui:FindFirstChild("SeraphiCA_Flick_v23")
+local oldUi = CoreGui:FindFirstChild("SeraphiCA_Masterpiece_v15")
 if oldUi then oldUi:Destroy() end
-local oldBlur = Lighting:FindFirstChild("SeraphiCA_Summer_Blur")
+local oldBlur = Lighting:FindFirstChild("SeraphiCA_Masterpiece_Blur")
 if oldBlur then oldBlur:Destroy() end
 
 local Theme = {
-    Background = Color3.fromRGB(15, 10, 20), Sidebar = Color3.fromRGB(20, 15, 25), Element = Color3.fromRGB(30, 20, 40), Hover = Color3.fromRGB(40, 25, 55), Accent = Color3.fromRGB(255, 0, 140), Accent2 = Color3.fromRGB(0, 255, 200), Accent3 = Color3.fromRGB(255, 150, 0), Text = Color3.fromRGB(255, 255, 255), TextDark = Color3.fromRGB(15, 10, 20), Description = Color3.fromRGB(200, 180, 220), Stroke = Color3.fromRGB(60, 40, 80), DarkStroke = Color3.fromRGB(25, 15, 35), RedNotif = Color3.fromRGB(255, 65, 65), Success = Color3.fromRGB(45, 255, 100), Disabled = Color3.fromRGB(50, 35, 65)
+    Background = Color3.fromRGB(12, 12, 16), Sidebar = Color3.fromRGB(8, 8, 12), Element = Color3.fromRGB(20, 20, 26), Hover = Color3.fromRGB(28, 28, 36), Accent = Color3.fromRGB(168, 85, 247), Text = Color3.fromRGB(245, 245, 250), TextDark = Color3.fromRGB(12, 12, 16), Description = Color3.fromRGB(140, 140, 155), Stroke = Color3.fromRGB(40, 40, 50), DarkStroke = Color3.fromRGB(20, 20, 25), RedNotif = Color3.fromRGB(255, 65, 65), Success = Color3.fromRGB(45, 255, 100), Disabled = Color3.fromRGB(35, 35, 45)
 }
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphiCA_Flick_v23"
+ScreenGui.Name = "SeraphiCA_Masterpiece_v15"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
@@ -227,114 +226,22 @@ local function Create(className, props, children)
 end
 
 local function AddSoftShadow(parent, size, transparency)
-    local shadow = Create("ImageLabel", {
+    return Create("ImageLabel", {
         Size = UDim2.new(1, size, 1, size), Position = UDim2.new(0, -size/2, 0, -size/2),
-        BackgroundTransparency = 1, Image = "rbxassetid://1316045217", ImageColor3 = Theme.Accent,
+        BackgroundTransparency = 1, Image = "rbxassetid://1316045217", ImageColor3 = Color3.fromRGB(0, 0, 0),
         ImageTransparency = transparency or 0.5, ScaleType = Enum.ScaleType.Slice, SliceCenter = Rect.new(10, 10, 118, 118),
-        ZIndex = 0, Parent = parent
+        ZIndex = parent.ZIndex - 1, Parent = parent
     })
-    return shadow
 end
 
-local function AddRipple(btn)
-    btn.ClipsDescendants = true
-    btn.MouseButton1Down:Connect(function(x, y)
-        local ripple = Create("Frame", {BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.7, BorderSizePixel = 0, Parent = btn})
-        Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = ripple})
-        local btnPos = btn.AbsolutePosition local btnSize = btn.AbsoluteSize local maxSize = math.max(btnSize.X, btnSize.Y) * 2.5
-        ripple.Position = UDim2.new(0, (x - btnPos.X) - maxSize/2, 0, (y - btnPos.Y) - maxSize/2)
-        ripple.Size = UDim2.new(0, 0, 0, 0)
-        TweenService:Create(ripple, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, maxSize, 0, maxSize), BackgroundTransparency = 1}):Play()
-        task.delay(0.8, function() ripple:Destroy() end)
-    end)
-end
+-- GLOBAL STATES
+local aimState = { Enabled = false, Fov = 90, VisibleCheck = false, Aim360 = false }
+local espState = { Enabled = false, Box = false, Line = false, LinePos = "Top", Health = false }
+local huynaState = { ThirdPerson = 0, AntiAim = false, AntiAimType = "Random", BunnyHop = false, BhopSpeed = 50, AutoFarm = false }
 
-local function AddShimmer(textLabel)
-    local shimmer = Create("UIGradient", {
-        Color = ColorSequence.new({ColorSequenceKeypoint.new(0, textLabel.TextColor3), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, textLabel.TextColor3)}),
-        Rotation = 0, Offset = Vector2.new(-1, 0), Parent = textLabel
-    })
-    task.spawn(function()
-        while textLabel.Parent do
-            TweenService:Create(shimmer, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Offset = Vector2.new(1, 0)}):Play()
-            task.wait(2.5)
-            TweenService:Create(shimmer, TweenInfo.new(0), {Offset = Vector2.new(-1, 0)}):Play()
-            task.wait(0.1)
-        end
-    end)
-end
-
--- GLOBAL STATE & LOGIC
-local currentLang = "ENG"
-local Lang = {
-    AimBot = {ENG = "Aim-Bot", RUS = "Аим-Бот"}, Esp = {ENG = "Esp", RUS = "Есп"}, Settings = {ENG = "Settings", RUS = "Настройки"},
-    General = {ENG = "Main", RUS = "Основное"}, ThemeCustomization = {ENG = "Theme Customization", RUS = "Тема"}, VisualEffects = {ENG = "Visual Effects", RUS = "Визуальные Эффекты"},
-    Enabled = {ENG = "Enabled", RUS = "Включено"}, EnabledDesc = {ENG = "Toggle the Aimbot on/off.", RUS = "Включить/выключить Аимбот."},
-    Fov = {ENG = "Fov", RUS = "Поле зрения"}, FovDesc = {ENG = "Max 360. Shows a circle on screen.", RUS = "Макс 360. Показывает круг на экране."},
-    VisibleCheck = {ENG = "Visible Check", RUS = "Проверка видимости"}, VisibleCheckDesc = {ENG = "If on, won't aim through walls.", RUS = "Если вкл, не наводится сквозь стены."},
-    Aim360 = {ENG = "360° Aim", RUS = "360° Аим"}, Aim360Desc = {ENG = "Aims at players behind you too.", RUS = "Наводится на игроков позади вас."},
-    Box = {ENG = "Box", RUS = "Бокс"}, BoxDesc = {ENG = "White box around players.", RUS = "Белый бокс вокруг игроков."},
-    Line = {ENG = "Line", RUS = "Линия"}, LineDesc = {ENG = "Line from screen edge to box.", RUS = "Линия от края экрана к боксу."},
-    LinePos = {ENG = "Line Position", RUS = "Позиция линии"}, LinePosDesc = {ENG = "Top, Bottom, or Center.", RUS = "Верх, низ или центр."},
-    Health = {ENG = "Health", RUS = "Здоровье"}, HealthDesc = {ENG = "Health bar and text.", RUS = "Полоска здоровья и цифры."},
-    AccentColor = {ENG = "Accent Color", RUS = "Акцентный Цвет"}, AccentColorDesc = {ENG = "Change the main menu and UI accent color.", RUS = "Изменить цвет меню."},
-    WmTextColor = {ENG = "Watermark Text Color", RUS = "Цвет Водяного Знака"}, WmTextColorDesc = {ENG = "Change the text color of the watermark.", RUS = "Изменить цвет текста вотермарка."},
-    Language = {ENG = "Language", RUS = "Язык"}, LanguageDesc = {ENG = "Switch between RUS and ENG.", RUS = "Переключить между RUS и ENG."},
-    PulseEffect = {ENG = "Pulse Effect", RUS = "Пульс Эффект"}, PulseEffectDesc = {ENG = "Enable rhythmic white glow pulsation on the UI.", RUS = "Включить ритмичную белую пульсацию на интерфейсе."}
-}
-local function L(key) return Lang[key][currentLang] end
-
-local aimState = {
-    Enabled = false,
-    Fov = 90,
-    VisibleCheck = false,
-    Aim360 = false
-}
-
-local espState = {
-    Enabled = false,
-    Box = false,
-    Line = false,
-    LinePos = "Top",
-    Health = false
-}
-
--- INTRO
-local Intro = Create("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(5, 5, 8), ZIndex = 100, Parent = ScreenGui})
-local IntroRing = Create("Frame", {Size = UDim2.new(0, 100, 0, 100), Position = UDim2.new(0.5, -50, 0.5, -50), BackgroundTransparency = 1, Parent = Intro})
-Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = IntroRing})
-local RingStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 2, Transparency = 1, Parent = IntroRing})
-local IntroLogo = Create("TextLabel", {Size = UDim2.new(0, 500, 0, 60), Position = UDim2.new(0.5, -250, 0.5, 80), BackgroundTransparency = 1, Text = "SeraphiCA", Font = Enum.Font.GothamBlack, TextSize = 50, TextColor3 = Theme.Text, TextTransparency = 1, ZIndex = 101, Parent = Intro})
-local IntroSub = Create("TextLabel", {Size = UDim2.new(0, 500, 0, 20), Position = UDim2.new(0.5, -250, 0.5, 130), BackgroundTransparency = 1, Text = "Flick Edition", Font = Enum.Font.GothamMedium, TextSize = 14, TextColor3 = Theme.Description, TextTransparency = 1, ZIndex = 101, Parent = Intro})
-local LoadBarBg = Create("Frame", {Size = UDim2.new(0, 200, 0, 4), Position = UDim2.new(0.5, -100, 0.5, 170), BackgroundColor3 = Theme.DarkStroke, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 101, Parent = Intro})
-Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = LoadBarBg})
-local LoadBarFill = Create("Frame", {Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = 102, Parent = LoadBarBg})
-Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = LoadBarFill})
-Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Theme.Accent), ColorSequenceKeypoint.new(0.5, Theme.Accent3), ColorSequenceKeypoint.new(1, Theme.Accent2)}), Parent = LoadBarFill})
-
-TweenService:Create(IntroRing, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 120, 0, 120), Position = UDim2.new(0.5, -60, 0.5, -60)}):Play()
-TweenService:Create(RingStroke, TweenInfo.new(0.5), {Transparency = 0.2}):Play()
-
-task.delay(0.5, function()
-    TweenService:Create(RingStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Transparency = 1}):Play()
-    TweenService:Create(IntroLogo, TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
-    TweenService:Create(IntroSub, TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
-    TweenService:Create(LoadBarBg, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
-    TweenService:Create(LoadBarFill, TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
-end)
-
-task.delay(2.8, function()
-    TweenService:Create(IntroLogo, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
-    TweenService:Create(IntroSub, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
-    TweenService:Create(LoadBarBg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-    TweenService:Create(LoadBarFill, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-    TweenService:Create(Intro, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
-    task.wait(0.8) Intro.Visible = false
-end)
-
--- BLUR & NOTIFICATIONS
+-- NOTIFICATIONS
 local MenuBlur = Instance.new("BlurEffect")
-MenuBlur.Name = "SeraphiCA_Summer_Blur"
+MenuBlur.Name = "SeraphiCA_Masterpiece_Blur"
 MenuBlur.Size = 0
 MenuBlur.Parent = Lighting
 
@@ -342,17 +249,17 @@ local NotifHolder = Create("Frame", {Size = UDim2.new(0, 350, 1, 0), Position = 
 Create("UIListLayout", {Padding = UDim.new(0, 10), VerticalAlignment = Enum.VerticalAlignment.Bottom, HorizontalAlignment = Enum.HorizontalAlignment.Right, Parent = NotifHolder})
 
 local function Notify(text, color)
-    local Notif = Create("Frame", {Size = UDim2.new(0, 320, 0, 50), BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = NotifHolder})
+    local Notif = Create("Frame", {Size = UDim2.new(0, 320, 0, 50), BackgroundColor3 = Theme.Element, BackgroundTransparency = 0.1, BorderSizePixel = 0, Parent = NotifHolder})
     AddSoftShadow(Notif, 30, 0.6)
-    Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Notif})
-    Create("UIStroke", {Color = color, Thickness = 1.5, Transparency = 0.3, Parent = Notif})
+    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Notif})
+    Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = Notif})
     Create("Frame", {Size = UDim2.new(0, 4, 0, 20), Position = UDim2.new(0, 15, 0.5, -10), BackgroundColor3 = color, BorderSizePixel = 0, Parent = Notif}, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
     Create("TextLabel", {Size = UDim2.new(1, -40, 1, 0), Position = UDim2.new(0, 30, 0, 0), BackgroundTransparency = 1, Text = text, Font = Enum.Font.GothamMedium, TextSize = 14, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Left, Parent = Notif})
     Notif.Position = UDim2.new(0, 350, 0, 0)
-    TweenService:Create(Notif, TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+    TweenService:Create(Notif, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
     task.delay(3, function()
-        TweenService:Create(Notif, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0, 350, 0, 0)}):Play()
-        task.wait(0.5) Notif:Destroy()
+        TweenService:Create(Notif, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0, 350, 0, 0)}):Play()
+        task.wait(0.4) Notif:Destroy()
     end)
 end
 
@@ -371,7 +278,6 @@ local function getClosestPlayer()
     local shortestDist = aimState.Fov
     local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     local shortest3DDist = 500
-    
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
             local char = plr.Character
@@ -389,19 +295,13 @@ local function getClosestPlayer()
                         local charHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                         if charHrp then
                             local dist3D = (hrp.Position - charHrp.Position).Magnitude
-                            if dist3D < shortest3DDist then
-                                shortest3DDist = dist3D
-                                closestPlayer = plr
-                            end
+                            if dist3D < shortest3DDist then shortest3DDist = dist3D closestPlayer = plr end
                         end
                     else
                         local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                         if onScreen then
                             local dist2D = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                            if dist2D < shortestDist then
-                                closestPlayer = plr
-                                shortestDist = dist2D
-                            end
+                            if dist2D < shortestDist then closestPlayer = plr shortestDist = dist2D end
                         end
                     end
                 end
@@ -411,7 +311,7 @@ local function getClosestPlayer()
     return closestPlayer
 end
 
--- ESP SYSTEM LOGIC
+-- ESP LOGIC
 local espObjects = {}
 local function createEspForPlayer(player)
     if espObjects[player] then return end
@@ -420,7 +320,6 @@ local function createEspForPlayer(player)
     espGui.Visible = false
     espGui.Parent = ScreenGui
 
-    -- Box
     local box = Instance.new("Frame")
     box.BackgroundTransparency = 1
     box.BorderSizePixel = 0
@@ -432,21 +331,17 @@ local function createEspForPlayer(player)
     boxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     boxStroke.Parent = box
 
-    -- Health Bar Background (Red)
     local healthBg = Instance.new("Frame")
     healthBg.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     healthBg.BorderSizePixel = 0
     healthBg.Visible = false
     healthBg.Parent = espGui
 
-    -- Health Bar Fill (Green)
     local healthFill = Instance.new("Frame")
     healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
     healthFill.BorderSizePixel = 0
-    healthFill.AnchorPoint = Vector2.new(0, 0)
     healthFill.Parent = healthBg
 
-    -- Health Text
     local healthText = Instance.new("TextLabel")
     healthText.BackgroundTransparency = 1
     healthText.Text = ""
@@ -456,7 +351,6 @@ local function createEspForPlayer(player)
     healthText.Visible = false
     healthText.Parent = espGui
 
-    -- Tracer Line
     local tracer = Instance.new("Frame")
     tracer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     tracer.BorderSizePixel = 0
@@ -469,74 +363,46 @@ end
 
 local function removeEspForPlayer(player)
     local data = espObjects[player]
-    if data then
-        data.gui:Destroy()
-        espObjects[player] = nil
-    end
+    if data then data.gui:Destroy() espObjects[player] = nil end
 end
 
 local function updateEspForPlayer(player)
     local data = espObjects[player]
     if not data then return end
-
-    if not espState.Enabled or not player.Character then
-        data.gui.Visible = false
-        return
-    end
-
+    if not espState.Enabled or not player.Character then data.gui.Visible = false return end
     local char = player.Character
     local hum = char:FindFirstChildOfClass("Humanoid")
     local hrp = char:FindFirstChild("HumanoidRootPart")
     local head = char:FindFirstChild("Head")
-
-    if not hum or not hrp or not head or hum.Health <= 0 then
-        data.gui.Visible = false
-        return
-    end
+    if not hum or not hrp or not head or hum.Health <= 0 then data.gui.Visible = false return end
 
     local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position)
     local footPos, footOnScreen = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
-
-    if not headOnScreen and not footOnScreen then
-        data.gui.Visible = false
-        return
-    end
+    if not headOnScreen and not footOnScreen then data.gui.Visible = false return end
 
     local height = math.abs(footPos.Y - headPos.Y)
     local width = height / 2
     local centerX = (headPos.X + footPos.X) / 2
     local topY = math.min(headPos.Y, footPos.Y)
-
-    if height < 10 then
-        data.gui.Visible = false
-        return
-    end
+    if height < 10 then data.gui.Visible = false return end
 
     data.gui.Visible = true
 
-    -- Update Box
     if espState.Box then
         data.box.Visible = true
         data.box.Size = UDim2.new(0, width, 0, height)
         data.box.Position = UDim2.new(0, centerX - width / 2, 0, topY)
-    else
-        data.box.Visible = false
-    end
+    else data.box.Visible = false end
 
-    -- Update Health
     if espState.Health then
         data.healthBg.Visible = true
         data.healthText.Visible = true
-        
         local barWidth = 3
         local barX = centerX - width / 2 - barWidth - 2
-        
         data.healthBg.Size = UDim2.new(0, barWidth, 0, height)
         data.healthBg.Position = UDim2.new(0, barX, 0, topY)
-        
         local healthPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
         data.healthFill.Size = UDim2.new(1, 0, healthPct, 0)
-        
         data.healthText.Text = tostring(math.floor(hum.Health))
         data.healthText.Size = UDim2.new(0, 50, 0, 15)
         data.healthText.Position = UDim2.new(0, centerX - 25, 0, topY + height + 2)
@@ -545,25 +411,116 @@ local function updateEspForPlayer(player)
         data.healthText.Visible = false
     end
 
-    -- Update Tracer
     if espState.Line then
         data.tracer.Visible = true
         local startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-        if espState.LinePos == "Top" then
-            startPos = Vector2.new(Camera.ViewportSize.X / 2, 0)
-        elseif espState.LinePos == "Bottom" then
-            startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-        end
-
+        if espState.LinePos == "Top" then startPos = Vector2.new(Camera.ViewportSize.X / 2, 0)
+        elseif espState.LinePos == "Bottom" then startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y) end
         local endPos = Vector2.new(centerX, topY)
         local dist = (endPos - startPos).Magnitude
         local angle = math.atan2(endPos.Y - startPos.Y, endPos.X - startPos.X)
-        
         data.tracer.Size = UDim2.new(0, dist, 0, 1)
         data.tracer.Position = UDim2.new(0, startPos.X, 0, startPos.Y)
         data.tracer.Rotation = math.deg(angle)
+    else data.tracer.Visible = false end
+end
+
+-- HUyna LOGIC
+local savedLookVector = Vector3.new(0, 0, -1)
+RunService.RenderStepped:Connect(function()
+    if huynaState.AntiAim then savedLookVector = Camera.CFrame.LookVector end
+end)
+
+RunService:BindToRenderStep("FixCameraAA", Enum.RenderPriority.Camera.Value + 1, function()
+    if huynaState.AntiAim then Camera.CFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + savedLookVector) end
+end)
+
+local antiAimLoop, bhopLoop, autoFarmLoop = nil, nil, nil
+local originalTransparencies = {}
+
+local function toggleAntiAim(state)
+    huynaState.AntiAim = state
+    if antiAimLoop then antiAimLoop:Disconnect() end
+    if state then
+        antiAimLoop = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChildOfClass("Humanoid") then
+                local hrp = char.HumanoidRootPart local hum = char.Humanoid
+                hum.AutoRotate = false
+                local spinAngle = huynaState.AntiAimType == "Jilter" and math.rad((tick() * 180) % 360) or math.rad(math.random(0, 360))
+                local yPos = math.sin(tick() * 40) * 2
+                local currentVel = hrp.AssemblyLinearVelocity
+                hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + yPos, hrp.Position.Z) * CFrame.Angles(0, spinAngle, 0)
+                hrp.AssemblyLinearVelocity = currentVel
+            end
+        end)
     else
-        data.tracer.Visible = false
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then char.Humanoid.AutoRotate = true end
+    end
+end
+
+local function toggleBhop(state)
+    huynaState.BunnyHop = state
+    if bhopLoop then bhopLoop:Disconnect() end
+    if state then
+        bhopLoop = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChildOfClass("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                local hum = char.Humanoid local hrp = char.HumanoidRootPart
+                local isJumping = UserInputService:IsKeyDown(Enum.KeyCode.Space) or hum.Jump
+                if isJumping and hum.FloorMaterial ~= Enum.Material.Air then
+                    hum.Jump = true
+                    local lookVec = Camera.CFrame.LookVector
+                    lookVec = Vector3.new(lookVec.X, 0, lookVec.Z).Unit
+                    hrp.AssemblyLinearVelocity = Vector3.new(lookVec.X * huynaState.BhopSpeed, 50, lookVec.Z * huynaState.BhopSpeed)
+                end
+            end
+        end)
+    end
+end
+
+local function toggleAutoFarm(state)
+    huynaState.AutoFarm = state
+    if autoFarmLoop then autoFarmLoop:Disconnect() end
+    if state then
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then originalTransparencies[part] = part.Transparency part.Transparency = 1 end
+                if part:IsA("Decal") then originalTransparencies[part] = part.Transparency part.Transparency = 1 end
+            end
+        end
+        autoFarmLoop = RunService.Heartbeat:Connect(function()
+            local myChar = LocalPlayer.Character
+            if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
+            local myHrp = myChar.HumanoidRootPart local myHum = myChar.Humanoid
+            local myTool = myChar:FindFirstChildOfClass("Tool") or (LocalPlayer.Backpack and LocalPlayer.Backpack:FindFirstChildOfClass("Tool"))
+            if not myTool then return end
+            if myTool.Parent == LocalPlayer.Backpack then myHum:EquipTool(myTool) end
+
+            local closest, shortestDist = nil, math.huge
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+                    local dist = (p.Character.HumanoidRootPart.Position - myHrp.Position).Magnitude
+                    if dist < shortestDist then shortestDist = dist closest = p end
+                end
+            end
+            if closest then
+                local targetHrp = closest.Character.HumanoidRootPart
+                myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 3)
+                myHrp.CFrame = CFrame.lookAt(myHrp.Position, targetHrp.Position)
+                myTool:Activate()
+            end
+        end)
+    else
+        local char = LocalPlayer.Character
+        if char then
+            for part, trans in pairs(originalTransparencies) do
+                if part.Parent then part.Transparency = trans end
+            end
+        end
+        originalTransparencies = {}
     end
 end
 
@@ -573,95 +530,154 @@ RunService.RenderStepped:Connect(function()
         FovCircle.Visible = true
         FovCircle.Size = UDim2.new(0, aimState.Fov * 2, 0, aimState.Fov * 2)
         FovCircle.Position = UDim2.new(0.5, -aimState.Fov, 0.5, -aimState.Fov)
-        
         local target = getClosestPlayer()
         if target then
             local hrp = target.Character.HumanoidRootPart
-            local targetPos = hrp.Position
             local currentCFrame = Camera.CFrame
-            local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPos)
+            local targetCFrame = CFrame.lookAt(currentCFrame.Position, hrp.Position)
             Camera.CFrame = currentCFrame:Lerp(targetCFrame, 1)
         end
-    else
-        FovCircle.Visible = false
-    end
+    else FovCircle.Visible = false end
     
     -- ESP
     if espState.Enabled then
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
-                if not espObjects[player] then
-                    createEspForPlayer(player)
-                end
+                if not espObjects[player] then createEspForPlayer(player) end
                 updateEspForPlayer(player)
             end
         end
     else
-        for _, data in pairs(espObjects) do
-            data.gui.Visible = false
-        end
+        for _, data in pairs(espObjects) do data.gui.Visible = false end
     end
-    
-    -- Cleanup
     for player, _ in pairs(espObjects) do
-        if not Players:FindFirstChild(player.Name) then
-            removeEspForPlayer(player)
-        end
+        if not Players:FindFirstChild(player.Name) then removeEspForPlayer(player) end
     end
 end)
 
 Players.PlayerRemoving:Connect(removeEspForPlayer)
 
--- WATERMARK
+-- ========================================================================================
+-- INTERACTIVE WATERMARK
+-- ========================================================================================
 local Watermark = Create("TextButton", {Size = UDim2.new(0, 240, 0, 38), Position = UDim2.new(0.5, -120, 0, 15), BackgroundColor3 = Color3.fromRGB(20, 20, 25), BackgroundTransparency = 0.3, AutoButtonColor = false, Text = "", Parent = ScreenGui})
+AddSoftShadow(Watermark, 20, 0.7)
 Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Watermark})
 local WmStroke = Create("UIStroke", {Color = Color3.fromRGB(255, 255, 255), Thickness = 1, Transparency = 0.8, Parent = Watermark})
+
 local WmText = Create("TextLabel", {Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 10, 0, 0), BackgroundTransparency = 1, Text = "SeraphiCA  |  00:00:00  |  60 FPS", Font = Enum.Font.GothamMedium, TextSize = 13, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, Parent = Watermark})
 
 local fps = 60 local frames = 0 local lastTime = tick()
+local isExpanded = false
 RunService.RenderStepped:Connect(function()
     frames = frames + 1
     if tick() - lastTime >= 1 then
         fps = frames frames = 0 lastTime = tick()
-        WmText.Text = "SeraphiCA  |  " .. os.date("%H:%M:%S") .. "  |  " .. tostring(fps) .. " FPS"
+        if not isExpanded then WmText.Text = "SeraphiCA  |  " .. os.date("%H:%M:%S") .. "  |  " .. tostring(fps) .. " FPS" end
+    end
+end)
+
+local SkullBtn = Create("TextButton", {Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0.5, -50, 0.5, -20), BackgroundColor3 = Color3.fromRGB(255, 255, 255), AutoButtonColor = false, Visible = false, Parent = Watermark})
+Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = SkullBtn})
+local SkullStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 0, Transparency = 1, Parent = SkullBtn})
+
+local SkullHead = Create("Frame", {Size = UDim2.new(0, 20, 0, 22), Position = UDim2.new(0.5, -10, 0, 6), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Parent = SkullBtn})
+Create("UICorner", {CornerRadius = UDim.new(0.5, 0), Parent = SkullHead})
+local SkullJaw = Create("Frame", {Size = UDim2.new(0, 14, 0, 8), Position = UDim2.new(0.5, -7, 0, 24), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Parent = SkullBtn})
+Create("UICorner", {CornerRadius = UDim.new(0.2, 0), Parent = SkullJaw})
+Create("Frame", {Size = UDim2.new(0, 5, 0, 5), Position = UDim2.new(0, 4, 0, 6), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = SkullHead}, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
+Create("Frame", {Size = UDim2.new(0, 5, 0, 5), Position = UDim2.new(1, -9, 0, 6), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = SkullHead}, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
+Create("Frame", {Size = UDim2.new(0, 3, 0, 3), Position = UDim2.new(0.5, -1.5, 0, 13), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = SkullHead}, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
+
+local EyeBtn = Create("TextButton", {Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0.5, 10, 0.5, -20), BackgroundColor3 = Color3.fromRGB(255, 255, 255), AutoButtonColor = false, Visible = false, Parent = Watermark})
+Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = EyeBtn})
+local EyeStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 0, Transparency = 1, Parent = EyeBtn})
+local EyeShape = Create("Frame", {Size = UDim2.new(0, 24, 0, 16), Position = UDim2.new(0.5, -12, 0.5, -8), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Parent = EyeBtn})
+Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = EyeShape})
+local Iris = Create("Frame", {Size = UDim2.new(0, 10, 0, 10), Position = UDim2.new(0.5, -5, 0.5, -5), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = EyeBtn})
+Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Iris})
+local Pupil = Create("Frame", {Size = UDim2.new(0, 4, 0, 4), Position = UDim2.new(0.5, -2, 0.5, -2), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Parent = EyeBtn})
+Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Pupil})
+
+local function ToggleWatermarkExpand()
+    isExpanded = not isExpanded
+    if isExpanded then
+        TweenService:Create(Watermark, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 140, 0, 50), BackgroundTransparency = 0.1}):Play()
+        TweenService:Create(WmText, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
+        task.wait(0.2)
+        SkullBtn.Visible = true EyeBtn.Visible = true
+        TweenService:Create(SkullBtn, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Visible = true}):Play()
+        TweenService:Create(EyeBtn, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Visible = true}):Play()
+    else
+        TweenService:Create(SkullBtn, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(EyeBtn, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+        task.wait(0.1)
+        SkullBtn.Visible = false EyeBtn.Visible = false
+        TweenService:Create(Watermark, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 240, 0, 38), BackgroundTransparency = 0.3}):Play()
+        TweenService:Create(WmText, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+    end
+end
+
+local lastWmClick = 0
+Watermark.MouseButton1Click:Connect(function()
+    local now = tick()
+    if now - lastWmClick < 0.3 then ToggleMenu() end
+    lastWmClick = now
+end)
+
+SkullBtn.MouseButton1Click:Connect(function()
+    aimState.Enabled = not aimState.Enabled
+    if aimState.Enabled then
+        Notify("AimBot on!", Theme.Accent)
+        TweenService:Create(SkullBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent}):Play()
+        TweenService:Create(SkullStroke, TweenInfo.new(0.3), {Thickness = 2, Transparency = 0}):Play()
+        TweenService:Create(SkullHead, TweenInfo.new(0.3), {BackgroundColor3 = Theme.TextDark}):Play()
+        TweenService:Create(SkullJaw, TweenInfo.new(0.3), {BackgroundColor3 = Theme.TextDark}):Play()
+    else
+        Notify("AimBot off!", Theme.RedNotif)
+        TweenService:Create(SkullBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+        TweenService:Create(SkullStroke, TweenInfo.new(0.3), {Thickness = 0, Transparency = 1}):Play()
+        TweenService:Create(SkullHead, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
+        TweenService:Create(SkullJaw, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
+    end
+end)
+
+EyeBtn.MouseButton1Click:Connect(function()
+    espState.Enabled = not espState.Enabled
+    if espState.Enabled then
+        Notify("Esp on!", Theme.Accent)
+        TweenService:Create(EyeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent}):Play()
+        TweenService:Create(EyeStroke, TweenInfo.new(0.3), {Thickness = 2, Transparency = 0}):Play()
+        TweenService:Create(EyeShape, TweenInfo.new(0.3), {BackgroundColor3 = Theme.TextDark}):Play()
+    else
+        Notify("Esp off!", Theme.RedNotif)
+        TweenService:Create(EyeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+        TweenService:Create(EyeStroke, TweenInfo.new(0.3), {Thickness = 0, Transparency = 1}):Play()
+        TweenService:Create(EyeShape, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
     end
 end)
 
 -- MAIN FRAME
-local MainFrame = Create("Frame", {Size = UDim2.new(0, 810, 0, 500), Position = UDim2.new(0.5, -405, 0.5, -250), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, Visible = false, Parent = ScreenGui})
-AddSoftShadow(MainFrame, 60, 0.2)
-Create("UICorner", {CornerRadius = UDim.new(0, 16), Parent = MainFrame})
-local MainStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 2, Transparency = 0.2, Parent = MainFrame})
-
-local BgEffect = Create("Frame", {Size = UDim2.new(2, 0, 2, 0), Position = UDim2.new(-0.5, 0, -0.5, 0), BackgroundTransparency = 0.9, BorderSizePixel = 0, Parent = MainFrame})
-Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Theme.Accent), ColorSequenceKeypoint.new(0.5, Theme.Accent2), ColorSequenceKeypoint.new(1, Theme.Accent3)}), Rotation = 0, Parent = BgEffect})
-task.spawn(function()
-    local rot = 0
-    while BgEffect.Parent do
-        rot = (rot + 1) % 360
-        TweenService:Create(BgEffect.UIGradient, TweenInfo.new(0.1), {Rotation = rot}):Play()
-        task.wait(0.01)
-    end
-end)
+local MainFrame = Create("Frame", {Size = UDim2.new(0, 800, 0, 460), Position = UDim2.new(0.5, -400, 0.5, -230), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, Visible = false, Parent = ScreenGui})
+AddSoftShadow(MainFrame, 40, 0.4)
+Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = MainFrame})
+local MainStroke = Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = MainFrame})
 
 local MenuOpen = false
-local function ToggleMenu()
+function ToggleMenu()
     MenuOpen = not MenuOpen
     if MenuOpen then
         MainFrame.Visible = true
-        MainFrame.Size = UDim2.new(0, 810, 0, 0)
-        TweenService:Create(MenuBlur, TweenInfo.new(0.6), {Size = 24}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = UDim2.new(0, 810, 0, 500)}):Play()
+        MainFrame.Size = UDim2.new(0, 800, 0, 0)
+        TweenService:Create(MenuBlur, TweenInfo.new(0.5), {Size = 10}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = UDim2.new(0, 800, 0, 460)}):Play()
     else
-        TweenService:Create(MenuBlur, TweenInfo.new(0.4), {Size = 0}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {Size = UDim2.new(0, 810, 0, 0)}):Play()
-        task.delay(0.4, function() if not MenuOpen then MainFrame.Visible = false end end)
+        TweenService:Create(MenuBlur, TweenInfo.new(0.3), {Size = 0}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {Size = UDim2.new(0, 800, 0, 0)}):Play()
+        task.delay(0.3, function() if not MenuOpen then MainFrame.Visible = false end end)
     end
 end
-Watermark.MouseButton1Click:Connect(ToggleMenu)
-task.delay(3.3, function() ToggleMenu() end)
 
--- Drag
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -669,9 +685,7 @@ MainFrame.InputBegan:Connect(function(input)
         input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
     end
 end)
-MainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
-end)
+MainFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
@@ -679,61 +693,46 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- SIDEBAR & CONTENT
-local Sidebar = Create("Frame", {Size = UDim2.new(0, 230, 1, 0), BackgroundColor3 = Theme.Sidebar, BackgroundTransparency = 0.2, BorderSizePixel = 0, Parent = MainFrame})
-Create("UICorner", {CornerRadius = UDim.new(0, 16), Parent = Sidebar})
+-- SIDEBAR
+local Sidebar = Create("Frame", {Size = UDim2.new(0, 220, 1, 0), BackgroundColor3 = Theme.Sidebar, BorderSizePixel = 0, Parent = MainFrame})
 Create("Frame", {Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0), BackgroundColor3 = Theme.Stroke, BorderSizePixel = 0, Parent = Sidebar})
+Create("TextLabel", {Size = UDim2.new(1, -40, 0, 30), Position = UDim2.new(0, 20, 0, 25), BackgroundTransparency = 1, Text = "SeraphiCA", Font = Enum.Font.GothamBlack, TextSize = 20, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
 
-local SideTitle = Create("TextLabel", {Size = UDim2.new(1, -30, 0, 35), Position = UDim2.new(0, 20, 0, 25), BackgroundTransparency = 1, Text = "SeraphiCA", Font = Enum.Font.GothamBlack, TextSize = 24, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
-AddShimmer(SideTitle)
-Create("TextLabel", {Size = UDim2.new(1, -30, 0, 15), Position = UDim2.new(0, 21, 0, 60), BackgroundTransparency = 1, Text = "Flick v23", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
-
-local TabContainer = Create("Frame", {Size = UDim2.new(1, 0, 1, -160), Position = UDim2.new(0, 0, 0, 100), BackgroundTransparency = 1, Parent = Sidebar})
+local TabContainer = Create("Frame", {Size = UDim2.new(1, 0, 1, -100), Position = UDim2.new(0, 0, 0, 80), BackgroundTransparency = 1, Parent = Sidebar})
 Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = TabContainer})
 Create("UIPadding", {PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), Parent = TabContainer})
 
-local UserInfo = Create("Frame", {Size = UDim2.new(1, -30, 0, 55), Position = UDim2.new(0, 15, 1, -65), BackgroundColor3 = Theme.Element, Parent = Sidebar})
-Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = UserInfo})
-Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = UserInfo})
-Create("TextLabel", {Size = UDim2.new(1, -20, 0, 20), Position = UDim2.new(0, 15, 0, 10), BackgroundTransparency = 1, Text = LocalPlayer.Name, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = UserInfo})
-Create("TextLabel", {Size = UDim2.new(1, -20, 0, 15), Position = UDim2.new(0, 15, 0, 32), BackgroundTransparency = 1, Text = "Flick Access", Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Theme.Accent2, TextXAlignment = Enum.TextXAlignment.Left, Parent = UserInfo})
+local SlideIndicator = Create("Frame", {Size = UDim2.new(0, 2, 0, 20), Position = UDim2.new(0, 15, 0, 0), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, Visible = false, Parent = Sidebar})
 
-local ContentArea = Create("Frame", {Size = UDim2.new(1, -230, 1, 0), Position = UDim2.new(0, 230, 0, 0), BackgroundTransparency = 1, Parent = MainFrame})
-local PageTitle = Create("TextLabel", {Size = UDim2.new(1, -50, 0, 45), Position = UDim2.new(0, 30, 0, 25), BackgroundTransparency = 1, Text = "Settings", Font = Enum.Font.GothamBlack, TextSize = 28, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = ContentArea})
-Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Theme.Accent), ColorSequenceKeypoint.new(0.5, Theme.Accent3), ColorSequenceKeypoint.new(1, Theme.Accent2)}), Parent = PageTitle})
-AddShimmer(PageTitle)
-local PageContainer = Create("ScrollingFrame", {Size = UDim2.new(1, -50, 1, -100), Position = UDim2.new(0, 30, 0, 85), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 4, ScrollBarImageColor3 = Theme.Accent, CanvasSize = UDim2.new(0, 0, 0, 0), Parent = ContentArea})
+local ContentArea = Create("Frame", {Size = UDim2.new(1, -220, 1, 0), Position = UDim2.new(0, 220, 0, 0), BackgroundTransparency = 1, Parent = MainFrame})
+local PageTitle = Create("TextLabel", {Size = UDim2.new(1, -40, 0, 35), Position = UDim2.new(0, 30, 0, 20), BackgroundTransparency = 1, Text = "Settings", Font = Enum.Font.GothamBold, TextSize = 24, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = ContentArea})
+local PageContainer = Create("ScrollingFrame", {Size = UDim2.new(1, -50, 1, -80), Position = UDim2.new(0, 30, 0, 65), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2, ScrollBarImageColor3 = Theme.Accent, CanvasSize = UDim2.new(0, 0, 0, 0), Parent = ContentArea})
 Create("UIListLayout", {Padding = UDim.new(0, 10), Parent = PageContainer}):GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() PageContainer.CanvasSize = UDim2.new(0, 0, 0, PageContainer.UIListLayout.AbsoluteContentSize.Y + 20) end)
 
 -- LOGIC & TABS
-local Tabs = {}
-local ActiveTab = nil
-
+local Tabs = {} local ActiveTab = nil
 local function SelectTab(name)
-    for _, child in ipairs(PageContainer:GetChildren()) do
-        if child:IsA("GuiObject") and not child:IsA("UIListLayout") then child:Destroy() end
-    end
+    for _, child in ipairs(PageContainer:GetChildren()) do if child:IsA("GuiObject") and not child:IsA("UIListLayout") then child:Destroy() end end
     for tabName, tabData in pairs(Tabs) do
         if tabName == name then
-            TweenService:Create(tabData.Button, TweenInfo.new(0.4), {BackgroundColor3 = Theme.Accent}):Play()
-            TweenService:Create(tabData.Button.Title, TweenInfo.new(0.4), {TextColor3 = Theme.TextDark}):Play()
+            TweenService:Create(tabData.Button, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Hover}):Play()
+            TweenService:Create(tabData.Button.Title, TweenInfo.new(0.3), {TextColor3 = Theme.Accent}):Play()
+            SlideIndicator.Visible = true
+            TweenService:Create(SlideIndicator, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 15, 0, tabData.Button.AbsolutePosition.Y - Sidebar.AbsolutePosition.Y + 10)}):Play()
         else
-            TweenService:Create(tabData.Button, TweenInfo.new(0.4), {BackgroundColor3 = Theme.Element}):Play()
-            TweenService:Create(tabData.Button.Title, TweenInfo.new(0.4), {TextColor3 = Theme.Text}):Play()
+            TweenService:Create(tabData.Button, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element}):Play()
+            TweenService:Create(tabData.Button.Title, TweenInfo.new(0.3), {TextColor3 = Theme.Text}):Play()
         end
     end
-    PageTitle.Text = name
-    ActiveTab = name
+    PageTitle.Text = name ActiveTab = name
     if Tabs[name].Render then Tabs[name].Render() end
 end
 
 local function CreateTab(name)
     local Btn = Create("TextButton", {Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Theme.Element, AutoButtonColor = false, Text = "", Parent = TabContainer})
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Btn})
-    Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = Btn})
-    local Title = Create("TextLabel", {Name = "Title", Size = UDim2.new(1, -30, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = name, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Btn})
-    AddRipple(Btn)
-    Btn.MouseEnter:Connect(function() TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Hover}):Play() end)
+    Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = Btn})
+    local Title = Create("TextLabel", {Name = "Title", Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = name, Font = Enum.Font.GothamMedium, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Btn})
+    Btn.MouseEnter:Connect(function() if ActiveTab ~= name then TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Hover}):Play() end end)
     Btn.MouseLeave:Connect(function() if ActiveTab ~= name then TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Element}):Play() end end)
     Tabs[name] = {Button = Btn, Render = nil}
     Btn.MouseButton1Click:Connect(function() SelectTab(name) end)
@@ -742,36 +741,32 @@ end
 
 -- UI ELEMENTS
 local function CreateCategory(page, title)
-    Create("TextLabel", {Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, Text = string.upper(title), Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = Theme.Accent2, TextXAlignment = Enum.TextXAlignment.Left, Parent = page})
+    Create("TextLabel", {Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, Text = string.upper(title), Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = page})
 end
 
 local function CreateToggle(page, title, desc, defaultState, onToggle)
-    local Container = Create("TextButton", {Size = UDim2.new(1, 0, 0, 60), BackgroundColor3 = Theme.Element, AutoButtonColor = false, Text = "", Parent = page})
-    Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Container})
-    Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = Container})
-    AddRipple(Container)
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 20), Position = UDim2.new(0, 20, 0, 12), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 15), Position = UDim2.new(0, 20, 0, 34), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-
-    local Switch = Create("Frame", {Size = UDim2.new(0, 46, 0, 26), Position = UDim2.new(1, -66, 0.5, -13), BackgroundColor3 = Theme.Disabled, BorderSizePixel = 0, Parent = Container})
+    local Container = Create("TextButton", {Size = UDim2.new(1, 0, 0, 55), BackgroundColor3 = Theme.Element, AutoButtonColor = false, Text = "", Parent = page})
+    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
+    Container.MouseEnter:Connect(function() TweenService:Create(Container, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Hover}):Play() end)
+    Container.MouseLeave:Connect(function() TweenService:Create(Container, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Element}):Play() end)
+    Create("TextLabel", {Size = UDim2.new(1, -80, 0, 18), Position = UDim2.new(0, 15, 0, 10), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
+    Create("TextLabel", {Size = UDim2.new(1, -80, 0, 14), Position = UDim2.new(0, 15, 0, 30), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
+    local Switch = Create("TextButton", {Size = UDim2.new(0, 40, 0, 20), Position = UDim2.new(1, -55, 0.5, -10), BackgroundColor3 = Theme.Disabled, AutoButtonColor = false, Text = "", Parent = Container})
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Switch})
-    local Indicator = Create("Frame", {Size = UDim2.new(0, 20, 0, 20), Position = UDim2.new(0, 3, 0.5, -10), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = Switch})
+    local Indicator = Create("Frame", {Size = UDim2.new(0, 14, 0, 14), Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Theme.Text, BorderSizePixel = 0, Parent = Switch})
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Indicator})
-
-    local state = defaultState
+    local state = defaultState or false
     if state then
-        Switch.BackgroundColor3 = Theme.Accent
-        Indicator.Position = UDim2.new(1, -23, 0.5, -10)
+        Switch.BackgroundColor3 = Theme.Accent Indicator.Position = UDim2.new(1, -17, 0.5, -7) Indicator.BackgroundColor3 = Theme.TextDark
     end
-
     Container.MouseButton1Click:Connect(function()
         state = not state
         if state then
-            TweenService:Create(Switch, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundColor3 = Theme.Accent}):Play()
-            TweenService:Create(Indicator, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -23, 0.5, -10)}):Play()
+            TweenService:Create(Switch, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundColor3 = Theme.Accent}):Play()
+            TweenService:Create(Indicator, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -17, 0.5, -7), BackgroundColor3 = Theme.TextDark}):Play()
         else
-            TweenService:Create(Switch, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundColor3 = Theme.Disabled}):Play()
-            TweenService:Create(Indicator, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -10)}):Play()
+            TweenService:Create(Switch, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Disabled}):Play()
+            TweenService:Create(Indicator, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Theme.Text}):Play()
         end
         if onToggle then onToggle(state) end
     end)
@@ -779,27 +774,21 @@ end
 
 local function CreateSlider(page, title, desc, maxVal, defaultVal, onValueChanged)
     local Container = Create("Frame", {Size = UDim2.new(1, 0, 0, 60), BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = page})
-    Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Container})
-    Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 20), Position = UDim2.new(0, 20, 0, 10), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 15), Position = UDim2.new(0, 20, 0, 32), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    local ValLabel = Create("TextLabel", {Size = UDim2.new(0, 50, 0, 20), Position = UDim2.new(1, -70, 0, 10), BackgroundTransparency = 1, Text = tostring(defaultVal), Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Accent2, TextXAlignment = Enum.TextXAlignment.Right, Parent = Container})
-
-    local Bar = Create("TextButton", {Size = UDim2.new(1, -40, 0, 8), Position = UDim2.new(0, 20, 0, 45), BackgroundColor3 = Theme.Disabled, AutoButtonColor = false, Text = "", Parent = Container})
+    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
+    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 18), Position = UDim2.new(0, 15, 0, 10), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
+    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 14), Position = UDim2.new(0, 15, 0, 30), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
+    local ValLabel = Create("TextLabel", {Size = UDim2.new(0, 50, 0, 20), Position = UDim2.new(1, -65, 0, 10), BackgroundTransparency = 1, Text = tostring(defaultVal), Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Accent, TextXAlignment = Enum.TextXAlignment.Right, Parent = Container})
+    local Bar = Create("TextButton", {Size = UDim2.new(1, -30, 0, 6), Position = UDim2.new(0, 15, 0, 48), BackgroundColor3 = Theme.Disabled, AutoButtonColor = false, Text = "", Parent = Container})
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Bar})
     local Fill = Create("Frame", {Size = UDim2.new(defaultVal / maxVal, 0, 1, 0), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, Parent = Bar})
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Fill})
-    local Knob = Create("Frame", {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(defaultVal / maxVal, -8, 0.5, -8), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = Bar})
+    local Knob = Create("Frame", {Size = UDim2.new(0, 14, 0, 14), Position = UDim2.new(defaultVal / maxVal, -7, 0.5, -7), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = Bar})
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Knob})
-    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1, Parent = Knob})
-
     local draggingSlider = false
     local function update(input)
         local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
         local val = math.floor(pos * maxVal + 0.5)
-        Fill.Size = UDim2.new(pos, 0, 1, 0)
-        Knob.Position = UDim2.new(pos, -8, 0.5, -8)
-        ValLabel.Text = tostring(val)
+        Fill.Size = UDim2.new(pos, 0, 1, 0) Knob.Position = UDim2.new(pos, -7, 0.5, -7) ValLabel.Text = tostring(val)
         if onValueChanged then onValueChanged(val) end
     end
     Bar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = true update(input) end end)
@@ -808,16 +797,14 @@ local function CreateSlider(page, title, desc, maxVal, defaultVal, onValueChange
 end
 
 local function CreateCycleButton(page, title, desc, options, defaultIndex, onValueChanged)
-    local Container = Create("TextButton", {Size = UDim2.new(1, 0, 0, 60), BackgroundColor3 = Theme.Element, AutoButtonColor = false, Text = "", Parent = page})
-    Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Container})
-    Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = Container})
-    AddRipple(Container)
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 20), Position = UDim2.new(0, 20, 0, 12), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 15), Position = UDim2.new(0, 20, 0, 34), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-
-    local ValBtn = Create("TextButton", {Size = UDim2.new(0, 80, 0, 30), Position = UDim2.new(1, -95, 0.5, -15), BackgroundColor3 = Theme.Accent, AutoButtonColor = false, Text = options[defaultIndex], Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = Theme.TextDark, Parent = Container})
+    local Container = Create("TextButton", {Size = UDim2.new(1, 0, 0, 55), BackgroundColor3 = Theme.Element, AutoButtonColor = false, Text = "", Parent = page})
+    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
+    Container.MouseEnter:Connect(function() TweenService:Create(Container, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Hover}):Play() end)
+    Container.MouseLeave:Connect(function() TweenService:Create(Container, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Element}):Play() end)
+    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 18), Position = UDim2.new(0, 15, 0, 10), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
+    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 14), Position = UDim2.new(0, 15, 0, 30), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
+    local ValBtn = Create("TextButton", {Size = UDim2.new(0, 70, 0, 25), Position = UDim2.new(1, -85, 0.5, -12.5), BackgroundColor3 = Theme.Accent, AutoButtonColor = false, Text = options[defaultIndex], Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = Theme.TextDark, Parent = Container})
     Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = ValBtn})
-
     local currentIndex = defaultIndex
     ValBtn.MouseButton1Click:Connect(function()
         currentIndex = currentIndex + 1
@@ -828,22 +815,21 @@ local function CreateCycleButton(page, title, desc, options, defaultIndex, onVal
 end
 
 local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged)
-    local Container = Create("Frame", {Size = UDim2.new(1, 0, 0, 75), BackgroundColor3 = Theme.Element, Parent = page})
-    Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Container})
-    Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -20, 0, 20), Position = UDim2.new(0, 20, 0, 10), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -20, 0, 15), Position = UDim2.new(0, 20, 0, 32), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    local Bar = Create("TextButton", {Size = UDim2.new(1, -40, 0, 12), Position = UDim2.new(0, 20, 0, 55), BackgroundColor3 = defaultColor, AutoButtonColor = false, Text = "", Parent = Container})
+    local Container = Create("Frame", {Size = UDim2.new(1, 0, 0, 65), BackgroundColor3 = Theme.Element, Parent = page})
+    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
+    Create("TextLabel", {Size = UDim2.new(1, -20, 0, 18), Position = UDim2.new(0, 15, 0, 10), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
+    Create("TextLabel", {Size = UDim2.new(1, -20, 0, 14), Position = UDim2.new(0, 15, 0, 28), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
+    local Bar = Create("TextButton", {Size = UDim2.new(1, -30, 0, 8), Position = UDim2.new(0, 15, 0, 50), BackgroundColor3 = defaultColor, AutoButtonColor = false, Text = "", Parent = Container})
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Bar})
     Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 255, 0)), ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)), ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)), ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))}), Parent = Bar})
-    local Knob = Create("Frame", {Size = UDim2.new(0, 20, 0, 20), Position = UDim2.new(0, 0, 0.5, -10), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = Bar})
+    local Knob = Create("Frame", {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(0, 0, 0.5, -8), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = Bar})
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Knob})
     Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1, Parent = Knob})
     local draggingSlider = false
     local function update(input)
         local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
         local color = Color3.fromHSV(pos, 0.8, 1)
-        Knob.Position = UDim2.new(pos, -10, 0.5, -10)
+        Knob.Position = UDim2.new(pos, -8, 0.5, -8)
         onColorChanged(color)
     end
     Bar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = true update(input) end end)
@@ -852,65 +838,68 @@ local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged
 end
 
 -- INIT & RENDER
-CreateTab(L("AimBot"))
-Tabs[L("AimBot")].Render = function()
-    CreateCategory(PageContainer, L("General"))
-    CreateToggle(PageContainer, L("Enabled"), L("EnabledDesc"), aimState.Enabled, function(v) aimState.Enabled = v end)
-    CreateSlider(PageContainer, L("Fov"), L("FovDesc"), 360, aimState.Fov, function(v) aimState.Fov = v end)
-    CreateToggle(PageContainer, L("VisibleCheck"), L("VisibleCheckDesc"), aimState.VisibleCheck, function(v) aimState.VisibleCheck = v end)
-    CreateToggle(PageContainer, L("Aim360"), L("Aim360Desc"), aimState.Aim360, function(v) aimState.Aim360 = v end)
+CreateTab("AimBot")
+Tabs["AimBot"].Render = function()
+    CreateCategory(PageContainer, "Main")
+    CreateToggle(PageContainer, "Enabled", "Toggle Aimbot (Skull Icon).", aimState.Enabled, function(v) aimState.Enabled = v end)
+    CreateSlider(PageContainer, "Fov", "Max 360.", 360, aimState.Fov, function(v) aimState.Fov = v end)
+    CreateToggle(PageContainer, "Visible Check", "Don't aim through walls.", aimState.VisibleCheck, function(v) aimState.VisibleCheck = v end)
+    CreateToggle(PageContainer, "360 Aim", "Aim behind you.", aimState.Aim360, function(v) aimState.Aim360 = v end)
 end
 
-CreateTab(L("Esp"))
-Tabs[L("Esp")].Render = function()
-    CreateCategory(PageContainer, L("General"))
-    CreateToggle(PageContainer, L("Enabled"), L("EnabledDesc"), espState.Enabled, function(v) espState.Enabled = v end)
-    CreateToggle(PageContainer, L("Box"), L("BoxDesc"), espState.Box, function(v) espState.Box = v end)
-    CreateToggle(PageContainer, L("Line"), L("LineDesc"), espState.Line, function(v) espState.Line = v end)
-    CreateCycleButton(PageContainer, L("LinePos"), L("LinePosDesc"), {"Top", "Bottom", "Center"}, 1, function(val) espState.LinePos = val end)
-    CreateToggle(PageContainer, L("Health"), L("HealthDesc"), espState.Health, function(v) espState.Health = v end)
+CreateTab("Huyna")
+Tabs["Huyna"].Render = function()
+    CreateCategory(PageContainer, "Main")
+    CreateSlider(PageContainer, "Third Person", "Camera distance.", 128, 0, function(v)
+        huynaState.ThirdPerson = v
+        if v > 0 then LocalPlayer.CameraMode = Enum.CameraMode.Classic LocalPlayer.CameraMaxZoomDistance = v LocalPlayer.CameraMinZoomDistance = v
+        else LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson end
+    end)
+    CreateToggle(PageContainer, "Anti Aim", "Spins your torso.", huynaState.AntiAim, function(v) toggleAntiAim(v) end)
+    CreateCycleButton(PageContainer, "AntiAim Type", "Spin mode.", {"Random", "Jilter"}, 1, function(val) huynaState.AntiAimType = val end)
+    CreateToggle(PageContainer, "Bunny Hop", "Auto jump.", huynaState.BunnyHop, function(v) toggleBhop(v) end)
+    CreateSlider(PageContainer, "Bhop Speed", "Hop velocity.", 200, 50, function(v) huynaState.BhopSpeed = v end)
+    CreateToggle(PageContainer, "Auto Farm", "Invisible + Kill.", huynaState.AutoFarm, function(v) toggleAutoFarm(v) end)
 end
 
-CreateTab(L("Settings"))
-Tabs[L("Settings")].Render = function()
-    CreateCategory(PageContainer, L("VisualEffects"))
+CreateTab("Esp")
+Tabs["Esp"].Render = function()
+    CreateCategory(PageContainer, "Main")
+    CreateToggle(PageContainer, "Enabled", "Toggle ESP (Eye Icon).", espState.Enabled, function(v) espState.Enabled = v end)
+    CreateToggle(PageContainer, "Box", "White box.", espState.Box, function(v) espState.Box = v end)
+    CreateToggle(PageContainer, "Line", "Screen edge line.", espState.Line, function(v) espState.Line = v end)
+    CreateCycleButton(PageContainer, "Line Position", "Origin of line.", {"Top", "Bottom", "Center"}, 1, function(val) espState.LinePos = val end)
+    CreateToggle(PageContainer, "Health", "Health bar and text.", espState.Health, function(v) espState.Health = v end)
+end
+
+CreateTab("Settings")
+Tabs["Settings"].Render = function()
+    CreateCategory(PageContainer, "Visuals")
     local isPulsing = false
-    CreateToggle(PageContainer, L("PulseEffect"), L("PulseEffectDesc"), false, function(state)
+    CreateToggle(PageContainer, "Pulse Effect", "UI white glow.", false, function(state)
         isPulsing = state
         if state then
             task.spawn(function()
                 while isPulsing do
-                    TweenService:Create(MainStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Color3.fromRGB(255, 255, 255), Transparency = 0}):Play()
-                    TweenService:Create(WmStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Color3.fromRGB(255, 255, 255), Transparency = 0}):Play()
+                    TweenService:Create(MainStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Color3.fromRGB(255, 255, 255)}):Play()
+                    TweenService:Create(WmStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Color3.fromRGB(255, 255, 255)}):Play()
                     task.wait(0.8)
-                    TweenService:Create(MainStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Theme.Accent, Transparency = 0.2}):Play()
+                    TweenService:Create(MainStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Theme.Stroke}):Play()
                     TweenService:Create(WmStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Color3.fromRGB(255, 255, 255), Transparency = 0.8}):Play()
                     task.wait(0.8)
                 end
             end)
         else
-            TweenService:Create(MainStroke, TweenInfo.new(0.3), {Color = Theme.Accent, Transparency = 0.2}):Play()
+            TweenService:Create(MainStroke, TweenInfo.new(0.3), {Color = Theme.Stroke}):Play()
             TweenService:Create(WmStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(255, 255, 255), Transparency = 0.8}):Play()
         end
     end)
-    CreateCategory(PageContainer, L("ThemeCustomization"))
-    CreateToggle(PageContainer, L("Language"), L("LanguageDesc"), currentLang == "RUS", function(v)
-        currentLang = v and "RUS" or "ENG"
-        for name, tab in pairs(Tabs) do tab.Button.Title.Text = name end
-        SelectTab(ActiveTab)
-    end)
-    CreateColorSlider(PageContainer, L("AccentColor"), L("AccentColorDesc"), Theme.Accent, function(color)
+    CreateColorSlider(PageContainer, "Accent Color", "UI Color.", Theme.Accent, function(color)
         if not isPulsing then
-            Theme.Accent = color
-            MainStroke.Color = color
-            PageContainer.ScrollBarImageColor3 = color
-            FovStroke.Color = color
-            for name, tab in pairs(Tabs) do
-                if name == ActiveTab then tab.Button.BackgroundColor3 = color end
-            end
+            Theme.Accent = color PageContainer.ScrollBarImageColor3 = color FovStroke.Color = color
+            for name, tab in pairs(Tabs) do if name == ActiveTab then tab.Button.Title.TextColor3 = color SlideIndicator.BackgroundColor3 = color end end
         end
     end)
-    CreateColorSlider(PageContainer, L("WmTextColor"), L("WmTextColorDesc"), Theme.Text, function(color) WmText.TextColor3 = color end)
 end
 
-SelectTab(L("Settings"))
+SelectTab("Settings")

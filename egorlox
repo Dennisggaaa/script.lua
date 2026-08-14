@@ -1,905 +1,2710 @@
--- // SeraphiCA | The Absolute Masterpiece v15 (Flick Edition)
--- // Interactive Watermark, Frame-based Icons, Glassmorphism & Full Logic
+--[[
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         SERAPHICA UI ENGINE                                ║
+║                         Single-file Luau UI                                 ║
+║                                                                              ║
+║  Target: Roblox / tablet-friendly                                          ║
+║  Main window: 800 x 460                                                     ║
+║  Design: Glass / Dynamic Island / Ambient / Touch                           ║
+║                                                                              ║
+║  This file is a visual UI framework.                                       ║
+║  The AimBot / Visuals pages are UI/demo surfaces only.                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+]]
 
-local CoreGui = game:GetService("CoreGui")
+--// SERVICES
+local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
-local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- ========================================================================================
--- OBFUSCATED KEY SYSTEM
--- ========================================================================================
-local function decode(arr)
-    local s = ""
-    for _, v in ipairs(arr) do s = s .. string.char(v - 27) end
+--// CLEAN OLD INSTANCE
+local old = PlayerGui:FindFirstChild("SeraphiCA")
+if old then
+    old:Destroy()
+end
+
+--// ROOT
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "SeraphiCA"
+Gui.ResetOnSpawn = false
+Gui.IgnoreGuiInset = true
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.DisplayOrder = 999
+Gui.Parent = PlayerGui
+
+--// CONSTANTS
+local WINDOW_W = 800
+local WINDOW_H = 460
+local ISLAND_W = 230
+local ISLAND_H = 42
+
+local UI = {
+    WindowPosition = UDim2.fromScale(0.5, 0.5),
+    WindowSize = UDim2.fromOffset(WINDOW_W, WINDOW_H),
+    Radius = 22,
+    CardRadius = 16,
+    ButtonRadius = 12,
+    SidebarWidth = 184,
+    Padding = 20,
+    Gap = 12,
+}
+
+--// COLOR HELPERS
+local function rgb(r, g, b)
+    return Color3.fromRGB(r, g, b)
+end
+
+local Themes = {
+    Obsidian = {
+        Background = rgb(6, 7, 10),
+        Window = rgb(10, 12, 17),
+        Sidebar = rgb(13, 16, 22),
+        Card = rgb(17, 21, 29),
+        CardHover = rgb(21, 26, 35),
+        CardActive = rgb(25, 31, 42),
+        Text = rgb(245, 247, 250),
+        Secondary = rgb(167, 173, 184),
+        Muted = rgb(104, 111, 123),
+        Border = rgb(38, 43, 53),
+        Accent = rgb(124, 92, 255),
+        Accent2 = rgb(82, 154, 255),
+        Danger = rgb(245, 92, 105),
+        Success = rgb(83, 211, 143),
+        Warning = rgb(241, 184, 83),
+    },
+
+    Arctic = {
+        Background = rgb(4, 8, 14),
+        Window = rgb(8, 14, 22),
+        Sidebar = rgb(10, 18, 28),
+        Card = rgb(14, 24, 36),
+        CardHover = rgb(19, 32, 46),
+        CardActive = rgb(22, 40, 56),
+        Text = rgb(240, 248, 255),
+        Secondary = rgb(158, 181, 199),
+        Muted = rgb(91, 113, 131),
+        Border = rgb(32, 55, 72),
+        Accent = rgb(80, 198, 255),
+        Accent2 = rgb(123, 143, 255),
+        Danger = rgb(245, 92, 105),
+        Success = rgb(83, 211, 143),
+        Warning = rgb(241, 184, 83),
+    },
+
+    Aurora = {
+        Background = rgb(4, 8, 9),
+        Window = rgb(8, 14, 15),
+        Sidebar = rgb(10, 18, 18),
+        Card = rgb(13, 25, 23),
+        CardHover = rgb(17, 34, 31),
+        CardActive = rgb(20, 42, 37),
+        Text = rgb(239, 250, 246),
+        Secondary = rgb(155, 188, 177),
+        Muted = rgb(84, 115, 105),
+        Border = rgb(30, 57, 49),
+        Accent = rgb(83, 225, 174),
+        Accent2 = rgb(90, 169, 255),
+        Danger = rgb(245, 92, 105),
+        Success = rgb(83, 211, 143),
+        Warning = rgb(241, 184, 83),
+    },
+
+    Nebula = {
+        Background = rgb(7, 5, 11),
+        Window = rgb(13, 9, 18),
+        Sidebar = rgb(17, 11, 24),
+        Card = rgb(24, 15, 32),
+        CardHover = rgb(31, 19, 41),
+        CardActive = rgb(39, 22, 51),
+        Text = rgb(248, 243, 252),
+        Secondary = rgb(187, 166, 197),
+        Muted = rgb(111, 91, 121),
+        Border = rgb(55, 34, 65),
+        Accent = rgb(188, 99, 255),
+        Accent2 = rgb(91, 132, 255),
+        Danger = rgb(245, 92, 105),
+        Success = rgb(83, 211, 143),
+        Warning = rgb(241, 184, 83),
+    },
+
+    Crimson = {
+        Background = rgb(9, 5, 6),
+        Window = rgb(15, 9, 10),
+        Sidebar = rgb(21, 11, 13),
+        Card = rgb(29, 14, 17),
+        CardHover = rgb(38, 18, 21),
+        CardActive = rgb(47, 21, 25),
+        Text = rgb(250, 244, 245),
+        Secondary = rgb(193, 165, 168),
+        Muted = rgb(115, 86, 90),
+        Border = rgb(60, 32, 36),
+        Accent = rgb(244, 78, 104),
+        Accent2 = rgb(255, 145, 79),
+        Danger = rgb(245, 92, 105),
+        Success = rgb(83, 211, 143),
+        Warning = rgb(241, 184, 83),
+    },
+
+    Monochrome = {
+        Background = rgb(4, 4, 5),
+        Window = rgb(9, 9, 10),
+        Sidebar = rgb(13, 13, 14),
+        Card = rgb(18, 18, 20),
+        CardHover = rgb(24, 24, 26),
+        CardActive = rgb(30, 30, 32),
+        Text = rgb(250, 250, 250),
+        Secondary = rgb(173, 173, 176),
+        Muted = rgb(105, 105, 108),
+        Border = rgb(40, 40, 43),
+        Accent = rgb(235, 235, 235),
+        Accent2 = rgb(170, 170, 175),
+        Danger = rgb(245, 92, 105),
+        Success = rgb(83, 211, 143),
+        Warning = rgb(241, 184, 83),
+    },
+}
+
+local Theme = Themes.Obsidian
+
+--// STATE
+local State = {
+    Open = false,
+    Tab = "AimBot",
+    ThemeName = "Obsidian",
+    Accent = nil,
+    Animations = true,
+    Particles = true,
+    Glow = true,
+    Ambient = true,
+    ReducedMotion = false,
+    Performance = "Balanced",
+    UIScale = 1,
+    Notifications = true,
+    Sounds = false,
+    CornerMode = "Rounded",
+    Density = "Comfortable",
+    Search = "",
+    DemoValues = {
+        AimEnabled = false,
+        AssistStrength = 65,
+        FOV = 120,
+        VisualPreview = true,
+        Boxes = true,
+        Names = true,
+        Distance = false,
+        UtilityDemo = true,
+    },
+}
+
+--// UTILITY
+local function getAccent()
+    return State.Accent or Theme.Accent
+end
+
+local function tween(instance, duration, props, style, direction)
+    if State.ReducedMotion then
+        duration = math.min(duration, 0.06)
+    end
+    local info = TweenInfo.new(
+        duration,
+        style or Enum.EasingStyle.Quint,
+        direction or Enum.EasingDirection.Out
+    )
+    local t = TweenService:Create(instance, info, props)
+    t:Play()
+    return t
+end
+
+local function corner(parent, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius or UI.Radius)
+    c.Parent = parent
+    return c
+end
+
+local function stroke(parent, color, transparency, thickness)
+    local s = Instance.new("UIStroke")
+    s.Color = color or Theme.Border
+    s.Transparency = transparency or 0
+    s.Thickness = thickness or 1
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Parent = parent
     return s
 end
 
-local validKeys = {
-    [decode({125, 128, 143, 124})] = true, -- beta
-    [decode({143, 128, 142, 143})] = true  -- test
-}
-
-local KeyGui = Instance.new("ScreenGui")
-KeyGui.Name = "SeraphiCA_Key"
-KeyGui.Parent = CoreGui
-KeyGui.IgnoreGuiInset = true
-KeyGui.ResetOnSpawn = false
-
-local KeyDarkness = Instance.new("Frame")
-KeyDarkness.Size = UDim2.new(1, 0, 1, 0)
-KeyDarkness.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-KeyDarkness.BackgroundTransparency = 0.2
-KeyDarkness.Parent = KeyGui
-
-local KeyBlur = Instance.new("BlurEffect")
-KeyBlur.Name = "SeraphiCA_Key_Blur"
-KeyBlur.Size = 24
-KeyBlur.Parent = Lighting
-
-local SnowHolder = Instance.new("Frame")
-SnowHolder.Size = UDim2.new(1, 0, 1, 0)
-SnowHolder.BackgroundTransparency = 1
-SnowHolder.Parent = KeyGui
-
-task.spawn(function()
-    while KeyGui.Parent do
-        local flake = Instance.new("Frame")
-        flake.Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5))
-        flake.Position = UDim2.new(math.random(), 0, 0, -20)
-        flake.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        flake.BackgroundTransparency = math.random(30, 90) / 100
-        flake.BorderSizePixel = 0
-        flake.Parent = SnowHolder
-        Instance.new("UICorner", flake).CornerRadius = UDim.new(1, 0)
-        local tween = TweenService:Create(flake, TweenInfo.new(math.random(4, 8), Enum.EasingStyle.Linear), {Position = UDim2.new(flake.Position.X.Scale + math.random(-10, 10)/100, 0, 1.1, 20)})
-        tween:Play()
-        tween.Completed:Connect(function() flake:Destroy() end)
-        task.wait(0.1)
-    end
-end)
-
-local KeyFrame = Instance.new("Frame")
-KeyFrame.Size = UDim2.new(0, 350, 0, 180)
-KeyFrame.Position = UDim2.new(0.5, -175, 0.5, -90)
-KeyFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-KeyFrame.BackgroundTransparency = 0.1
-KeyFrame.BorderSizePixel = 0
-KeyFrame.Parent = KeyGui
-Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
-
-local KeyStroke = Instance.new("UIStroke")
-KeyStroke.Color = Color3.fromRGB(168, 85, 247) -- Accent
-KeyStroke.Thickness = 1.5
-KeyStroke.Parent = KeyFrame
-
-task.spawn(function()
-    while KeyFrame.Parent do
-        TweenService:Create(KeyStroke, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.1, Thickness = 2}):Play()
-        task.wait(1)
-        TweenService:Create(KeyStroke, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.5, Thickness = 1}):Play()
-        task.wait(1)
-    end
-end)
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundTransparency = 1
-Title.Text = "SeraphiCA | Key System"
-Title.Font = Enum.Font.GothamBlack
-Title.TextSize = 18
-Title.TextColor3 = Color3.fromRGB(245, 245, 250)
-Title.Parent = KeyFrame
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 65, 65)
-CloseBtn.Text = "X"
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 14
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Parent = KeyFrame
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
-
-local InputBox = Instance.new("TextBox")
-InputBox.Size = UDim2.new(1, -40, 0, 40)
-InputBox.Position = UDim2.new(0, 20, 0, 60)
-InputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
-InputBox.BackgroundTransparency = 0.2
-InputBox.PlaceholderText = "Enter Key..."
-InputBox.Text = ""
-InputBox.Font = Enum.Font.GothamMedium
-InputBox.TextSize = 14
-InputBox.TextColor3 = Color3.fromRGB(245, 245, 250)
-InputBox.Parent = KeyFrame
-Instance.new("UICorner", InputBox).CornerRadius = UDim.new(0, 6)
-
-local SubmitBtn = Instance.new("TextButton")
-SubmitBtn.Size = UDim2.new(1, -40, 0, 40)
-SubmitBtn.Position = UDim2.new(0, 20, 0, 110)
-SubmitBtn.BackgroundColor3 = Color3.fromRGB(168, 85, 247)
-SubmitBtn.Text = "Submit"
-SubmitBtn.Font = Enum.Font.GothamBold
-SubmitBtn.TextSize = 14
-SubmitBtn.TextColor3 = Color3.fromRGB(12, 12, 16)
-SubmitBtn.Parent = KeyFrame
-Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 6)
-
-local StatusLbl = Instance.new("TextLabel")
-StatusLbl.Size = UDim2.new(1, -40, 0, 20)
-StatusLbl.Position = UDim2.new(0, 20, 1, -25)
-StatusLbl.BackgroundTransparency = 1
-StatusLbl.Text = ""
-StatusLbl.Font = Enum.Font.GothamMedium
-StatusLbl.TextSize = 12
-StatusLbl.TextColor3 = Color3.fromRGB(140, 140, 155)
-StatusLbl.Parent = KeyFrame
-
-local attempts = 3
-local isCooldown = false
-local isUnlocked = false
-local isClosed = false
-
-CloseBtn.MouseButton1Click:Connect(function()
-    KeyGui:Destroy()
-    if KeyBlur then KeyBlur:Destroy() end
-    isClosed = true
-end)
-
-SubmitBtn.MouseButton1Click:Connect(function()
-    if isCooldown or isUnlocked or isClosed then return end
-    if validKeys[InputBox.Text] then
-        StatusLbl.Text = "Unlocked! Loading..."
-        StatusLbl.TextColor3 = Color3.fromRGB(45, 255, 100)
-        task.wait(1)
-        KeyGui:Destroy()
-        if KeyBlur then KeyBlur:Destroy() end
-        isUnlocked = true
-    else
-        attempts = attempts - 1
-        if attempts > 0 then
-            StatusLbl.Text = "Invalid Key. " .. attempts .. " attempts left."
-            StatusLbl.TextColor3 = Color3.fromRGB(255, 65, 65)
-            InputBox.Text = ""
-            local origPos = KeyFrame.Position
-            TweenService:Create(KeyFrame, TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {Position = UDim2.new(origPos.X.Scale, origPos.X.Offset + 10, origPos.Y.Scale, origPos.Y.Offset)}):Play()
-            task.wait(0.05)
-            TweenService:Create(KeyFrame, TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {Position = UDim2.new(origPos.X.Scale, origPos.X.Offset - 10, origPos.Y.Scale, origPos.Y.Offset)}):Play()
-            task.wait(0.05)
-            TweenService:Create(KeyFrame, TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {Position = origPos}):Play()
-        else
-            isCooldown = true
-            StatusLbl.Text = "Cooldown: 15s"
-            StatusLbl.TextColor3 = Color3.fromRGB(255, 65, 65)
-            InputBox.Text = ""
-            SubmitBtn.Active = false
-            InputBox.Active = false
-            local timeLeft = 15
-            while timeLeft > 0 do
-                StatusLbl.Text = "Cooldown: " .. timeLeft .. "s"
-                task.wait(1)
-                timeLeft = timeLeft - 1
-            end
-            isCooldown = false
-            attempts = 3
-            SubmitBtn.Active = true
-            InputBox.Active = true
-            StatusLbl.Text = "Try again."
-            StatusLbl.TextColor3 = Color3.fromRGB(140, 140, 155)
-        end
-    end
-end)
-
-while not isUnlocked and not isClosed do task.wait(0.1) end
-if isClosed then return end
-
--- ========================================================================================
--- MAIN SCRIPT
--- ========================================================================================
-local oldUi = CoreGui:FindFirstChild("SeraphiCA_Masterpiece_v15")
-if oldUi then oldUi:Destroy() end
-local oldBlur = Lighting:FindFirstChild("SeraphiCA_Masterpiece_Blur")
-if oldBlur then oldBlur:Destroy() end
-
-local Theme = {
-    Background = Color3.fromRGB(12, 12, 16), Sidebar = Color3.fromRGB(8, 8, 12), Element = Color3.fromRGB(20, 20, 26), Hover = Color3.fromRGB(28, 28, 36), Accent = Color3.fromRGB(168, 85, 247), Text = Color3.fromRGB(245, 245, 250), TextDark = Color3.fromRGB(12, 12, 16), Description = Color3.fromRGB(140, 140, 155), Stroke = Color3.fromRGB(40, 40, 50), DarkStroke = Color3.fromRGB(20, 20, 25), RedNotif = Color3.fromRGB(255, 65, 65), Success = Color3.fromRGB(45, 255, 100), Disabled = Color3.fromRGB(35, 35, 45)
-}
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SeraphiCA_Masterpiece_v15"
-ScreenGui.Parent = CoreGui
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.DisplayOrder = 9999
-
-local function Create(className, props, children)
-    local obj = Instance.new(className)
-    for prop, val in pairs(props) do obj[prop] = val end
-    if children then for _, child in ipairs(children) do child.Parent = obj end end
-    return obj
+local function gradient(parent, c1, c2, rotation)
+    local g = Instance.new("UIGradient")
+    g.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, c1),
+        ColorSequenceKeypoint.new(1, c2),
+    })
+    g.Rotation = rotation or 0
+    g.Parent = parent
+    return g
 end
 
-local function AddSoftShadow(parent, size, transparency)
-    return Create("ImageLabel", {
-        Size = UDim2.new(1, size, 1, size), Position = UDim2.new(0, -size/2, 0, -size/2),
-        BackgroundTransparency = 1, Image = "rbxassetid://1316045217", ImageColor3 = Color3.fromRGB(0, 0, 0),
-        ImageTransparency = transparency or 0.5, ScaleType = Enum.ScaleType.Slice, SliceCenter = Rect.new(10, 10, 118, 118),
-        ZIndex = parent.ZIndex - 1, Parent = parent
+local function padding(parent, amount)
+    local p = Instance.new("UIPadding")
+    p.PaddingTop = UDim.new(0, amount)
+    p.PaddingBottom = UDim.new(0, amount)
+    p.PaddingLeft = UDim.new(0, amount)
+    p.PaddingRight = UDim.new(0, amount)
+    p.Parent = parent
+    return p
+end
+
+local function text(parent, value, size, color, font)
+    local l = Instance.new("TextLabel")
+    l.BackgroundTransparency = 1
+    l.Text = value
+    l.TextSize = size or 14
+    l.TextColor3 = color or Theme.Text
+    l.Font = font or Enum.Font.Gotham
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.TextYAlignment = Enum.TextYAlignment.Center
+    l.Parent = parent
+    return l
+end
+
+local function buttonBase(parent)
+    local b = Instance.new("TextButton")
+    b.AutoButtonColor = false
+    b.BackgroundColor3 = Theme.Card
+    b.Text = ""
+    b.BorderSizePixel = 0
+    b.Parent = parent
+    corner(b, UI.ButtonRadius)
+    return b
+end
+
+local function safeDestroy(obj)
+    if obj and obj.Parent then
+        obj:Destroy()
+    end
+end
+
+--// ROOT BACKDROP
+local Backdrop = Instance.new("Frame")
+Backdrop.Name = "Backdrop"
+Backdrop.BackgroundTransparency = 1
+Backdrop.Size = UDim2.fromScale(1, 1)
+Backdrop.Parent = Gui
+
+--// AMBIENT LIGHT
+local AmbientA = Instance.new("Frame")
+AmbientA.Name = "AmbientA"
+AmbientA.AnchorPoint = Vector2.new(0.5, 0.5)
+AmbientA.Position = UDim2.fromScale(0.28, 0.32)
+AmbientA.Size = UDim2.fromOffset(360, 360)
+AmbientA.BackgroundColor3 = getAccent()
+AmbientA.BackgroundTransparency = 0.92
+AmbientA.BorderSizePixel = 0
+AmbientA.Parent = Backdrop
+corner(AmbientA, 180)
+
+local AmbientB = Instance.new("Frame")
+AmbientB.Name = "AmbientB"
+AmbientB.AnchorPoint = Vector2.new(0.5, 0.5)
+AmbientB.Position = UDim2.fromScale(0.72, 0.68)
+AmbientB.Size = UDim2.fromOffset(300, 300)
+AmbientB.BackgroundColor3 = Theme.Accent2
+AmbientB.BackgroundTransparency = 0.94
+AmbientB.BorderSizePixel = 0
+AmbientB.Parent = Backdrop
+corner(AmbientB, 150)
+
+--// MAIN WINDOW
+local Window = Instance.new("Frame")
+Window.Name = "Window"
+Window.AnchorPoint = Vector2.new(0.5, 0.5)
+Window.Position = UI.WindowPosition
+Window.Size = UI.WindowSize
+Window.BackgroundColor3 = Theme.Window
+Window.BorderSizePixel = 0
+Window.Visible = false
+Window.Parent = Gui
+corner(Window, UI.Radius)
+stroke(Window, Theme.Border, 0.05, 1)
+
+local WindowGradient = gradient(Window, Theme.Window, Theme.Background, 90)
+
+local WindowScale = Instance.new("UIScale")
+WindowScale.Scale = 1
+WindowScale.Parent = Window
+
+--// SOFT SHADOW
+local Shadow = Instance.new("ImageLabel")
+Shadow.Name = "Shadow"
+Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+Shadow.Position = UDim2.fromScale(0.5, 0.5)
+Shadow.Size = UDim2.new(1, 70, 1, 70)
+Shadow.BackgroundTransparency = 1
+Shadow.Image = "rbxassetid://6014261993"
+Shadow.ImageColor3 = Color3.new(0, 0, 0)
+Shadow.ImageTransparency = 0.45
+Shadow.ScaleType = Enum.ScaleType.Slice
+Shadow.SliceCenter = Rect.new(49, 49, 450, 450)
+Shadow.ZIndex = Window.ZIndex - 1
+Shadow.Parent = Window
+
+--// TOP HIGHLIGHT
+local TopHighlight = Instance.new("Frame")
+TopHighlight.BackgroundColor3 = Color3.new(1, 1, 1)
+TopHighlight.BackgroundTransparency = 0.94
+TopHighlight.BorderSizePixel = 0
+TopHighlight.Position = UDim2.fromOffset(18, 1)
+TopHighlight.Size = UDim2.new(1, -36, 0, 1)
+TopHighlight.Parent = Window
+
+--// HEADER
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.BackgroundTransparency = 1
+Header.Position = UDim2.fromOffset(20, 12)
+Header.Size = UDim2.new(1, -40, 0, 54)
+Header.Parent = Window
+
+local Brand = text(Header, "S", 22, getAccent(), Enum.Font.GothamBold)
+Brand.Size = UDim2.fromOffset(30, 54)
+
+local BrandTitle = text(Header, "SERAPHICA", 15, Theme.Text, Enum.Font.GothamBold)
+BrandTitle.Position = UDim2.fromOffset(36, 1)
+BrandTitle.Size = UDim2.fromOffset(150, 27)
+
+local BrandSub = text(Header, "Interface", 10, Theme.Muted, Enum.Font.Gotham)
+BrandSub.Position = UDim2.fromOffset(36, 25)
+BrandSub.Size = UDim2.fromOffset(150, 20)
+
+local ClockLabel = text(Header, "--:--", 12, Theme.Secondary, Enum.Font.GothamMedium)
+ClockLabel.AnchorPoint = Vector2.new(1, 0)
+ClockLabel.Position = UDim2.new(1, -42, 0, 0)
+ClockLabel.Size = UDim2.fromOffset(60, 30)
+ClockLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+local CloseButton = buttonBase(Header)
+CloseButton.AnchorPoint = Vector2.new(1, 0)
+CloseButton.Position = UDim2.new(1, 0, 0, 5)
+CloseButton.Size = UDim2.fromOffset(30, 30)
+CloseButton.BackgroundTransparency = 1
+
+local CloseText = text(CloseButton, "×", 22, Theme.Secondary, Enum.Font.Gotham)
+CloseText.Size = UDim2.fromScale(1, 1)
+CloseText.TextXAlignment = Enum.TextXAlignment.Center
+
+--// DIVIDER
+local Divider = Instance.new("Frame")
+Divider.BackgroundColor3 = Theme.Border
+Divider.BackgroundTransparency = 0.35
+Divider.BorderSizePixel = 0
+Divider.Position = UDim2.fromOffset(20, 66)
+Divider.Size = UDim2.new(1, -40, 0, 1)
+Divider.Parent = Window
+
+--// SIDEBAR
+local Sidebar = Instance.new("Frame")
+Sidebar.Name = "Sidebar"
+Sidebar.BackgroundColor3 = Theme.Sidebar
+Sidebar.BorderSizePixel = 0
+Sidebar.Position = UDim2.fromOffset(16, 78)
+Sidebar.Size = UDim2.new(0, UI.SidebarWidth, 1, -94)
+Sidebar.Parent = Window
+corner(Sidebar, 18)
+stroke(Sidebar, Theme.Border, 0.35, 1)
+
+local SidebarPadding = padding(Sidebar, 10)
+
+local SidebarLayout = Instance.new("UIListLayout")
+SidebarLayout.Padding = UDim.new(0, 8)
+SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SidebarLayout.Parent = Sidebar
+
+--// CONTENT
+local Content = Instance.new("Frame")
+Content.Name = "Content"
+Content.BackgroundTransparency = 1
+Content.Position = UDim2.fromOffset(UI.SidebarWidth + 30, 78)
+Content.Size = UDim2.new(1, -(UI.SidebarWidth + 46), 1, -94)
+Content.Parent = Window
+
+local ContentScroll = Instance.new("ScrollingFrame")
+ContentScroll.Name = "Scroll"
+Content.BackgroundTransparency = 1
+Content.BorderSizePixel = 0
+Content.Size = UDim2.fromScale(1, 1)
+Content.CanvasSize = UDim2.new()
+Content.ScrollBarThickness = 2
+Content.ScrollBarImageColor3 = getAccent()
+Content.ScrollBarImageTransparency = 0.25
+Content.ScrollingDirection = Enum.ScrollingDirection.Y
+Content.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Content.Parent = Content
+
+local ContentPadding = padding(ContentScroll, 2)
+
+local ContentLayout = Instance.new("UIListLayout")
+ContentLayout.Padding = UDim.new(0, 12)
+ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ContentLayout.Parent = ContentScroll
+
+--// DYNAMIC ISLAND
+local Island = Instance.new("Frame")
+Island.Name = "DynamicIsland"
+Island.AnchorPoint = Vector2.new(0.5, 0)
+Island.Position = UDim2.new(0.5, 0, 0, 12)
+Island.Size = UDim2.fromOffset(ISLAND_W, ISLAND_H)
+Island.BackgroundColor3 = Theme.Window
+Island.BorderSizePixel = 0
+Island.ZIndex = 50
+Island.Parent = Gui
+corner(Island, 21)
+stroke(Island, Theme.Border, 0.08, 1)
+
+local IslandScale = Instance.new("UIScale")
+IslandScale.Scale = 1
+IslandScale.Parent = Island
+
+local IslandDot = Instance.new("Frame")
+IslandDot.AnchorPoint = Vector2.new(0, 0.5)
+IslandDot.Position = UDim2.new(0, 14, 0.5, 0)
+IslandDot.Size = UDim2.fromOffset(8, 8)
+IslandDot.BackgroundColor3 = getAccent()
+IslandDot.BorderSizePixel = 0
+IslandDot.Parent = Island
+corner(IslandDot, 4)
+
+local IslandText = text(Island, "SeraphiCA", 12, Theme.Text, Enum.Font.GothamMedium)
+IslandText.Position = UDim2.fromOffset(30, 0)
+IslandText.Size = UDim2.new(1, -90, 1, 0)
+
+local IslandClock = text(Island, "--:--", 11, Theme.Secondary, Enum.Font.GothamMedium)
+IslandClock.AnchorPoint = Vector2.new(1, 0)
+IslandClock.Position = UDim2.new(1, -14, 0, 0)
+IslandClock.Size = UDim2.fromOffset(48, ISLAND_H)
+IslandClock.TextXAlignment = Enum.TextXAlignment.Right
+
+--// EFFECT CONTAINERS
+local ParticleLayer = Instance.new("Frame")
+ParticleLayer.Name = "Particles"
+ParticleLayer.BackgroundTransparency = 1
+ParticleLayer.Size = UDim2.fromScale(1, 1)
+ParticleLayer.ClipsDescendants = true
+ParticleLayer.ZIndex = 2
+ParticleLayer.Parent = Window
+
+--// NAV DATA
+local Tabs = {
+    {
+        Name = "AimBot",
+        Icon = "◉",
+        Description = "Precision interface",
+    },
+    {
+        Name = "Visuals",
+        Icon = "◇",
+        Description = "Visual preview",
+    },
+    {
+        Name = "Huyna",
+        Icon = "◌",
+        Description = "Utilities",
+    },
+    {
+        Name = "Settings",
+        Icon = "⚙",
+        Description = "Appearance & system",
+    },
+}
+
+local TabButtons = {}
+local ActiveIndicator = Instance.new("Frame")
+ActiveIndicator.Name = "ActiveIndicator"
+ActiveIndicator.BackgroundColor3 = getAccent()
+ActiveIndicator.BorderSizePixel = 0
+ActiveIndicator.Size = UDim2.fromOffset(3, 38)
+ActiveIndicator.Position = UDim2.fromOffset(10, 0)
+ActiveIndicator.ZIndex = 5
+ActiveIndicator.Parent = Sidebar
+corner(ActiveIndicator, 2)
+
+--// FORWARD DECLARATIONS
+local showTab
+local applyTheme
+local notify
+local openIsland
+local closeWindow
+local openWindow
+
+--// TAB BUTTONS
+for index, tab in ipairs(Tabs) do
+    local holder = Instance.new("Frame")
+    holder.Name = tab.Name .. "Holder"
+    holder.BackgroundTransparency = 1
+    holder.Size = UDim2.new(1, 0, 0, 44)
+    holder.LayoutOrder = index
+    holder.Parent = Sidebar
+
+    local btn = buttonBase(holder)
+    btn.Name = tab.Name
+    btn.Position = UDim2.fromOffset(0, 0)
+    btn.Size = UDim2.fromScale(1, 1)
+    btn.BackgroundColor3 = Theme.Card
+    btn.BackgroundTransparency = 0.4
+
+    local icon = text(btn, tab.Icon, 17, Theme.Secondary, Enum.Font.GothamMedium)
+    icon.Position = UDim2.fromOffset(12, 0)
+    icon.Size = UDim2.fromOffset(28, 44)
+    icon.TextXAlignment = Enum.TextXAlignment.Center
+
+    local title = text(btn, tab.Name, 12, Theme.Secondary, Enum.Font.GothamMedium)
+    title.Position = UDim2.fromOffset(44, 0)
+    title.Size = UDim2.new(1, -52, 44, 0)
+
+    TabButtons[tab.Name] = {
+        Button = btn,
+        Icon = icon,
+        Title = title,
+        Holder = holder,
+    }
+
+    btn.MouseEnter:Connect(function()
+        if State.Tab ~= tab.Name then
+            tween(btn, 0.16, {
+                BackgroundColor3 = Theme.CardHover,
+                BackgroundTransparency = 0.1,
+            })
+        end
+    end)
+
+    btn.MouseLeave:Connect(function()
+        if State.Tab ~= tab.Name then
+            tween(btn, 0.16, {
+                BackgroundColor3 = Theme.Card,
+                BackgroundTransparency = 0.4,
+            })
+        end
+    end)
+
+    btn.Activated:Connect(function()
+        showTab(tab.Name)
+    end)
+end
+
+--// CARD FACTORY
+local function createCard(parent, titleText, subtitleText, height)
+    local card = Instance.new("Frame")
+    card.BackgroundColor3 = Theme.Card
+    card.BorderSizePixel = 0
+    card.Size = UDim2.new(1, 0, 0, height or 82)
+    card.Parent = parent
+    corner(card, UI.CardRadius)
+    stroke(card, Theme.Border, 0.35, 1)
+
+    local titleLabel = text(card, titleText, 13, Theme.Text, Enum.Font.GothamSemibold)
+    titleLabel.Position = UDim2.fromOffset(16, 10)
+    titleLabel.Size = UDim2.new(1, -32, 0, 22)
+
+    if subtitleText then
+        local sub = text(card, subtitleText, 10, Theme.Muted, Enum.Font.Gotham)
+        sub.Position = UDim2.fromOffset(16, 32)
+        sub.Size = UDim2.new(1, -32, 0, 18)
+    end
+
+    return card
+end
+
+local function createSectionHeader(parent, titleText, subtitleText)
+    local holder = Instance.new("Frame")
+    holder.BackgroundTransparency = 1
+    holder.Size = UDim2.new(1, 0, 0, 58)
+    holder.Parent = parent
+
+    local t = text(holder, titleText, 22, Theme.Text, Enum.Font.GothamBold)
+    t.Position = UDim2.fromOffset(2, 0)
+    t.Size = UDim2.new(1, -4, 0, 32)
+
+    local s = text(holder, subtitleText or "", 11, Theme.Muted, Enum.Font.Gotham)
+    s.Position = UDim2.fromOffset(2, 32)
+    s.Size = UDim2.new(1, -4, 0, 22)
+
+    return holder
+end
+
+--// TOGGLE
+local function createToggle(parent, titleText, subtitleText, initial, callback)
+    local row = Instance.new("Frame")
+    row.BackgroundTransparency = 1
+    row.Size = UDim2.new(1, 0, 0, 58)
+    row.Parent = parent
+
+    local titleLabel = text(row, titleText, 12, Theme.Text, Enum.Font.GothamMedium)
+    titleLabel.Position = UDim2.fromOffset(0, 3)
+    titleLabel.Size = UDim2.new(1, -76, 0, 24)
+
+    local sub = text(row, subtitleText or "", 10, Theme.Muted, Enum.Font.Gotham)
+    sub.Position = UDim2.fromOffset(0, 26)
+    sub.Size = UDim2.new(1, -76, 0, 20)
+
+    local toggle = Instance.new("TextButton")
+    toggle.AutoButtonColor = false
+    toggle.Text = ""
+    toggle.AnchorPoint = Vector2.new(1, 0.5)
+    toggle.Position = UDim2.new(1, 0, 0.5, 0)
+    toggle.Size = UDim2.fromOffset(48, 26)
+    toggle.BackgroundColor3 = Theme.Background
+    toggle.BorderSizePixel = 0
+    toggle.Parent = row
+    corner(toggle, 13)
+    stroke(toggle, Theme.Border, 0.15, 1)
+
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.fromOffset(20, 20)
+    knob.AnchorPoint = Vector2.new(0, 0.5)
+    knob.Position = UDim2.new(0, 3, 0.5, 0)
+    knob.BackgroundColor3 = Theme.Secondary
+    knob.BorderSizePixel = 0
+    knob.Parent = toggle
+    corner(knob, 10)
+
+    local enabled = initial == true
+
+    local function render(animated)
+        local targetX = enabled and 25 or 3
+        local targetColor = enabled and getAccent() or Theme.Background
+        local knobColor = enabled and Color3.new(1, 1, 1) or Theme.Secondary
+
+        if animated then
+            tween(toggle, 0.22, {BackgroundColor3 = targetColor})
+            tween(knob, 0.22, {
+                Position = UDim2.new(0, targetX, 0.5, 0),
+                BackgroundColor3 = knobColor,
+            }, Enum.EasingStyle.Back)
+        else
+            toggle.BackgroundColor3 = targetColor
+            knob.Position = UDim2.new(0, targetX, 0.5, 0)
+            knob.BackgroundColor3 = knobColor
+        end
+    end
+
+    toggle.Activated:Connect(function()
+        enabled = not enabled
+        render(true)
+        if callback then
+            callback(enabled)
+        end
+    end)
+
+    render(false)
+
+    return {
+        Row = row,
+        Set = function(value, animated)
+            enabled = value == true
+            render(animated ~= false)
+            if callback then callback(enabled) end
+        end,
+        Get = function()
+            return enabled
+        end,
+    }
+end
+
+--// SLIDER
+local function createSlider(parent, titleText, subtitleText, min, max, initial, callback)
+    local row = Instance.new("Frame")
+    row.BackgroundTransparency = 1
+    row.Size = UDim2.new(1, 0, 0, 68)
+    row.Parent = parent
+
+    local titleLabel = text(row, titleText, 12, Theme.Text, Enum.Font.GothamMedium)
+    titleLabel.Position = UDim2.fromOffset(0, 0)
+    titleLabel.Size = UDim2.new(1, -60, 0, 22)
+
+    local valueLabel = text(row, tostring(initial), 11, getAccent(), Enum.Font.GothamBold)
+    valueLabel.AnchorPoint = Vector2.new(1, 0)
+    valueLabel.Position = UDim2.new(1, 0, 0, 0)
+    valueLabel.Size = UDim2.fromOffset(50, 22)
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+    local sub = text(row, subtitleText or "", 10, Theme.Muted, Enum.Font.Gotham)
+    sub.Position = UDim2.fromOffset(0, 20)
+    sub.Size = UDim2.new(1, 0, 0, 16)
+
+    local track = Instance.new("Frame")
+    track.BackgroundColor3 = Theme.Background
+    track.BorderSizePixel = 0
+    track.Position = UDim2.fromOffset(0, 48)
+    track.Size = UDim2.new(1, 0, 0, 6)
+    track.Parent = row
+    corner(track, 3)
+
+    local fill = Instance.new("Frame")
+    fill.BackgroundColor3 = getAccent()
+    fill.BorderSizePixel = 0
+    fill.Size = UDim2.new(0, 0, 1, 0)
+    fill.Parent = track
+    corner(fill, 3)
+
+    local knob = Instance.new("Frame")
+    knob.AnchorPoint = Vector2.new(0.5, 0.5)
+    knob.Size = UDim2.fromOffset(16, 16)
+    knob.BackgroundColor3 = Color3.new(1, 1, 1)
+    knob.BorderSizePixel = 0
+    knob.Position = UDim2.new(0, 0, 0.5, 0)
+    knob.Parent = track
+    corner(knob, 8)
+
+    local hit = Instance.new("TextButton")
+    hit.BackgroundTransparency = 1
+    hit.Text = ""
+    hit.Size = UDim2.new(1, 0, 0, 30)
+    hit.Position = UDim2.fromOffset(0, 36)
+    hit.Parent = row
+
+    local value = math.clamp(initial or min, min, max)
+    local dragging = false
+
+    local function setValue(v, fire)
+        value = math.clamp(math.floor(v + 0.5), min, max)
+        local alpha = (value - min) / (max - min)
+        fill.Size = UDim2.new(alpha, 0, 1, 0)
+        knob.Position = UDim2.new(alpha, 0, 0.5, 0)
+        valueLabel.Text = tostring(value)
+        if fire and callback then callback(value) end
+    end
+
+    local function fromX(x)
+        local alpha = math.clamp(
+            (x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1),
+            0,
+            1
+        )
+        setValue(min + (max - min) * alpha, true)
+    end
+
+    hit.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            fromX(input.Position.X)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (
+            input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch
+        ) then
+            fromX(input.Position.X)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    setValue(value, false)
+
+    return {
+        Row = row,
+        Set = function(v)
+            setValue(v, false)
+        end,
+        Get = function()
+            return value
+        end,
+    }
+end
+
+--// DROPDOWN
+local function createDropdown(parent, titleText, subtitleText, options, initial, callback)
+    local holder = Instance.new("Frame")
+    holder.BackgroundTransparency = 1
+    holder.Size = UDim2.new(1, 0, 0, 64)
+    holder.ClipsDescendants = true
+    holder.Parent = parent
+
+    local main = buttonBase(holder)
+    main.Position = UDim2.fromOffset(0, 0)
+    main.Size = UDim2.new(1, 0, 0, 52)
+    main.BackgroundColor3 = Theme.Background
+
+    local titleLabel = text(main, titleText, 12, Theme.Text, Enum.Font.GothamMedium)
+    titleLabel.Position = UDim2.fromOffset(12, 3)
+    titleLabel.Size = UDim2.new(0.55, 0, 0, 22)
+
+    local sub = text(main, subtitleText or "", 9, Theme.Muted, Enum.Font.Gotham)
+    sub.Position = UDim2.fromOffset(12, 25)
+    sub.Size = UDim2.new(0.55, 0, 0, 18)
+
+    local selected = initial or options[1]
+    local valueLabel = text(main, tostring(selected), 11, getAccent(), Enum.Font.GothamMedium)
+    valueLabel.AnchorPoint = Vector2.new(1, 0)
+    valueLabel.Position = UDim2.new(1, -30, 0, 0)
+    valueLabel.Size = UDim2.fromOffset(110, 52)
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+    local arrow = text(main, "⌄", 17, Theme.Secondary, Enum.Font.Gotham)
+    arrow.AnchorPoint = Vector2.new(1, 0)
+    arrow.Position = UDim2.new(1, -10, 0, 0)
+    arrow.Size = UDim2.fromOffset(18, 52)
+    arrow.TextXAlignment = Enum.TextXAlignment.Center
+
+    local optionsFrame = Instance.new("Frame")
+    optionsFrame.BackgroundColor3 = Theme.Card
+    optionsFrame.BorderSizePixel = 0
+    optionsFrame.Position = UDim2.fromOffset(0, 58)
+    optionsFrame.Size = UDim2.new(1, 0, 0, #options * 38)
+    optionsFrame.Visible = false
+    optionsFrame.Parent = holder
+    corner(optionsFrame, 12)
+    stroke(optionsFrame, Theme.Border, 0.2, 1)
+
+    local list = Instance.new("UIListLayout")
+    list.SortOrder = Enum.SortOrder.LayoutOrder
+    list.Parent = optionsFrame
+
+    local opened = false
+
+    local function close()
+        opened = false
+        optionsFrame.Visible = false
+        holder.Size = UDim2.new(1, 0, 0, 64)
+        arrow.Text = "⌄"
+    end
+
+    for i, option in ipairs(options) do
+        local optionButton = buttonBase(optionsFrame)
+        optionButton.Size = UDim2.new(1, 0, 0, 38)
+        optionButton.BackgroundTransparency = 1
+
+        local optionText = text(optionButton, tostring(option), 11, Theme.Secondary, Enum.Font.Gotham)
+        optionText.Position = UDim2.fromOffset(12, 0)
+        optionText.Size = UDim2.new(1, -24, 1, 0)
+
+        optionButton.Activated:Connect(function()
+            selected = option
+            valueLabel.Text = tostring(selected)
+            if callback then callback(selected) end
+            close()
+        end)
+    end
+
+    main.Activated:Connect(function()
+        opened = not opened
+        if opened then
+            optionsFrame.Visible = true
+            holder.Size = UDim2.new(1, 0, 0, 64 + optionsFrame.Size.Y.Offset + 6)
+            arrow.Text = "⌃"
+        else
+            close()
+        end
+    end)
+
+    return {
+        Holder = holder,
+        Set = function(v)
+            selected = v
+            valueLabel.Text = tostring(v)
+        end,
+        Get = function()
+            return selected
+        end,
+    }
+end
+
+--// TWO COLUMN CARD
+local function createTwoColumn(parent, leftTitle, rightTitle, height)
+    local holder = Instance.new("Frame")
+    holder.BackgroundTransparency = 1
+    holder.Size = UDim2.new(1, 0, 0, height or 180)
+    holder.Parent = parent
+
+    local left = createCard(holder, leftTitle, nil, height or 180)
+    left.Position = UDim2.fromScale(0, 0)
+    left.Size = UDim2.new(0.5, -6, 1, 0)
+
+    local right = createCard(holder, rightTitle, nil, height or 180)
+    right.Position = UDim2.new(0.5, 6, 0, 0)
+    right.Size = UDim2.new(0.5, -6, 1, 0)
+
+    return left, right
+end
+
+--// DEMO PREVIEW
+local function createPreview(parent)
+    local preview = Instance.new("Frame")
+    preview.BackgroundColor3 = Theme.Background
+    preview.BorderSizePixel = 0
+    preview.Size = UDim2.new(1, 0, 0, 176)
+    preview.Parent = parent
+    corner(preview, 14)
+    stroke(preview, Theme.Border, 0.2, 1)
+
+    local title = text(preview, "LIVE PREVIEW", 9, Theme.Muted, Enum.Font.GothamBold)
+    title.Position = UDim2.fromOffset(14, 10)
+    title.Size = UDim2.fromOffset(120, 18)
+
+    local fake = Instance.new("Frame")
+    fake.AnchorPoint = Vector2.new(0.5, 0.5)
+    fake.Position = UDim2.fromScale(0.5, 0.56)
+    fake.Size = UDim2.fromOffset(270, 104)
+    fake.BackgroundColor3 = Theme.Window
+    fake.BorderSizePixel = 0
+    fake.Parent = preview
+    corner(fake, 14)
+    stroke(fake, Theme.Border, 0.15, 1)
+
+    local fakeSide = Instance.new("Frame")
+    fakeSide.BackgroundColor3 = Theme.Sidebar
+    fakeSide.BorderSizePixel = 0
+    fakeSide.Position = UDim2.fromOffset(8, 8)
+    fakeSide.Size = UDim2.new(0, 66, 1, -16)
+    fakeSide.Parent = fake
+    corner(fakeSide, 9)
+
+    local fakeDot = Instance.new("Frame")
+    fakeDot.BackgroundColor3 = getAccent()
+    fakeDot.BorderSizePixel = 0
+    fakeDot.Position = UDim2.fromOffset(16, 18)
+    fakeDot.Size = UDim2.fromOffset(34, 4)
+    fakeDot.Parent = fakeSide
+    corner(fakeDot, 2)
+
+    for i = 1, 3 do
+        local line = Instance.new("Frame")
+        line.BackgroundColor3 = i == 1 and getAccent() or Theme.Muted
+        line.BackgroundTransparency = i == 1 and 0.05 or 0.65
+        line.BorderSizePixel = 0
+        line.Position = UDim2.fromOffset(16, 36 + (i - 1) * 16)
+        line.Size = UDim2.fromOffset(34, 5)
+        line.Parent = fakeSide
+        corner(line, 2)
+    end
+
+    for i = 1, 2 do
+        local c = Instance.new("Frame")
+        c.BackgroundColor3 = Theme.Card
+        c.BorderSizePixel = 0
+        c.Position = UDim2.fromOffset(84 + (i - 1) * 88, 14)
+        c.Size = UDim2.fromOffset(78, 76)
+        c.Parent = fake
+        corner(c, 10)
+        stroke(c, Theme.Border, 0.25, 1)
+
+        local bar = Instance.new("Frame")
+        bar.BackgroundColor3 = getAccent()
+        bar.BackgroundTransparency = 0.15
+        bar.BorderSizePixel = 0
+        bar.Position = UDim2.fromOffset(10, 14)
+        bar.Size = UDim2.fromOffset(30, 4)
+        bar.Parent = c
+        corner(bar, 2)
+
+        local tiny = Instance.new("Frame")
+        tiny.BackgroundColor3 = Theme.Muted
+        tiny.BackgroundTransparency = 0.4
+        tiny.BorderSizePixel = 0
+        tiny.Position = UDim2.fromOffset(10, 30)
+        tiny.Size = UDim2.fromOffset(48, 4)
+        tiny.Parent = c
+        corner(tiny, 2)
+    end
+
+    return preview
+end
+
+--// PAGE BUILDERS
+local Pages = {}
+
+local function clearContent()
+    for _, child in ipairs(ContentScroll:GetChildren()) do
+        if child:IsA("GuiObject") and child ~= ContentPadding and child ~= ContentLayout then
+            child:Destroy()
+        end
+    end
+end
+
+function Pages.AimBot()
+    createSectionHeader(
+        ContentScroll,
+        "AIMBOT",
+        "Precision interface • visual controls only"
+    )
+
+    local status = createCard(
+        ContentScroll,
+        "Interface Status",
+        "A clean dashboard surface for your own systems",
+        88
+    )
+
+    local dot = Instance.new("Frame")
+    dot.BackgroundColor3 = Theme.Success
+    dot.BorderSizePixel = 0
+    dot.Position = UDim2.fromOffset(16, 55)
+    dot.Size = UDim2.fromOffset(7, 7)
+    dot.Parent = status
+    corner(dot, 4)
+
+    local ready = text(status, "READY", 10, Theme.Success, Enum.Font.GothamBold)
+    ready.Position = UDim2.fromOffset(30, 49)
+    ready.Size = UDim2.fromOffset(80, 20)
+
+    local preview = createPreview(ContentScroll)
+
+    local card = createCard(
+        ContentScroll,
+        "Control Surface",
+        "Demo controls for the interface",
+        178
+    )
+    padding(card, 12)
+
+    local toggle = createToggle(
+        card,
+        "Enable interface",
+        "Visual state only",
+        State.DemoValues.AimEnabled,
+        function(v)
+            State.DemoValues.AimEnabled = v
+            notify(v and "Interface enabled" or "Interface disabled", v and "success" or "info")
+        end
+    )
+
+    local slider = createSlider(
+        card,
+        "Assist strength",
+        "Demo value • no gameplay logic",
+        0, 100,
+        State.DemoValues.AssistStrength,
+        function(v)
+            State.DemoValues.AssistStrength = v
+        end
+    )
+
+    local fov = createSlider(
+        card,
+        "Preview radius",
+        "UI demonstration value",
+        30, 240,
+        State.DemoValues.FOV,
+        function(v)
+            State.DemoValues.FOV = v
+        end
+    )
+end
+
+function Pages.Visuals()
+    createSectionHeader(
+        ContentScroll,
+        "VISUALS",
+        "Preview and presentation controls"
+    )
+
+    local preview = createPreview(ContentScroll)
+
+    local card = createCard(
+        ContentScroll,
+        "Preview Elements",
+        "Toggle visual examples",
+        238
+    )
+    padding(card, 12)
+
+    createToggle(
+        card,
+        "Live preview",
+        "Keep the preview surface active",
+        State.DemoValues.VisualPreview,
+        function(v)
+            State.DemoValues.VisualPreview = v
+        end
+    )
+
+    createToggle(
+        card,
+        "Boxes",
+        "Demo overlay element",
+        State.DemoValues.Boxes,
+        function(v)
+            State.DemoValues.Boxes = v
+        end
+    )
+
+    createToggle(
+        card,
+        "Names",
+        "Demo label element",
+        State.DemoValues.Names,
+        function(v)
+            State.DemoValues.Names = v
+        end
+    )
+
+    createToggle(
+        card,
+        "Distance",
+        "Demo distance label",
+        State.DemoValues.Distance,
+        function(v)
+            State.DemoValues.Distance = v
+        end
+    )
+end
+
+function Pages.Huyna()
+    createSectionHeader(
+        ContentScroll,
+        "HUЯNA",
+        "Utilities and interface experiments"
+    )
+
+    local hero = createCard(
+        ContentScroll,
+        "Utility Hub",
+        "A place for your own non-gameplay utilities",
+        108
+    )
+
+    local status = text(hero, "●  READY", 10, Theme.Success, Enum.Font.GothamBold)
+    status.Position = UDim2.fromOffset(16, 62)
+    status.Size = UDim2.fromOffset(100, 22)
+
+    local card = createCard(
+        ContentScroll,
+        "Utility Controls",
+        "Example controls",
+        206
+    )
+    padding(card, 12)
+
+    createToggle(
+        card,
+        "Utility demo",
+        "Visual state only",
+        State.DemoValues.UtilityDemo,
+        function(v)
+            State.DemoValues.UtilityDemo = v
+        end
+    )
+
+    createDropdown(
+        card,
+        "Display mode",
+        "Choose a presentation style",
+        {"Minimal", "Glass", "Holographic", "Monochrome"},
+        "Glass",
+        function(value)
+            notify("Display mode: " .. tostring(value), "info")
+        end
+    )
+
+    createSlider(
+        card,
+        "Intensity",
+        "Visual demonstration",
+        0, 100, 55,
+        function()
+        end
+    )
+end
+
+function Pages.Settings()
+    createSectionHeader(
+        ContentScroll,
+        "SETTINGS",
+        "Appearance, motion and performance"
+    )
+
+    local appearance = createCard(
+        ContentScroll,
+        "Appearance",
+        "Make SeraphiCA yours",
+        260
+    )
+    padding(appearance, 12)
+
+    createDropdown(
+        appearance,
+        "Theme",
+        "Choose the global visual system",
+        {"Obsidian", "Arctic", "Aurora", "Nebula", "Crimson", "Monochrome"},
+        State.ThemeName,
+        function(value)
+            State.ThemeName = value
+            Theme = Themes[value]
+            State.Accent = nil
+            applyTheme()
+            notify("Theme applied: " .. value, "success")
+        end
+    )
+
+    createDropdown(
+        appearance,
+        "UI scale",
+        "Tablet-friendly interface size",
+        {"80%", "90%", "100%", "110%", "120%"},
+        "100%",
+        function(value)
+            local n = tonumber(string.sub(value, 1, -2)) or 100
+            State.UIScale = n / 100
+            WindowScale.Scale = State.UIScale
+            notify("UI scale: " .. value, "info")
+        end
+    )
+
+    createDropdown(
+        appearance,
+        "Density",
+        "Spacing between controls",
+        {"Compact", "Comfortable", "Spacious"},
+        State.Density,
+        function(value)
+            State.Density = value
+            notify("Density: " .. value, "info")
+        end
+    )
+
+    createDropdown(
+        appearance,
+        "Corners",
+        "Global corner personality",
+        {"Sharp", "Soft", "Rounded", "Ultra Rounded"},
+        State.CornerMode,
+        function(value)
+            State.CornerMode = value
+            notify("Corner style: " .. value, "info")
+        end
+    )
+
+    local motion = createCard(
+        ContentScroll,
+        "Motion & Effects",
+        "Control visual intensity",
+        286
+    )
+    padding(motion, 12)
+
+    createToggle(
+        motion,
+        "Animations",
+        "Page and component transitions",
+        State.Animations,
+        function(v)
+            State.Animations = v
+        end
+    )
+
+    createToggle(
+        motion,
+        "Glow",
+        "Accent lighting and highlights",
+        State.Glow,
+        function(v)
+            State.Glow = v
+        end
+    )
+
+    createToggle(
+        motion,
+        "Ambient light",
+        "Soft background lighting",
+        State.Ambient,
+        function(v)
+            State.Ambient = v
+        end
+    )
+
+    createToggle(
+        motion,
+        "Particles",
+        "Small decorative particles",
+        State.Particles,
+        function(v)
+            State.Particles = v
+        end
+    )
+
+    createToggle(
+        motion,
+        "Reduced motion",
+        "Shorter and simpler transitions",
+        State.ReducedMotion,
+        function(v)
+            State.ReducedMotion = v
+        end
+    )
+
+    local performance = createCard(
+        ContentScroll,
+        "Performance",
+        "Tune effects for a tablet",
+        160
+    )
+    padding(performance, 12)
+
+    createDropdown(
+        performance,
+        "Effects budget",
+        "Recommended for tablet hardware",
+        {"Performance", "Balanced", "Ultra"},
+        State.Performance,
+        function(value)
+            State.Performance = value
+            if value == "Performance" then
+                State.Particles = false
+                State.Glow = false
+            elseif value == "Balanced" then
+                State.Particles = true
+                State.Glow = true
+            elseif value == "Ultra" then
+                State.Particles = true
+                State.Glow = true
+            end
+            notify("Performance: " .. value, "info")
+        end
+    )
+end
+
+--// NOTIFICATION SYSTEM
+local ToastLayer = Instance.new("Frame")
+ToastLayer.Name = "ToastLayer"
+ToastLayer.AnchorPoint = Vector2.new(1, 0)
+ToastLayer.Position = UDim2.new(1, -18, 0, 70)
+ToastLayer.Size = UDim2.fromOffset(290, 360)
+ToastLayer.BackgroundTransparency = 1
+ToastLayer.ZIndex = 80
+ToastLayer.Parent = Gui
+
+local ToastLayout = Instance.new("UIListLayout")
+ToastLayout.Padding = UDim.new(0, 8)
+ToastLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+ToastLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+ToastLayout.Parent = ToastLayer
+
+notify = function(message, kind)
+    if not State.Notifications then return end
+
+    local color = getAccent()
+    if kind == "success" then
+        color = Theme.Success
+    elseif kind == "error" then
+        color = Theme.Danger
+    elseif kind == "warning" then
+        color = Theme.Warning
+    end
+
+    local toast = Instance.new("Frame")
+    toast.BackgroundColor3 = Theme.Card
+    toast.BackgroundTransparency = 0.02
+    toast.BorderSizePixel = 0
+    toast.Size = UDim2.fromOffset(280, 62)
+    toast.ZIndex = 81
+    toast.Parent = ToastLayer
+    corner(toast, 14)
+    stroke(toast, Theme.Border, 0.2, 1)
+
+    local bar = Instance.new("Frame")
+    bar.BackgroundColor3 = color
+    bar.BorderSizePixel = 0
+    bar.Size = UDim2.fromOffset(3, 30)
+    bar.Position = UDim2.fromOffset(10, 16)
+    bar.ZIndex = 82
+    bar.Parent = toast
+    corner(bar, 2)
+
+    local icon = text(toast, kind == "success" and "✓" or kind == "error" and "!" or "●", 13, color, Enum.Font.GothamBold)
+    icon.Position = UDim2.fromOffset(24, 9)
+    icon.Size = UDim2.fromOffset(20, 20)
+    icon.ZIndex = 82
+
+    local label = text(toast, message, 11, Theme.Text, Enum.Font.GothamMedium)
+    label.Position = UDim2.fromOffset(48, 7)
+    label.Size = UDim2.new(1, -60, 0, 24)
+    label.TextWrapped = true
+    label.ZIndex = 82
+
+    local sub = text(toast, "SeraphiCA", 9, Theme.Muted, Enum.Font.Gotham)
+    sub.Position = UDim2.fromOffset(48, 33)
+    sub.Size = UDim2.new(1, -60, 0, 18)
+    sub.ZIndex = 82
+
+    toast.Position = UDim2.fromOffset(40, 0)
+    toast.BackgroundTransparency = 1
+    tween(toast, 0.28, {
+        Position = UDim2.fromOffset(0, 0),
+        BackgroundTransparency = 0.02,
+    }, Enum.EasingStyle.Quint)
+
+    task.delay(2.8, function()
+        if toast.Parent then
+            tween(toast, 0.22, {
+                Position = UDim2.fromOffset(30, 0),
+                BackgroundTransparency = 1,
+            })
+            task.wait(0.25)
+            safeDestroy(toast)
+        end
+    end)
+end
+
+--// SEARCH BUTTON
+local SearchButton = buttonBase(Header)
+SearchButton.AnchorPoint = Vector2.new(1, 0)
+SearchButton.Position = UDim2.new(1, -82, 0, 5)
+SearchButton.Size = UDim2.fromOffset(30, 30)
+SearchButton.BackgroundTransparency = 1
+
+local SearchIcon = text(SearchButton, "⌕", 18, Theme.Secondary, Enum.Font.Gotham)
+SearchIcon.Size = UDim2.fromScale(1, 1)
+SearchIcon.TextXAlignment = Enum.TextXAlignment.Center
+
+--// SEARCH OVERLAY
+local SearchBox = Instance.new("Frame")
+SearchBox.AnchorPoint = Vector2.new(0.5, 0)
+SearchBox.Position = UDim2.new(0.5, 0, 0, 78)
+SearchBox.Size = UDim2.fromOffset(460, 52)
+SearchBox.BackgroundColor3 = Theme.Card
+SearchBox.BorderSizePixel = 0
+SearchBox.Visible = false
+SearchBox.ZIndex = 70
+SearchBox.Parent = Gui
+corner(SearchBox, 16)
+stroke(SearchBox, Theme.Border, 0.1, 1)
+
+local SearchInput = Instance.new("TextBox")
+SearchInput.BackgroundTransparency = 1
+SearchInput.ClearTextOnFocus = false
+SearchInput.PlaceholderText = "Search settings..."
+SearchInput.PlaceholderColor3 = Theme.Muted
+SearchInput.Text = ""
+SearchInput.TextColor3 = Theme.Text
+SearchInput.TextSize = 12
+SearchInput.Font = Enum.Font.Gotham
+SearchInput.Position = UDim2.fromOffset(16, 0)
+SearchInput.Size = UDim2.new(1, -32, 1, 0)
+SearchInput.TextXAlignment = Enum.TextXAlignment.Left
+SearchInput.Parent = SearchBox
+
+SearchButton.Activated:Connect(function()
+    SearchBox.Visible = not SearchBox.Visible
+    if SearchBox.Visible then
+        SearchInput:CaptureFocus()
+    end
+end)
+
+SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
+    State.Search = SearchInput.Text
+end)
+
+--// RIPPLE
+local function ripple(button, position)
+    local r = Instance.new("Frame")
+    r.BackgroundColor3 = getAccent()
+    r.BackgroundTransparency = 0.78
+    r.BorderSizePixel = 0
+    r.Size = UDim2.fromOffset(8, 8)
+    r.AnchorPoint = Vector2.new(0.5, 0.5)
+    r.Position = UDim2.fromOffset(
+        position.X - button.AbsolutePosition.X,
+        position.Y - button.AbsolutePosition.Y
+    )
+    r.ZIndex = button.ZIndex + 5
+    r.Parent = button
+    corner(r, 100)
+
+    local target = math.max(button.AbsoluteSize.X, button.AbsoluteSize.Y) * 2.4
+    tween(r, 0.42, {
+        Size = UDim2.fromOffset(target, target),
+        BackgroundTransparency = 1,
+    }, Enum.EasingStyle.Quad)
+
+    task.delay(0.45, function()
+        safeDestroy(r)
+    end)
+end
+
+Gui.DescendantAdded:Connect(function(obj)
+    if obj:IsA("TextButton") then
+        obj.Activated:Connect(function()
+            if obj.Visible and obj.Active then
+                local p = UserInputService:GetMouseLocation()
+                ripple(obj, p)
+            end
+        end)
+    end
+end)
+
+--// TAB DISPLAY
+showTab = function(name)
+    State.Tab = name
+
+    for tabName, data in pairs(TabButtons) do
+        local active = tabName == name
+        tween(data.Button, 0.18, {
+            BackgroundColor3 = active and Theme.CardActive or Theme.Card,
+            BackgroundTransparency = active and 0.02 or 0.4,
+        })
+
+        tween(data.Icon, 0.18, {
+            TextColor3 = active and getAccent() or Theme.Secondary,
+        })
+
+        tween(data.Title, 0.18, {
+            TextColor3 = active and Theme.Text or Theme.Secondary,
+        })
+
+        if active then
+            local target = data.Holder.AbsolutePosition.Y - Sidebar.AbsolutePosition.Y + 3
+            tween(ActiveIndicator, 0.28, {
+                Position = UDim2.fromOffset(10, target),
+                BackgroundColor3 = getAccent(),
+            }, Enum.EasingStyle.Quint)
+        end
+    end
+
+    clearContent()
+
+    if Pages[name] then
+        Pages[name]()
+    end
+
+    ContentScroll.CanvasPosition = Vector2.zero
+end
+
+--// THEME APPLICATION
+applyTheme = function()
+    Window.BackgroundColor3 = Theme.Window
+    WindowGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Theme.Window),
+        ColorSequenceKeypoint.new(1, Theme.Background),
+    })
+
+    Sidebar.BackgroundColor3 = Theme.Sidebar
+    Divider.BackgroundColor3 = Theme.Border
+    Brand.TextColor3 = getAccent()
+    BrandTitle.TextColor3 = Theme.Text
+    BrandSub.TextColor3 = Theme.Muted
+    ClockLabel.TextColor3 = Theme.Secondary
+    CloseText.TextColor3 = Theme.Secondary
+
+    Island.BackgroundColor3 = Theme.Window
+    IslandDot.BackgroundColor3 = getAccent()
+    IslandText.TextColor3 = Theme.Text
+    IslandClock.TextColor3 = Theme.Secondary
+
+    AmbientA.BackgroundColor3 = getAccent()
+    AmbientB.BackgroundColor3 = Theme.Accent2
+
+    ActiveIndicator.BackgroundColor3 = getAccent()
+    ContentScroll.ScrollBarImageColor3 = getAccent()
+
+    -- Rebuild the current page so all generated components inherit the theme.
+    showTab(State.Tab)
+end
+
+--// WINDOW / ISLAND MORPH
+local function setWindowVisibility(visible)
+    if visible then
+        Window.Visible = true
+        WindowScale.Scale = 0.90 * State.UIScale
+        Window.BackgroundTransparency = 0.2
+
+        tween(WindowScale, 0.48, {
+            Scale = State.UIScale
+        }, Enum.EasingStyle.Back)
+
+        tween(Window, 0.35, {
+            BackgroundTransparency = 0,
+        }, Enum.EasingStyle.Quint)
+    else
+        tween(WindowScale, 0.28, {
+            Scale = 0.92 * State.UIScale
+        }, Enum.EasingStyle.Quint)
+
+        tween(Window, 0.2, {
+            BackgroundTransparency = 0.35,
+        })
+
+        task.delay(0.22, function()
+            if not State.Open then
+                Window.Visible = false
+            end
+        end)
+    end
+end
+
+openWindow = function()
+    if State.Open then return end
+    State.Open = true
+
+    tween(IslandScale, 0.30, {
+        Scale = 0.86
+    }, Enum.EasingStyle.Back)
+
+    tween(Island, 0.34, {
+        Size = UDim2.fromOffset(WINDOW_W, WINDOW_H),
+        Position = UI.WindowPosition,
+    }, Enum.EasingStyle.Quint)
+
+    task.delay(0.16, function()
+        if State.Open then
+            Island.Visible = false
+            setWindowVisibility(true)
+        end
+    end)
+end
+
+closeWindow = function()
+    if not State.Open then return end
+    State.Open = false
+
+    Window.Visible = false
+    Island.Visible = true
+    Island.Position = UDim2.new(0.5, 0, 0, 12)
+    Island.Size = UDim2.fromOffset(WINDOW_W, WINDOW_H)
+
+    tween(IslandScale, 0.32, {
+        Scale = 0.92
+    }, Enum.EasingStyle.Quint)
+
+    tween(Island, 0.40, {
+        Size = UDim2.fromOffset(ISLAND_W, ISLAND_H),
+    }, Enum.EasingStyle.Quint)
+
+    task.delay(0.28, function()
+        if not State.Open then
+            tween(IslandScale, 0.20, {Scale = 1}, Enum.EasingStyle.Back)
+        end
+    end)
+end
+
+openIsland = function()
+    if State.Open then
+        closeWindow()
+    else
+        openWindow()
+    end
+end
+
+Island.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        openIsland()
+    end
+end)
+
+CloseButton.Activated:Connect(closeWindow)
+
+--// DRAGGING
+do
+    local dragging = false
+    local dragStart
+    local startPos
+
+    Header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = Window.Position
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement
+            and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        local delta = input.Position - dragStart
+        Window.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+--// PARTICLE ENGINE
+local particles = {}
+local function createParticle()
+    if not State.Particles then return end
+    if State.Performance == "Performance" then return end
+
+    local p = Instance.new("Frame")
+    p.BackgroundColor3 = getAccent()
+    p.BackgroundTransparency = 0.72
+    p.BorderSizePixel = 0
+    p.Size = UDim2.fromOffset(math.random(2, 4), math.random(2, 4))
+    p.Position = UDim2.fromScale(math.random(), math.random())
+    p.ZIndex = 3
+    p.Parent = ParticleLayer
+    corner(p, 10)
+
+    table.insert(particles, {
+        Object = p,
+        Speed = math.random(3, 8),
+        Phase = math.random() * math.pi * 2,
     })
 end
 
--- GLOBAL STATES
-local aimState = { Enabled = false, Fov = 90, VisibleCheck = false, Aim360 = false }
-local espState = { Enabled = false, Box = false, Line = false, LinePos = "Top", Health = false }
-local huynaState = { ThirdPerson = 0, AntiAim = false, AntiAimType = "Random", BunnyHop = false, BhopSpeed = 50, AutoFarm = false }
-
--- NOTIFICATIONS
-local MenuBlur = Instance.new("BlurEffect")
-MenuBlur.Name = "SeraphiCA_Masterpiece_Blur"
-MenuBlur.Size = 0
-MenuBlur.Parent = Lighting
-
-local NotifHolder = Create("Frame", {Size = UDim2.new(0, 350, 1, 0), Position = UDim2.new(1, -370, 0, 0), BackgroundTransparency = 1, Parent = ScreenGui})
-Create("UIListLayout", {Padding = UDim.new(0, 10), VerticalAlignment = Enum.VerticalAlignment.Bottom, HorizontalAlignment = Enum.HorizontalAlignment.Right, Parent = NotifHolder})
-
-local function Notify(text, color)
-    local Notif = Create("Frame", {Size = UDim2.new(0, 320, 0, 50), BackgroundColor3 = Theme.Element, BackgroundTransparency = 0.1, BorderSizePixel = 0, Parent = NotifHolder})
-    AddSoftShadow(Notif, 30, 0.6)
-    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Notif})
-    Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = Notif})
-    Create("Frame", {Size = UDim2.new(0, 4, 0, 20), Position = UDim2.new(0, 15, 0.5, -10), BackgroundColor3 = color, BorderSizePixel = 0, Parent = Notif}, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
-    Create("TextLabel", {Size = UDim2.new(1, -40, 1, 0), Position = UDim2.new(0, 30, 0, 0), BackgroundTransparency = 1, Text = text, Font = Enum.Font.GothamMedium, TextSize = 14, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Left, Parent = Notif})
-    Notif.Position = UDim2.new(0, 350, 0, 0)
-    TweenService:Create(Notif, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
-    task.delay(3, function()
-        TweenService:Create(Notif, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0, 350, 0, 0)}):Play()
-        task.wait(0.4) Notif:Destroy()
-    end)
+for _ = 1, 12 do
+    createParticle()
 end
 
--- AIMBOT LOGIC
-local Camera = Workspace.CurrentCamera
-local FovCircle = Create("Frame", {
-    Size = UDim2.new(0, aimState.Fov * 2, 0, aimState.Fov * 2),
-    Position = UDim2.new(0.5, -aimState.Fov, 0.5, -aimState.Fov),
-    BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, Parent = ScreenGui
-})
-Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = FovCircle})
-local FovStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 1.5, Transparency = 0.2, Parent = FovCircle})
+RunService.RenderStepped:Connect(function(dt)
+    if not Window.Visible then return end
 
-local function getClosestPlayer()
-    local closestPlayer = nil
-    local shortestDist = aimState.Fov
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    local shortest3DDist = 500
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
-            local char = plr.Character
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if hum and hrp and hum.Health > 0 then
-                local isVisible = true
-                if aimState.VisibleCheck then
-                    local ray = Ray.new(Camera.CFrame.Position, hrp.Position - Camera.CFrame.Position)
-                    local hit = Workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, char})
-                    isVisible = (hit == nil or hit:IsDescendantOf(char))
-                end
-                if isVisible then
-                    if aimState.Aim360 then
-                        local charHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                        if charHrp then
-                            local dist3D = (hrp.Position - charHrp.Position).Magnitude
-                            if dist3D < shortest3DDist then shortest3DDist = dist3D closestPlayer = plr end
-                        end
-                    else
-                        local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                        if onScreen then
-                            local dist2D = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                            if dist2D < shortestDist then closestPlayer = plr shortestDist = dist2D end
-                        end
-                    end
-                end
+    for i = #particles, 1, -1 do
+        local item = particles[i]
+        local p = item.Object
+
+        if not p.Parent then
+            table.remove(particles, i)
+        else
+            local pos = p.Position
+            local x = pos.X.Scale + math.sin(os.clock() * 0.25 + item.Phase) * dt * 0.008
+            local y = pos.Y.Scale - dt * 0.002 * item.Speed
+
+            if y < -0.05 then
+                y = 1.05
+                x = math.random()
             end
+
+            p.Position = UDim2.fromScale(x, y)
         end
     end
-    return closestPlayer
-end
-
--- ESP LOGIC
-local espObjects = {}
-local function createEspForPlayer(player)
-    if espObjects[player] then return end
-    local espGui = Instance.new("Frame")
-    espGui.BackgroundTransparency = 1
-    espGui.Visible = false
-    espGui.Parent = ScreenGui
-
-    local box = Instance.new("Frame")
-    box.BackgroundTransparency = 1
-    box.BorderSizePixel = 0
-    box.Visible = false
-    box.Parent = espGui
-    local boxStroke = Instance.new("UIStroke")
-    boxStroke.Color = Color3.fromRGB(255, 255, 255)
-    boxStroke.Thickness = 1
-    boxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    boxStroke.Parent = box
-
-    local healthBg = Instance.new("Frame")
-    healthBg.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    healthBg.BorderSizePixel = 0
-    healthBg.Visible = false
-    healthBg.Parent = espGui
-
-    local healthFill = Instance.new("Frame")
-    healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-    healthFill.BorderSizePixel = 0
-    healthFill.Parent = healthBg
-
-    local healthText = Instance.new("TextLabel")
-    healthText.BackgroundTransparency = 1
-    healthText.Text = ""
-    healthText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    healthText.TextSize = 12
-    healthText.Font = Enum.Font.GothamMedium
-    healthText.Visible = false
-    healthText.Parent = espGui
-
-    local tracer = Instance.new("Frame")
-    tracer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    tracer.BorderSizePixel = 0
-    tracer.AnchorPoint = Vector2.new(0, 0.5)
-    tracer.Visible = false
-    tracer.Parent = espGui
-
-    espObjects[player] = {gui = espGui, box = box, healthBg = healthBg, healthFill = healthFill, healthText = healthText, tracer = tracer}
-end
-
-local function removeEspForPlayer(player)
-    local data = espObjects[player]
-    if data then data.gui:Destroy() espObjects[player] = nil end
-end
-
-local function updateEspForPlayer(player)
-    local data = espObjects[player]
-    if not data then return end
-    if not espState.Enabled or not player.Character then data.gui.Visible = false return end
-    local char = player.Character
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local head = char:FindFirstChild("Head")
-    if not hum or not hrp or not head or hum.Health <= 0 then data.gui.Visible = false return end
-
-    local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position)
-    local footPos, footOnScreen = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
-    if not headOnScreen and not footOnScreen then data.gui.Visible = false return end
-
-    local height = math.abs(footPos.Y - headPos.Y)
-    local width = height / 2
-    local centerX = (headPos.X + footPos.X) / 2
-    local topY = math.min(headPos.Y, footPos.Y)
-    if height < 10 then data.gui.Visible = false return end
-
-    data.gui.Visible = true
-
-    if espState.Box then
-        data.box.Visible = true
-        data.box.Size = UDim2.new(0, width, 0, height)
-        data.box.Position = UDim2.new(0, centerX - width / 2, 0, topY)
-    else data.box.Visible = false end
-
-    if espState.Health then
-        data.healthBg.Visible = true
-        data.healthText.Visible = true
-        local barWidth = 3
-        local barX = centerX - width / 2 - barWidth - 2
-        data.healthBg.Size = UDim2.new(0, barWidth, 0, height)
-        data.healthBg.Position = UDim2.new(0, barX, 0, topY)
-        local healthPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-        data.healthFill.Size = UDim2.new(1, 0, healthPct, 0)
-        data.healthText.Text = tostring(math.floor(hum.Health))
-        data.healthText.Size = UDim2.new(0, 50, 0, 15)
-        data.healthText.Position = UDim2.new(0, centerX - 25, 0, topY + height + 2)
-    else
-        data.healthBg.Visible = false
-        data.healthText.Visible = false
-    end
-
-    if espState.Line then
-        data.tracer.Visible = true
-        local startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-        if espState.LinePos == "Top" then startPos = Vector2.new(Camera.ViewportSize.X / 2, 0)
-        elseif espState.LinePos == "Bottom" then startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y) end
-        local endPos = Vector2.new(centerX, topY)
-        local dist = (endPos - startPos).Magnitude
-        local angle = math.atan2(endPos.Y - startPos.Y, endPos.X - startPos.X)
-        data.tracer.Size = UDim2.new(0, dist, 0, 1)
-        data.tracer.Position = UDim2.new(0, startPos.X, 0, startPos.Y)
-        data.tracer.Rotation = math.deg(angle)
-    else data.tracer.Visible = false end
-end
-
--- HUyna LOGIC
-local savedLookVector = Vector3.new(0, 0, -1)
-RunService.RenderStepped:Connect(function()
-    if huynaState.AntiAim then savedLookVector = Camera.CFrame.LookVector end
 end)
 
-RunService:BindToRenderStep("FixCameraAA", Enum.RenderPriority.Camera.Value + 1, function()
-    if huynaState.AntiAim then Camera.CFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + savedLookVector) end
+--// AMBIENT ANIMATION
+task.spawn(function()
+    while Gui.Parent do
+        if State.Ambient then
+            local t = os.clock()
+            AmbientA.Position = UDim2.fromScale(
+                0.28 + math.sin(t * 0.15) * 0.04,
+                0.32 + math.cos(t * 0.12) * 0.035
+            )
+
+            AmbientB.Position = UDim2.fromScale(
+                0.72 + math.cos(t * 0.13) * 0.04,
+                0.68 + math.sin(t * 0.16) * 0.035
+            )
+        end
+        task.wait(0.05)
+    end
 end)
 
-local antiAimLoop, bhopLoop, autoFarmLoop = nil, nil, nil
-local originalTransparencies = {}
-
-local function toggleAntiAim(state)
-    huynaState.AntiAim = state
-    if antiAimLoop then antiAimLoop:Disconnect() end
-    if state then
-        antiAimLoop = RunService.Heartbeat:Connect(function()
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChildOfClass("Humanoid") then
-                local hrp = char.HumanoidRootPart local hum = char.Humanoid
-                hum.AutoRotate = false
-                local spinAngle = huynaState.AntiAimType == "Jilter" and math.rad((tick() * 180) % 360) or math.rad(math.random(0, 360))
-                local yPos = math.sin(tick() * 40) * 2
-                local currentVel = hrp.AssemblyLinearVelocity
-                hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + yPos, hrp.Position.Z) * CFrame.Angles(0, spinAngle, 0)
-                hrp.AssemblyLinearVelocity = currentVel
-            end
-        end)
-    else
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChildOfClass("Humanoid") then char.Humanoid.AutoRotate = true end
-    end
+--// CLOCK
+local function updateClock()
+    local now = os.date("*t")
+    local value = string.format("%02d:%02d", now.hour, now.min)
+    ClockLabel.Text = value
+    IslandClock.Text = value
 end
 
-local function toggleBhop(state)
-    huynaState.BunnyHop = state
-    if bhopLoop then bhopLoop:Disconnect() end
-    if state then
-        bhopLoop = RunService.Heartbeat:Connect(function()
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChildOfClass("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
-                local hum = char.Humanoid local hrp = char.HumanoidRootPart
-                local isJumping = UserInputService:IsKeyDown(Enum.KeyCode.Space) or hum.Jump
-                if isJumping and hum.FloorMaterial ~= Enum.Material.Air then
-                    hum.Jump = true
-                    local lookVec = Camera.CFrame.LookVector
-                    lookVec = Vector3.new(lookVec.X, 0, lookVec.Z).Unit
-                    hrp.AssemblyLinearVelocity = Vector3.new(lookVec.X * huynaState.BhopSpeed, 50, lookVec.Z * huynaState.BhopSpeed)
-                end
-            end
+task.spawn(function()
+    while Gui.Parent do
+        updateClock()
+        task.wait(1)
+    end
+end)
+
+--// ISLAND PULSE
+task.spawn(function()
+    while Gui.Parent do
+        local alpha = 0.45 + math.sin(os.clock() * 2) * 0.15
+        IslandDot.BackgroundTransparency = alpha
+        task.wait(0.04)
+    end
+end)
+
+--// TOUCH SPOTLIGHT
+local TouchLight = Instance.new("Frame")
+TouchLight.Name = "TouchLight"
+TouchLight.AnchorPoint = Vector2.new(0.5, 0.5)
+TouchLight.Size = UDim2.fromOffset(80, 80)
+TouchLight.BackgroundColor3 = getAccent()
+TouchLight.BackgroundTransparency = 0.95
+TouchLight.BorderSizePixel = 0
+TouchLight.Visible = false
+TouchLight.ZIndex = 60
+TouchLight.Parent = Gui
+corner(TouchLight, 40)
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        if not State.Open then return end
+        if State.Performance == "Performance" then return end
+
+        TouchLight.Visible = true
+        TouchLight.Position = UDim2.fromOffset(input.Position.X, input.Position.Y)
+
+        tween(TouchLight, 0.18, {
+            Size = UDim2.fromOffset(110, 110),
+            BackgroundTransparency = 0.97,
+        })
+
+        task.delay(0.18, function()
+            TouchLight.Visible = false
         end)
     end
-end
+end)
 
-local function toggleAutoFarm(state)
-    huynaState.AutoFarm = state
-    if autoFarmLoop then autoFarmLoop:Disconnect() end
-    if state then
-        local char = LocalPlayer.Character
-        if char then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then originalTransparencies[part] = part.Transparency part.Transparency = 1 end
-                if part:IsA("Decal") then originalTransparencies[part] = part.Transparency part.Transparency = 1 end
-            end
-        end
-        autoFarmLoop = RunService.Heartbeat:Connect(function()
-            local myChar = LocalPlayer.Character
-            if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
-            local myHrp = myChar.HumanoidRootPart local myHum = myChar.Humanoid
-            local myTool = myChar:FindFirstChildOfClass("Tool") or (LocalPlayer.Backpack and LocalPlayer.Backpack:FindFirstChildOfClass("Tool"))
-            if not myTool then return end
-            if myTool.Parent == LocalPlayer.Backpack then myHum:EquipTool(myTool) end
+--// KEYBOARD SUPPORT
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
 
-            local closest, shortestDist = nil, math.huge
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
-                    local dist = (p.Character.HumanoidRootPart.Position - myHrp.Position).Magnitude
-                    if dist < shortestDist then shortestDist = dist closest = p end
-                end
-            end
-            if closest then
-                local targetHrp = closest.Character.HumanoidRootPart
-                myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 3)
-                myHrp.CFrame = CFrame.lookAt(myHrp.Position, targetHrp.Position)
-                myTool:Activate()
-            end
-        end)
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        openIsland()
+    elseif input.KeyCode == Enum.KeyCode.Escape and State.Open then
+        closeWindow()
+    end
+end)
+
+--// RESPONSIVE SCALE
+local Camera = workspace.CurrentCamera
+
+local function updateResponsiveScale()
+    if not Camera then return end
+
+    local viewport = Camera.ViewportSize
+    local maxW = math.max(viewport.X - 28, 420)
+    local maxH = math.max(viewport.Y - 80, 320)
+
+    local scaleW = maxW / WINDOW_W
+    local scaleH = maxH / WINDOW_H
+    local fit = math.min(1, scaleW, scaleH)
+
+    if fit < 0.82 then
+        WindowScale.Scale = fit
     else
-        local char = LocalPlayer.Character
-        if char then
-            for part, trans in pairs(originalTransparencies) do
-                if part.Parent then part.Transparency = trans end
-            end
-        end
-        originalTransparencies = {}
+        WindowScale.Scale = State.UIScale
     end
 end
 
-RunService.RenderStepped:Connect(function()
-    -- Aimbot
-    if aimState.Enabled then
-        FovCircle.Visible = true
-        FovCircle.Size = UDim2.new(0, aimState.Fov * 2, 0, aimState.Fov * 2)
-        FovCircle.Position = UDim2.new(0.5, -aimState.Fov, 0.5, -aimState.Fov)
-        local target = getClosestPlayer()
-        if target then
-            local hrp = target.Character.HumanoidRootPart
-            local currentCFrame = Camera.CFrame
-            local targetCFrame = CFrame.lookAt(currentCFrame.Position, hrp.Position)
-            Camera.CFrame = currentCFrame:Lerp(targetCFrame, 1)
-        end
-    else FovCircle.Visible = false end
-    
-    -- ESP
-    if espState.Enabled then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                if not espObjects[player] then createEspForPlayer(player) end
-                updateEspForPlayer(player)
-            end
-        end
-    else
-        for _, data in pairs(espObjects) do data.gui.Visible = false end
-    end
-    for player, _ in pairs(espObjects) do
-        if not Players:FindFirstChild(player.Name) then removeEspForPlayer(player) end
-    end
+if Camera then
+    Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateResponsiveScale)
+end
+
+updateResponsiveScale()
+
+--// APPLY THEME TO CURRENT GENERATED OBJECTS
+applyTheme = function()
+    -- Window shell
+    Window.BackgroundColor3 = Theme.Window
+    Sidebar.BackgroundColor3 = Theme.Sidebar
+    Divider.BackgroundColor3 = Theme.Border
+    TopHighlight.BackgroundColor3 = Color3.new(1, 1, 1)
+
+    -- Header
+    Brand.TextColor3 = getAccent()
+    BrandTitle.TextColor3 = Theme.Text
+    BrandSub.TextColor3 = Theme.Muted
+    ClockLabel.TextColor3 = Theme.Secondary
+    CloseText.TextColor3 = Theme.Secondary
+
+    -- Island
+    Island.BackgroundColor3 = Theme.Window
+    IslandDot.BackgroundColor3 = getAccent()
+    IslandText.TextColor3 = Theme.Text
+    IslandClock.TextColor3 = Theme.Secondary
+
+    -- Ambient
+    AmbientA.BackgroundColor3 = getAccent()
+    AmbientB.BackgroundColor3 = Theme.Accent2
+
+    -- Content
+    ContentScroll.ScrollBarImageColor3 = getAccent()
+    ActiveIndicator.BackgroundColor3 = getAccent()
+
+    -- Rebuild current page.
+    showTab(State.Tab)
+end
+
+--// STARTUP
+showTab("AimBot")
+updateClock()
+
+--// INITIAL ISLAND STATE
+Island.Visible = true
+Window.Visible = false
+
+--// INTRO ANIMATION
+IslandScale.Scale = 0.78
+Island.BackgroundTransparency = 1
+
+task.delay(0.12, function()
+    tween(IslandScale, 0.5, {Scale = 1}, Enum.EasingStyle.Back)
+    tween(Island, 0.4, {BackgroundTransparency = 0}, Enum.EasingStyle.Quint)
 end)
 
-Players.PlayerRemoving:Connect(removeEspForPlayer)
-
--- ========================================================================================
--- INTERACTIVE WATERMARK
--- ========================================================================================
-local Watermark = Create("TextButton", {Size = UDim2.new(0, 240, 0, 38), Position = UDim2.new(0.5, -120, 0, 15), BackgroundColor3 = Color3.fromRGB(20, 20, 25), BackgroundTransparency = 0.3, AutoButtonColor = false, Text = "", Parent = ScreenGui})
-AddSoftShadow(Watermark, 20, 0.7)
-Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Watermark})
-local WmStroke = Create("UIStroke", {Color = Color3.fromRGB(255, 255, 255), Thickness = 1, Transparency = 0.8, Parent = Watermark})
-
-local WmText = Create("TextLabel", {Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 10, 0, 0), BackgroundTransparency = 1, Text = "SeraphiCA  |  00:00:00  |  60 FPS", Font = Enum.Font.GothamMedium, TextSize = 13, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, Parent = Watermark})
-
-local fps = 60 local frames = 0 local lastTime = tick()
-local isExpanded = false
-RunService.RenderStepped:Connect(function()
-    frames = frames + 1
-    if tick() - lastTime >= 1 then
-        fps = frames frames = 0 lastTime = tick()
-        if not isExpanded then WmText.Text = "SeraphiCA  |  " .. os.date("%H:%M:%S") .. "  |  " .. tostring(fps) .. " FPS" end
-    end
+task.delay(0.65, function()
+    notify("SeraphiCA is ready", "success")
 end)
 
-local SkullBtn = Create("TextButton", {Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0.5, -50, 0.5, -20), BackgroundColor3 = Color3.fromRGB(255, 255, 255), AutoButtonColor = false, Visible = false, Parent = Watermark})
-Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = SkullBtn})
-local SkullStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 0, Transparency = 1, Parent = SkullBtn})
+--// PUBLIC API
+local SeraphiCA = {}
 
-local SkullHead = Create("Frame", {Size = UDim2.new(0, 20, 0, 22), Position = UDim2.new(0.5, -10, 0, 6), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Parent = SkullBtn})
-Create("UICorner", {CornerRadius = UDim.new(0.5, 0), Parent = SkullHead})
-local SkullJaw = Create("Frame", {Size = UDim2.new(0, 14, 0, 8), Position = UDim2.new(0.5, -7, 0, 24), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Parent = SkullBtn})
-Create("UICorner", {CornerRadius = UDim.new(0.2, 0), Parent = SkullJaw})
-Create("Frame", {Size = UDim2.new(0, 5, 0, 5), Position = UDim2.new(0, 4, 0, 6), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = SkullHead}, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
-Create("Frame", {Size = UDim2.new(0, 5, 0, 5), Position = UDim2.new(1, -9, 0, 6), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = SkullHead}, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
-Create("Frame", {Size = UDim2.new(0, 3, 0, 3), Position = UDim2.new(0.5, -1.5, 0, 13), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = SkullHead}, {Create("UICorner", {CornerRadius = UDim.new(1, 0)})})
+function SeraphiCA:Open()
+    openWindow()
+end
 
-local EyeBtn = Create("TextButton", {Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0.5, 10, 0.5, -20), BackgroundColor3 = Color3.fromRGB(255, 255, 255), AutoButtonColor = false, Visible = false, Parent = Watermark})
-Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = EyeBtn})
-local EyeStroke = Create("UIStroke", {Color = Theme.Accent, Thickness = 0, Transparency = 1, Parent = EyeBtn})
-local EyeShape = Create("Frame", {Size = UDim2.new(0, 24, 0, 16), Position = UDim2.new(0.5, -12, 0.5, -8), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Parent = EyeBtn})
-Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = EyeShape})
-local Iris = Create("Frame", {Size = UDim2.new(0, 10, 0, 10), Position = UDim2.new(0.5, -5, 0.5, -5), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = EyeBtn})
-Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Iris})
-local Pupil = Create("Frame", {Size = UDim2.new(0, 4, 0, 4), Position = UDim2.new(0.5, -2, 0.5, -2), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Parent = EyeBtn})
-Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Pupil})
+function SeraphiCA:Close()
+    closeWindow()
+end
 
-local function ToggleWatermarkExpand()
-    isExpanded = not isExpanded
-    if isExpanded then
-        TweenService:Create(Watermark, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 140, 0, 50), BackgroundTransparency = 0.1}):Play()
-        TweenService:Create(WmText, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
-        task.wait(0.2)
-        SkullBtn.Visible = true EyeBtn.Visible = true
-        TweenService:Create(SkullBtn, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Visible = true}):Play()
-        TweenService:Create(EyeBtn, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Visible = true}):Play()
-    else
-        TweenService:Create(SkullBtn, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(EyeBtn, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
-        task.wait(0.1)
-        SkullBtn.Visible = false EyeBtn.Visible = false
-        TweenService:Create(Watermark, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 240, 0, 38), BackgroundTransparency = 0.3}):Play()
-        TweenService:Create(WmText, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+function SeraphiCA:Toggle()
+    openIsland()
+end
+
+function SeraphiCA:SetTheme(name)
+    if Themes[name] then
+        State.ThemeName = name
+        Theme = Themes[name]
+        State.Accent = nil
+        applyTheme()
     end
 end
 
-local lastWmClick = 0
-Watermark.MouseButton1Click:Connect(function()
-    local now = tick()
-    if now - lastWmClick < 0.3 then ToggleMenu() end
-    lastWmClick = now
-end)
-
-SkullBtn.MouseButton1Click:Connect(function()
-    aimState.Enabled = not aimState.Enabled
-    if aimState.Enabled then
-        Notify("AimBot on!", Theme.Accent)
-        TweenService:Create(SkullBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent}):Play()
-        TweenService:Create(SkullStroke, TweenInfo.new(0.3), {Thickness = 2, Transparency = 0}):Play()
-        TweenService:Create(SkullHead, TweenInfo.new(0.3), {BackgroundColor3 = Theme.TextDark}):Play()
-        TweenService:Create(SkullJaw, TweenInfo.new(0.3), {BackgroundColor3 = Theme.TextDark}):Play()
-    else
-        Notify("AimBot off!", Theme.RedNotif)
-        TweenService:Create(SkullBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-        TweenService:Create(SkullStroke, TweenInfo.new(0.3), {Thickness = 0, Transparency = 1}):Play()
-        TweenService:Create(SkullHead, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
-        TweenService:Create(SkullJaw, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
-    end
-end)
-
-EyeBtn.MouseButton1Click:Connect(function()
-    espState.Enabled = not espState.Enabled
-    if espState.Enabled then
-        Notify("Esp on!", Theme.Accent)
-        TweenService:Create(EyeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Accent}):Play()
-        TweenService:Create(EyeStroke, TweenInfo.new(0.3), {Thickness = 2, Transparency = 0}):Play()
-        TweenService:Create(EyeShape, TweenInfo.new(0.3), {BackgroundColor3 = Theme.TextDark}):Play()
-    else
-        Notify("Esp off!", Theme.RedNotif)
-        TweenService:Create(EyeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-        TweenService:Create(EyeStroke, TweenInfo.new(0.3), {Thickness = 0, Transparency = 1}):Play()
-        TweenService:Create(EyeShape, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
-    end
-end)
-
--- MAIN FRAME
-local MainFrame = Create("Frame", {Size = UDim2.new(0, 800, 0, 460), Position = UDim2.new(0.5, -400, 0.5, -230), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, Visible = false, Parent = ScreenGui})
-AddSoftShadow(MainFrame, 40, 0.4)
-Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = MainFrame})
-local MainStroke = Create("UIStroke", {Color = Theme.Stroke, Thickness = 1, Parent = MainFrame})
-
-local MenuOpen = false
-function ToggleMenu()
-    MenuOpen = not MenuOpen
-    if MenuOpen then
-        MainFrame.Visible = true
-        MainFrame.Size = UDim2.new(0, 800, 0, 0)
-        TweenService:Create(MenuBlur, TweenInfo.new(0.5), {Size = 10}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = UDim2.new(0, 800, 0, 460)}):Play()
-    else
-        TweenService:Create(MenuBlur, TweenInfo.new(0.3), {Size = 0}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {Size = UDim2.new(0, 800, 0, 0)}):Play()
-        task.delay(0.3, function() if not MenuOpen then MainFrame.Visible = false end end)
+function SeraphiCA:SetAccent(color)
+    if typeof(color) == "Color3" then
+        State.Accent = color
+        applyTheme()
     end
 end
 
-local dragging, dragInput, dragStart, startPos
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true dragStart = input.Position startPos = MainFrame.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+function SeraphiCA:Notify(message, kind)
+    notify(message, kind)
+end
+
+function SeraphiCA:GetState()
+    return State
+end
+
+-- Keep the module-like table available globally for scripts that choose to
+-- reference it after execution.
+_G.SeraphiCA = SeraphiCA
+
+--[[
+===============================================================================
+END OF CORE IMPLEMENTATION
+===============================================================================
+The remaining lines below are documentation/examples embedded in the same
+single-file artifact so the file can also act as a reference while editing.
+===============================================================================
+]]
+
+
+--// ---------------------------------------------------------------------------
+--// SERAPHICA DESIGN REFERENCE
+--// ---------------------------------------------------------------------------
+
+local DesignReference = {
+    Window = {
+        Width = 800,
+        Height = 460,
+        Radius = 22,
+        Sidebar = 184,
+        Padding = 20,
+        Gap = 12,
+    },
+
+    Tablet = {
+        Target = "Lenovo Tab M10 3rd Gen",
+        Orientation = "Landscape",
+        TouchTarget = 44,
+        PreferredControlHeight = 48,
+    },
+
+    Effects = {
+        Ambient = true,
+        Particles = true,
+        Glow = true,
+        Shimmer = true,
+        Ripple = true,
+        TouchSpotlight = true,
+        ReducedMotion = false,
+    },
+
+    Pages = {
+        "AimBot",
+        "Visuals",
+        "Huyna",
+        "Settings",
+    },
+
+    Themes = {
+        "Obsidian",
+        "Arctic",
+        "Aurora",
+        "Nebula",
+        "Crimson",
+        "Monochrome",
+    },
+}
+
+--// ---------------------------------------------------------------------------
+--// ANIMATION GUIDELINES
+--// ---------------------------------------------------------------------------
+
+local AnimationPresets = {
+    Micro = {
+        Duration = 0.12,
+        Style = Enum.EasingStyle.Quad,
+        Direction = Enum.EasingDirection.Out,
+    },
+
+    Standard = {
+        Duration = 0.22,
+        Style = Enum.EasingStyle.Quint,
+        Direction = Enum.EasingDirection.Out,
+    },
+
+    Emphasis = {
+        Duration = 0.36,
+        Style = Enum.EasingStyle.Back,
+        Direction = Enum.EasingDirection.Out,
+    },
+
+    Morph = {
+        Duration = 0.48,
+        Style = Enum.EasingStyle.Quint,
+        Direction = Enum.EasingDirection.Out,
+    },
+
+    Slow = {
+        Duration = 0.80,
+        Style = Enum.EasingStyle.Sine,
+        Direction = Enum.EasingDirection.InOut,
+    },
+}
+
+--// ---------------------------------------------------------------------------
+--// SPACING TOKENS
+--// ---------------------------------------------------------------------------
+
+local Spacing = {
+    XS = 4,
+    SM = 8,
+    MD = 12,
+    LG = 16,
+    XL = 20,
+    XXL = 24,
+    XXXL = 32,
+    Huge = 40,
+    Massive = 48,
+}
+
+--// ---------------------------------------------------------------------------
+--// TYPOGRAPHY TOKENS
+--// ---------------------------------------------------------------------------
+
+local Typography = {
+    Hero = 28,
+    Page = 22,
+    Section = 17,
+    Card = 13,
+    Body = 12,
+    Secondary = 10,
+    Micro = 9,
+    Number = 14,
+}
+
+--// ---------------------------------------------------------------------------
+--// COMPONENT CONTRACTS
+--// ---------------------------------------------------------------------------
+
+local ComponentContracts = {
+    Toggle = {
+        Height = 58,
+        TrackWidth = 48,
+        TrackHeight = 26,
+        Knob = 20,
+    },
+
+    Slider = {
+        Height = 68,
+        TrackHeight = 6,
+        Knob = 16,
+    },
+
+    Dropdown = {
+        Height = 52,
+        OptionHeight = 38,
+    },
+
+    Button = {
+        MinimumHeight = 44,
+        Radius = 12,
+    },
+
+    Card = {
+        Radius = 16,
+        BorderThickness = 1,
+    },
+}
+
+--// ---------------------------------------------------------------------------
+--// ACCESSIBILITY NOTES
+--// ---------------------------------------------------------------------------
+
+local Accessibility = {
+    MinimumTouchTarget = 44,
+    AvoidTinyControls = true,
+    AvoidLowContrast = true,
+    ReducedMotionSupported = true,
+    TextShouldRemainReadable = true,
+    ScrollbarShouldNotBeRequiredForTouch = true,
+}
+
+--// ---------------------------------------------------------------------------
+--// PERFORMANCE NOTES
+--// ---------------------------------------------------------------------------
+
+local PerformanceProfiles = {
+    Performance = {
+        Particles = false,
+        Ambient = false,
+        Glow = false,
+        Shimmer = false,
+        ReducedMotion = true,
+        ParticleCount = 0,
+    },
+
+    Balanced = {
+        Particles = true,
+        Ambient = true,
+        Glow = true,
+        Shimmer = false,
+        ReducedMotion = false,
+        ParticleCount = 12,
+    },
+
+    Ultra = {
+        Particles = true,
+        Ambient = true,
+        Glow = true,
+        Shimmer = true,
+        ReducedMotion = false,
+        ParticleCount = 20,
+    },
+}
+
+--// ---------------------------------------------------------------------------
+--// FUTURE VISUAL COMPONENT IDEAS
+--// ---------------------------------------------------------------------------
+
+local FutureComponents = {
+    "ThemePreviewCard",
+    "ColorPicker",
+    "GradientPicker",
+    "ProfileSelector",
+    "CommandPalette",
+    "NotificationCenter",
+    "BottomSheet",
+    "ContextMenu",
+    "AboutPanel",
+    "KeyboardHints",
+    "LoadingOverlay",
+    "EmptyState",
+    "ErrorState",
+    "SuccessState",
+    "ConfirmationModal",
+    "ProgressBar",
+    "SegmentedControl",
+    "IconButton",
+    "HeroCard",
+    "StatusCard",
+    "MetricCard",
+    "PreviewCanvas",
+}
+
+--// ---------------------------------------------------------------------------
+--// VISUAL STATE DEFINITIONS
+--// ---------------------------------------------------------------------------
+
+local VisualStates = {
+    Default = {
+        Alpha = 0,
+        Scale = 1,
+    },
+
+    Hover = {
+        Alpha = 0,
+        Scale = 1.015,
+    },
+
+    Pressed = {
+        Alpha = 0,
+        Scale = 0.97,
+    },
+
+    Disabled = {
+        Alpha = 0.5,
+        Scale = 1,
+    },
+
+    Selected = {
+        Alpha = 0,
+        Scale = 1,
+    },
+}
+
+--// ---------------------------------------------------------------------------
+--// PAGE CONTENT GUIDELINES
+--// ---------------------------------------------------------------------------
+
+local PageGuidelines = {
+    AimBot = {
+        Hero = "Precision Interface",
+        Cards = {
+            "Interface Status",
+            "Control Surface",
+            "Preview",
+        },
+        Note = "Use controls as visual/demo surfaces unless backed by legitimate game code.",
+    },
+
+    Visuals = {
+        Hero = "Visual Preview",
+        Cards = {
+            "Live Preview",
+            "Elements",
+            "Style",
+        },
+        Note = "Preview-only elements are safe for interface development.",
+    },
+
+    Huyna = {
+        Hero = "Utility Hub",
+        Cards = {
+            "Utilities",
+            "Experiments",
+            "Quick Actions",
+        },
+    },
+
+    Settings = {
+        Hero = "Settings",
+        Cards = {
+            "Appearance",
+            "Motion & Effects",
+            "Performance",
+            "About",
+        },
+    },
+}
+
+--// ---------------------------------------------------------------------------
+--// THEME ROLE MAP
+--// ---------------------------------------------------------------------------
+
+local ThemeRoles = {
+    Background = "The deepest layer behind everything.",
+    Window = "Primary glass surface.",
+    Sidebar = "Navigation surface.",
+    Card = "Secondary surface.",
+    CardHover = "Pointer/touch hover surface.",
+    CardActive = "Selected surface.",
+    Text = "Primary readable text.",
+    Secondary = "Secondary readable text.",
+    Muted = "Supporting text.",
+    Border = "Structural separator.",
+    Accent = "Interaction highlight.",
+    Accent2 = "Secondary accent.",
+    Success = "Positive state.",
+    Warning = "Attention state.",
+    Danger = "Error state.",
+}
+
+--// ---------------------------------------------------------------------------
+--// RESPONSIVE RULES
+--// ---------------------------------------------------------------------------
+
+local ResponsiveRules = {
+    LandscapeTablet = {
+        MainWidth = 800,
+        MainHeight = 460,
+        SidebarWidth = 184,
+        Padding = 20,
+    },
+
+    SmallLandscape = {
+        MainWidth = 700,
+        MainHeight = 420,
+        SidebarWidth = 160,
+        Padding = 16,
+    },
+
+    PortraitFallback = {
+        MainWidth = 520,
+        MainHeight = 700,
+        SidebarWidth = 0,
+        Padding = 16,
+    },
+}
+
+--// ---------------------------------------------------------------------------
+--// DYNAMIC ISLAND STATES
+--// ---------------------------------------------------------------------------
+
+local IslandStates = {
+    Idle = {
+        Width = 230,
+        Height = 42,
+        Text = "SeraphiCA",
+    },
+
+    Status = {
+        Width = 250,
+        Height = 42,
+        Text = "READY",
+    },
+
+    Notification = {
+        Width = 290,
+        Height = 42,
+        Text = "Notification",
+    },
+
+    Expanded = {
+        Width = 800,
+        Height = 460,
+        Text = "SeraphiCA",
+    },
+}
+
+--// ---------------------------------------------------------------------------
+--// MICROINTERACTION CATALOG
+--// ---------------------------------------------------------------------------
+
+local MicroInteractions = {
+    Toggle = {
+        "knob slide",
+        "accent reveal",
+        "soft highlight",
+    },
+
+    Slider = {
+        "thumb movement",
+        "value morph",
+        "temporary value bubble",
+    },
+
+    Dropdown = {
+        "arrow rotation",
+        "height expansion",
+        "selection highlight",
+    },
+
+    Navigation = {
+        "active indicator travel",
+        "icon tint transition",
+        "content transition",
+    },
+
+    Notification = {
+        "slide in",
+        "opacity fade",
+        "slide out",
+    },
+
+    Island = {
+        "scale",
+        "size morph",
+        "status replacement",
+    },
+}
+
+--// ---------------------------------------------------------------------------
+--// CLEANUP CONTRACT
+--// ---------------------------------------------------------------------------
+
+local function CleanupSeraphiCA()
+    for _, item in ipairs(particles) do
+        safeDestroy(item.Object)
     end
-end)
-MainFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        TweenService:Create(MainFrame, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}):Play()
-    end
-end)
 
--- SIDEBAR
-local Sidebar = Create("Frame", {Size = UDim2.new(0, 220, 1, 0), BackgroundColor3 = Theme.Sidebar, BorderSizePixel = 0, Parent = MainFrame})
-Create("Frame", {Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0), BackgroundColor3 = Theme.Stroke, BorderSizePixel = 0, Parent = Sidebar})
-Create("TextLabel", {Size = UDim2.new(1, -40, 0, 30), Position = UDim2.new(0, 20, 0, 25), BackgroundTransparency = 1, Text = "SeraphiCA", Font = Enum.Font.GothamBlack, TextSize = 20, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Sidebar})
+    particles = {}
 
-local TabContainer = Create("Frame", {Size = UDim2.new(1, 0, 1, -100), Position = UDim2.new(0, 0, 0, 80), BackgroundTransparency = 1, Parent = Sidebar})
-Create("UIListLayout", {Padding = UDim.new(0, 8), Parent = TabContainer})
-Create("UIPadding", {PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), Parent = TabContainer})
-
-local SlideIndicator = Create("Frame", {Size = UDim2.new(0, 2, 0, 20), Position = UDim2.new(0, 15, 0, 0), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, Visible = false, Parent = Sidebar})
-
-local ContentArea = Create("Frame", {Size = UDim2.new(1, -220, 1, 0), Position = UDim2.new(0, 220, 0, 0), BackgroundTransparency = 1, Parent = MainFrame})
-local PageTitle = Create("TextLabel", {Size = UDim2.new(1, -40, 0, 35), Position = UDim2.new(0, 30, 0, 20), BackgroundTransparency = 1, Text = "Settings", Font = Enum.Font.GothamBold, TextSize = 24, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = ContentArea})
-local PageContainer = Create("ScrollingFrame", {Size = UDim2.new(1, -50, 1, -80), Position = UDim2.new(0, 30, 0, 65), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2, ScrollBarImageColor3 = Theme.Accent, CanvasSize = UDim2.new(0, 0, 0, 0), Parent = ContentArea})
-Create("UIListLayout", {Padding = UDim.new(0, 10), Parent = PageContainer}):GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() PageContainer.CanvasSize = UDim2.new(0, 0, 0, PageContainer.UIListLayout.AbsoluteContentSize.Y + 20) end)
-
--- LOGIC & TABS
-local Tabs = {} local ActiveTab = nil
-local function SelectTab(name)
-    for _, child in ipairs(PageContainer:GetChildren()) do if child:IsA("GuiObject") and not child:IsA("UIListLayout") then child:Destroy() end end
-    for tabName, tabData in pairs(Tabs) do
-        if tabName == name then
-            TweenService:Create(tabData.Button, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Hover}):Play()
-            TweenService:Create(tabData.Button.Title, TweenInfo.new(0.3), {TextColor3 = Theme.Accent}):Play()
-            SlideIndicator.Visible = true
-            TweenService:Create(SlideIndicator, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 15, 0, tabData.Button.AbsolutePosition.Y - Sidebar.AbsolutePosition.Y + 10)}):Play()
-        else
-            TweenService:Create(tabData.Button, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Element}):Play()
-            TweenService:Create(tabData.Button.Title, TweenInfo.new(0.3), {TextColor3 = Theme.Text}):Play()
-        end
-    end
-    PageTitle.Text = name ActiveTab = name
-    if Tabs[name].Render then Tabs[name].Render() end
+    safeDestroy(Gui)
 end
 
-local function CreateTab(name)
-    local Btn = Create("TextButton", {Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Theme.Element, AutoButtonColor = false, Text = "", Parent = TabContainer})
-    Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = Btn})
-    local Title = Create("TextLabel", {Name = "Title", Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = name, Font = Enum.Font.GothamMedium, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Btn})
-    Btn.MouseEnter:Connect(function() if ActiveTab ~= name then TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Hover}):Play() end end)
-    Btn.MouseLeave:Connect(function() if ActiveTab ~= name then TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Element}):Play() end end)
-    Tabs[name] = {Button = Btn, Render = nil}
-    Btn.MouseButton1Click:Connect(function() SelectTab(name) end)
-    return PageContainer
-end
+-- Optional cleanup:
+-- CleanupSeraphiCA()
 
--- UI ELEMENTS
-local function CreateCategory(page, title)
-    Create("TextLabel", {Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, Text = string.upper(title), Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = page})
-end
+--// ---------------------------------------------------------------------------
+--// END OF REFERENCE
+--// ---------------------------------------------------------------------------
 
-local function CreateToggle(page, title, desc, defaultState, onToggle)
-    local Container = Create("TextButton", {Size = UDim2.new(1, 0, 0, 55), BackgroundColor3 = Theme.Element, AutoButtonColor = false, Text = "", Parent = page})
-    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
-    Container.MouseEnter:Connect(function() TweenService:Create(Container, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Hover}):Play() end)
-    Container.MouseLeave:Connect(function() TweenService:Create(Container, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Element}):Play() end)
-    Create("TextLabel", {Size = UDim2.new(1, -80, 0, 18), Position = UDim2.new(0, 15, 0, 10), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -80, 0, 14), Position = UDim2.new(0, 15, 0, 30), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    local Switch = Create("TextButton", {Size = UDim2.new(0, 40, 0, 20), Position = UDim2.new(1, -55, 0.5, -10), BackgroundColor3 = Theme.Disabled, AutoButtonColor = false, Text = "", Parent = Container})
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Switch})
-    local Indicator = Create("Frame", {Size = UDim2.new(0, 14, 0, 14), Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Theme.Text, BorderSizePixel = 0, Parent = Switch})
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Indicator})
-    local state = defaultState or false
-    if state then
-        Switch.BackgroundColor3 = Theme.Accent Indicator.Position = UDim2.new(1, -17, 0.5, -7) Indicator.BackgroundColor3 = Theme.TextDark
-    end
-    Container.MouseButton1Click:Connect(function()
-        state = not state
-        if state then
-            TweenService:Create(Switch, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundColor3 = Theme.Accent}):Play()
-            TweenService:Create(Indicator, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -17, 0.5, -7), BackgroundColor3 = Theme.TextDark}):Play()
-        else
-            TweenService:Create(Switch, TweenInfo.new(0.3), {BackgroundColor3 = Theme.Disabled}):Play()
-            TweenService:Create(Indicator, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Theme.Text}):Play()
-        end
-        if onToggle then onToggle(state) end
-    end)
-end
+-- DESIGN NOTE 001: Glass surfaces should remain layered instead of fully transparent.
 
-local function CreateSlider(page, title, desc, maxVal, defaultVal, onValueChanged)
-    local Container = Create("Frame", {Size = UDim2.new(1, 0, 0, 60), BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = page})
-    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 18), Position = UDim2.new(0, 15, 0, 10), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 14), Position = UDim2.new(0, 15, 0, 30), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    local ValLabel = Create("TextLabel", {Size = UDim2.new(0, 50, 0, 20), Position = UDim2.new(1, -65, 0, 10), BackgroundTransparency = 1, Text = tostring(defaultVal), Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Accent, TextXAlignment = Enum.TextXAlignment.Right, Parent = Container})
-    local Bar = Create("TextButton", {Size = UDim2.new(1, -30, 0, 6), Position = UDim2.new(0, 15, 0, 48), BackgroundColor3 = Theme.Disabled, AutoButtonColor = false, Text = "", Parent = Container})
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Bar})
-    local Fill = Create("Frame", {Size = UDim2.new(defaultVal / maxVal, 0, 1, 0), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, Parent = Bar})
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Fill})
-    local Knob = Create("Frame", {Size = UDim2.new(0, 14, 0, 14), Position = UDim2.new(defaultVal / maxVal, -7, 0.5, -7), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = Bar})
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Knob})
-    local draggingSlider = false
-    local function update(input)
-        local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
-        local val = math.floor(pos * maxVal + 0.5)
-        Fill.Size = UDim2.new(pos, 0, 1, 0) Knob.Position = UDim2.new(pos, -7, 0.5, -7) ValLabel.Text = tostring(val)
-        if onValueChanged then onValueChanged(val) end
-    end
-    Bar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = true update(input) end end)
-    Bar.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = false end end)
-    UserInputService.InputChanged:Connect(function(input) if draggingSlider and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then update(input) end end)
-end
+-- DESIGN NOTE 002: Accent colors should appear primarily on interaction states.
 
-local function CreateCycleButton(page, title, desc, options, defaultIndex, onValueChanged)
-    local Container = Create("TextButton", {Size = UDim2.new(1, 0, 0, 55), BackgroundColor3 = Theme.Element, AutoButtonColor = false, Text = "", Parent = page})
-    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
-    Container.MouseEnter:Connect(function() TweenService:Create(Container, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Hover}):Play() end)
-    Container.MouseLeave:Connect(function() TweenService:Create(Container, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Element}):Play() end)
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 18), Position = UDim2.new(0, 15, 0, 10), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -100, 0, 14), Position = UDim2.new(0, 15, 0, 30), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    local ValBtn = Create("TextButton", {Size = UDim2.new(0, 70, 0, 25), Position = UDim2.new(1, -85, 0.5, -12.5), BackgroundColor3 = Theme.Accent, AutoButtonColor = false, Text = options[defaultIndex], Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = Theme.TextDark, Parent = Container})
-    Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = ValBtn})
-    local currentIndex = defaultIndex
-    ValBtn.MouseButton1Click:Connect(function()
-        currentIndex = currentIndex + 1
-        if currentIndex > #options then currentIndex = 1 end
-        ValBtn.Text = options[currentIndex]
-        if onValueChanged then onValueChanged(options[currentIndex]) end
-    end)
-end
+-- DESIGN NOTE 003: Negative space is part of the design and should not be filled unnecessarily.
 
-local function CreateColorSlider(page, title, desc, defaultColor, onColorChanged)
-    local Container = Create("Frame", {Size = UDim2.new(1, 0, 0, 65), BackgroundColor3 = Theme.Element, Parent = page})
-    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -20, 0, 18), Position = UDim2.new(0, 15, 0, 10), BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    Create("TextLabel", {Size = UDim2.new(1, -20, 0, 14), Position = UDim2.new(0, 15, 0, 28), BackgroundTransparency = 1, Text = desc, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Description, TextXAlignment = Enum.TextXAlignment.Left, Parent = Container})
-    local Bar = Create("TextButton", {Size = UDim2.new(1, -30, 0, 8), Position = UDim2.new(0, 15, 0, 50), BackgroundColor3 = defaultColor, AutoButtonColor = false, Text = "", Parent = Container})
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Bar})
-    Create("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 255, 0)), ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)), ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)), ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))}), Parent = Bar})
-    local Knob = Create("Frame", {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(0, 0, 0.5, -8), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, Parent = Bar})
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Knob})
-    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1, Parent = Knob})
-    local draggingSlider = false
-    local function update(input)
-        local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
-        local color = Color3.fromHSV(pos, 0.8, 1)
-        Knob.Position = UDim2.new(pos, -8, 0.5, -8)
-        onColorChanged(color)
-    end
-    Bar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = true update(input) end end)
-    Bar.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = false end end)
-    UserInputService.InputChanged:Connect(function(input) if draggingSlider and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then update(input) end end)
-end
+-- DESIGN NOTE 004: Touch targets should remain comfortably larger than the visible icon.
 
--- INIT & RENDER
-CreateTab("AimBot")
-Tabs["AimBot"].Render = function()
-    CreateCategory(PageContainer, "Main")
-    CreateToggle(PageContainer, "Enabled", "Toggle Aimbot (Skull Icon).", aimState.Enabled, function(v) aimState.Enabled = v end)
-    CreateSlider(PageContainer, "Fov", "Max 360.", 360, aimState.Fov, function(v) aimState.Fov = v end)
-    CreateToggle(PageContainer, "Visible Check", "Don't aim through walls.", aimState.VisibleCheck, function(v) aimState.VisibleCheck = v end)
-    CreateToggle(PageContainer, "360 Aim", "Aim behind you.", aimState.Aim360, function(v) aimState.Aim360 = v end)
-end
+-- DESIGN NOTE 005: Animations should communicate state changes rather than decorate every frame.
 
-CreateTab("Huyna")
-Tabs["Huyna"].Render = function()
-    CreateCategory(PageContainer, "Main")
-    CreateSlider(PageContainer, "Third Person", "Camera distance.", 128, 0, function(v)
-        huynaState.ThirdPerson = v
-        if v > 0 then LocalPlayer.CameraMode = Enum.CameraMode.Classic LocalPlayer.CameraMaxZoomDistance = v LocalPlayer.CameraMinZoomDistance = v
-        else LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson end
-    end)
-    CreateToggle(PageContainer, "Anti Aim", "Spins your torso.", huynaState.AntiAim, function(v) toggleAntiAim(v) end)
-    CreateCycleButton(PageContainer, "AntiAim Type", "Spin mode.", {"Random", "Jilter"}, 1, function(val) huynaState.AntiAimType = val end)
-    CreateToggle(PageContainer, "Bunny Hop", "Auto jump.", huynaState.BunnyHop, function(v) toggleBhop(v) end)
-    CreateSlider(PageContainer, "Bhop Speed", "Hop velocity.", 200, 50, function(v) huynaState.BhopSpeed = v end)
-    CreateToggle(PageContainer, "Auto Farm", "Invisible + Kill.", huynaState.AutoFarm, function(v) toggleAutoFarm(v) end)
-end
+-- DESIGN NOTE 006: Reduced Motion should remove unnecessary movement while preserving state feedback.
 
-CreateTab("Esp")
-Tabs["Esp"].Render = function()
-    CreateCategory(PageContainer, "Main")
-    CreateToggle(PageContainer, "Enabled", "Toggle ESP (Eye Icon).", espState.Enabled, function(v) espState.Enabled = v end)
-    CreateToggle(PageContainer, "Box", "White box.", espState.Box, function(v) espState.Box = v end)
-    CreateToggle(PageContainer, "Line", "Screen edge line.", espState.Line, function(v) espState.Line = v end)
-    CreateCycleButton(PageContainer, "Line Position", "Origin of line.", {"Top", "Bottom", "Center"}, 1, function(val) espState.LinePos = val end)
-    CreateToggle(PageContainer, "Health", "Health bar and text.", espState.Health, function(v) espState.Health = v end)
-end
+-- DESIGN NOTE 007: Performance mode should reduce decorative work before reducing usability.
 
-CreateTab("Settings")
-Tabs["Settings"].Render = function()
-    CreateCategory(PageContainer, "Visuals")
-    local isPulsing = false
-    CreateToggle(PageContainer, "Pulse Effect", "UI white glow.", false, function(state)
-        isPulsing = state
-        if state then
-            task.spawn(function()
-                while isPulsing do
-                    TweenService:Create(MainStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Color3.fromRGB(255, 255, 255)}):Play()
-                    TweenService:Create(WmStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Color3.fromRGB(255, 255, 255)}):Play()
-                    task.wait(0.8)
-                    TweenService:Create(MainStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Theme.Stroke}):Play()
-                    TweenService:Create(WmStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Color3.fromRGB(255, 255, 255), Transparency = 0.8}):Play()
-                    task.wait(0.8)
-                end
-            end)
-        else
-            TweenService:Create(MainStroke, TweenInfo.new(0.3), {Color = Theme.Stroke}):Play()
-            TweenService:Create(WmStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(255, 255, 255), Transparency = 0.8}):Play()
-        end
-    end)
-    CreateColorSlider(PageContainer, "Accent Color", "UI Color.", Theme.Accent, function(color)
-        if not isPulsing then
-            Theme.Accent = color PageContainer.ScrollBarImageColor3 = color FovStroke.Color = color
-            for name, tab in pairs(Tabs) do if name == ActiveTab then tab.Button.Title.TextColor3 = color SlideIndicator.BackgroundColor3 = color end end
-        end
-    end)
-end
+-- DESIGN NOTE 008: The Dynamic Island is the identity element and should remain visually simple.
 
-SelectTab("Settings")
+-- DESIGN NOTE 009: The main window should preserve the 800 x 460 design ratio whenever the viewport permits.
+
+-- DESIGN NOTE 010: Cards should have consistent padding and radius.
+
+-- DESIGN NOTE 011: The active navigation indicator should move instead of being recreated.
+
+-- DESIGN NOTE 012: Search should eventually be able to jump directly to settings.
+
+-- DESIGN NOTE 013: Theme changes should affect all generated surfaces consistently.
+
+-- DESIGN NOTE 014: Preview components should demonstrate appearance without implementing gameplay advantages.
+
+-- DESIGN NOTE 015: Notifications should stack and disappear without blocking the interface.
+
+-- DESIGN NOTE 016: Scrollbars should remain subtle and temporary.
+
+-- DESIGN NOTE 017: A single design token system prevents accidental visual inconsistency.
+
+-- DESIGN NOTE 018: All decorative effects should have an off switch.
+
+-- DESIGN NOTE 019: A tablet UI should prioritize touch interaction over tiny desktop controls.
+
+-- DESIGN NOTE 020: The best premium effect is consistency across all components.
+
+-- DESIGN NOTE 021: Glass surfaces should remain layered instead of fully transparent.
+
+-- DESIGN NOTE 022: Accent colors should appear primarily on interaction states.
+
+-- DESIGN NOTE 023: Negative space is part of the design and should not be filled unnecessarily.
+
+-- DESIGN NOTE 024: Touch targets should remain comfortably larger than the visible icon.
+
+-- DESIGN NOTE 025: Animations should communicate state changes rather than decorate every frame.
+
+-- DESIGN NOTE 026: Reduced Motion should remove unnecessary movement while preserving state feedback.
+
+-- DESIGN NOTE 027: Performance mode should reduce decorative work before reducing usability.
+
+-- DESIGN NOTE 028: The Dynamic Island is the identity element and should remain visually simple.
+
+-- DESIGN NOTE 029: The main window should preserve the 800 x 460 design ratio whenever the viewport permits.
+
+-- DESIGN NOTE 030: Cards should have consistent padding and radius.
+
+-- DESIGN NOTE 031: The active navigation indicator should move instead of being recreated.
+
+-- DESIGN NOTE 032: Search should eventually be able to jump directly to settings.
+
+-- DESIGN NOTE 033: Theme changes should affect all generated surfaces consistently.
+
+-- DESIGN NOTE 034: Preview components should demonstrate appearance without implementing gameplay advantages.
+
+-- DESIGN NOTE 035: Notifications should stack and disappear without blocking the interface.
+
+-- DESIGN NOTE 036: Scrollbars should remain subtle and temporary.
+
+-- DESIGN NOTE 037: A single design token system prevents accidental visual inconsistency.
+
+-- DESIGN NOTE 038: All decorative effects should have an off switch.
+
+-- DESIGN NOTE 039: A tablet UI should prioritize touch interaction over tiny desktop controls.
+
+-- DESIGN NOTE 040: The best premium effect is consistency across all components.
+
+-- DESIGN NOTE 041: Glass surfaces should remain layered instead of fully transparent.
+
+-- DESIGN NOTE 042: Accent colors should appear primarily on interaction states.
+
+-- DESIGN NOTE 043: Negative space is part of the design and should not be filled unnecessarily.
+
+-- DESIGN NOTE 044: Touch targets should remain comfortably larger than the visible icon.
+
+-- DESIGN NOTE 045: Animations should communicate state changes rather than decorate every frame.
+
+-- DESIGN NOTE 046: Reduced Motion should remove unnecessary movement while preserving state feedback.
+
+-- DESIGN NOTE 047: Performance mode should reduce decorative work before reducing usability.
+
+-- DESIGN NOTE 048: The Dynamic Island is the identity element and should remain visually simple.
+
+-- DESIGN NOTE 049: The main window should preserve the 800 x 460 design ratio whenever the viewport permits.
+
+-- DESIGN NOTE 050: Cards should have consistent padding and radius.
+
+-- DESIGN NOTE 051: The active navigation indicator should move instead of being recreated.
+
+-- DESIGN NOTE 052: Search should eventually be able to jump directly to settings.
+
+-- DESIGN NOTE 053: Theme changes should affect all generated surfaces consistently.
+
+-- DESIGN NOTE 054: Preview components should demonstrate appearance without implementing gameplay advantages.
+
+-- DESIGN NOTE 055: Notifications should stack and disappear without blocking the interface.
+
+-- DESIGN NOTE 056: Scrollbars should remain subtle and temporary.
+
+-- DESIGN NOTE 057: A single design token system prevents accidental visual inconsistency.
+
+-- DESIGN NOTE 058: All decorative effects should have an off switch.
+
+-- DESIGN NOTE 059: A tablet UI should prioritize touch interaction over tiny desktop controls.
+
+-- DESIGN NOTE 060: The best premium effect is consistency across all components.
+
+-- DESIGN NOTE 061: Glass surfaces should remain layered instead of fully transparent.
+
+-- DESIGN NOTE 062: Accent colors should appear primarily on interaction states.
+
+-- DESIGN NOTE 063: Negative space is part of the design and should not be filled unnecessarily.
+
+-- DESIGN NOTE 064: Touch targets should remain comfortably larger than the visible icon.
+
+-- DESIGN NOTE 065: Animations should communicate state changes rather than decorate every frame.
+
+-- DESIGN NOTE 066: Reduced Motion should remove unnecessary movement while preserving state feedback.
+
+-- DESIGN NOTE 067: Performance mode should reduce decorative work before reducing usability.
+
+-- DESIGN NOTE 068: The Dynamic Island is the identity element and should remain visually simple.
+
+-- DESIGN NOTE 069: The main window should preserve the 800 x 460 design ratio whenever the viewport permits.
+
+-- DESIGN NOTE 070: Cards should have consistent padding and radius.
+
+-- DESIGN NOTE 071: The active navigation indicator should move instead of being recreated.
+
+-- DESIGN NOTE 072: Search should eventually be able to jump directly to settings.
+
+-- DESIGN NOTE 073: Theme changes should affect all generated surfaces consistently.
+
+-- DESIGN NOTE 074: Preview components should demonstrate appearance without implementing gameplay advantages.
+
+-- DESIGN NOTE 075: Notifications should stack and disappear without blocking the interface.
+
+-- DESIGN NOTE 076: Scrollbars should remain subtle and temporary.
+
+-- DESIGN NOTE 077: A single design token system prevents accidental visual inconsistency.
+
+-- DESIGN NOTE 078: All decorative effects should have an off switch.
+
+-- DESIGN NOTE 079: A tablet UI should prioritize touch interaction over tiny desktop controls.
+
+-- DESIGN NOTE 080: The best premium effect is consistency across all components.
+
+-- DESIGN NOTE 081: Glass surfaces should remain layered instead of fully transparent.
+
+-- DESIGN NOTE 082: Accent colors should appear primarily on interaction states.
+
+-- DESIGN NOTE 083: Negative space is part of the design and should not be filled unnecessarily.
+
+-- DESIGN NOTE 084: Touch targets should remain comfortably larger than the visible icon.
+
+-- DESIGN NOTE 085: Animations should communicate state changes rather than decorate every frame.
+
+-- DESIGN NOTE 086: Reduced Motion should remove unnecessary movement while preserving state feedback.
+
+-- DESIGN NOTE 087: Performance mode should reduce decorative work before reducing usability.
+
+-- DESIGN NOTE 088: The Dynamic Island is the identity element and should remain visually simple.
+
+-- DESIGN NOTE 089: The main window should preserve the 800 x 460 design ratio whenever the viewport permits.
+
+-- DESIGN NOTE 090: Cards should have consistent padding and radius.
+
+-- DESIGN NOTE 091: The active navigation indicator should move instead of being recreated.
+
+-- DESIGN NOTE 092: Search should eventually be able to jump directly to settings.
+
+-- DESIGN NOTE 093: Theme changes should affect all generated surfaces consistently.
+
+-- DESIGN NOTE 094: Preview components should demonstrate appearance without implementing gameplay advantages.
+
+-- DESIGN NOTE 095: Notifications should stack and disappear without blocking the interface.
+
+-- DESIGN NOTE 096: Scrollbars should remain subtle and temporary.
+
+-- DESIGN NOTE 097: A single design token system prevents accidental visual inconsistency.
+
+-- DESIGN NOTE 098: All decorative effects should have an off switch.
+
+-- DESIGN NOTE 099: A tablet UI should prioritize touch interaction over tiny desktop controls.
+
+-- DESIGN NOTE 100: The best premium effect is consistency across all components.
+
+-- DESIGN NOTE 101: Glass surfaces should remain layered instead of fully transparent.
+
+-- DESIGN NOTE 102: Accent colors should appear primarily on interaction states.
+
+-- DESIGN NOTE 103: Negative space is part of the design and should not be filled unnecessarily.
+
+-- DESIGN NOTE 104: Touch targets should remain comfortably larger than the visible icon.
+
+-- DESIGN NOTE 105: Animations should communicate state changes rather than decorate every frame.
+
+-- DESIGN NOTE 106: Reduced Motion should remove unnecessary movement while preserving state feedback.
+
+-- DESIGN NOTE 107: Performance mode should reduce decorative work before reducing usability.
+
+-- DESIGN NOTE 108: The Dynamic Island is the identity element and should remain visually simple.
+
+-- DESIGN NOTE 109: The main window should preserve the 800 x 460 design ratio whenever the viewport permits.
+
+-- DESIGN NOTE 110: Cards should have consistent padding and radius.
+
+-- DESIGN NOTE 111: The active navigation indicator should move instead of being recreated.
+
+-- DESIGN NOTE 112: Search should eventually be able to jump directly to settings.
+
+-- DESIGN NOTE 113: Theme changes should affect all generated surfaces consistently.
+
+-- DESIGN NOTE 114: Preview components should demonstrate appearance without implementing gameplay advantages.
+
+-- DESIGN NOTE 115: Notifications should stack and disappear without blocking the interface.
+
+-- DESIGN NOTE 116: Scrollbars should remain subtle and temporary.
+
+-- DESIGN NOTE 117: A single design token system prevents accidental visual inconsistency.
+
+-- DESIGN NOTE 118: All decorative effects should have an off switch.
+
+-- DESIGN NOTE 119: A tablet UI should prioritize touch interaction over tiny desktop controls.
+
+-- DESIGN NOTE 120: The best premium effect is consistency across all components.
+
+
+--// FINAL TABLE EXPORT
+SeraphiCA.Design = DesignReference
+SeraphiCA.Animations = AnimationPresets
+SeraphiCA.Spacing = Spacing
+SeraphiCA.Typography = Typography
+SeraphiCA.Components = ComponentContracts
+SeraphiCA.Accessibility = Accessibility
+SeraphiCA.PerformanceProfiles = PerformanceProfiles
+SeraphiCA.Themes = Themes
+
+return SeraphiCA

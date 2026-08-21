@@ -1,14 +1,13 @@
 --[[
-    SeraphiCA | Defuse Edition v16
+    SeraphiCA | Defuse Edition v22
     Target: Roblox / Luau (Defuse — CS:GO copy)
     Platform: Android 9-13 / Delta Executor
 
-    v16 Changes:
-    - FIXED: ThirdPerson now forces camera distance every frame (game can't block it).
-    - FIXED: Spinbot now disables AutoRotate so you spin even while walking.
-    - FIXED: BunnyHop logic rewritten for reliable auto-jumping.
-    - ADDED: Bhop Speed slider.
-    - Base v15 features intact.
+    v22 Changes:
+    - RESTORED: Exact Silent Aim hook logic from v16 (stable and accurate).
+    - KEPT: ShotSc (Hitbox Expander).
+    - KEPT: Anti-Ban, Fly, BHop, ESP, X-Ray, etc.
+    - Base v21 structure intact (Uncompressed, full UI).
 ]]
 
 local Players = game:GetService("Players")
@@ -38,7 +37,7 @@ local UI_HEIGHT = math.floor(460 * screenScale)
 -- BOOTSTRAP
 -- ============================================================
 
-local GUI_NAME = "SeraphiCA_Defuse_v16_Fixes"
+local GUI_NAME = "SeraphiCA_Defuse_v22_v16AimRestored"
 
 local function getGuiParent()
     local ok, core = pcall(function() return game:GetService("CoreGui") end)
@@ -50,7 +49,7 @@ local Parent = getGuiParent()
 local old = Parent:FindFirstChild(GUI_NAME)
 if old then old:Destroy() end
 
-local oldRuntime = Parent:FindFirstChild("SeraphiCA_Runtime_v15")
+local oldRuntime = Parent:FindFirstChild("SeraphiCA_Runtime_v21")
 if oldRuntime then oldRuntime:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -146,12 +145,14 @@ local State = {
         SpectatorList = false, BombCalculator = false, SoundESP = false,
     },
     Misc = {
-        Fly = false, FlySpeed = 50, WallShot = false,
+        Fly = false, FlySpeed = 50,
         ThirdPerson = false, CamDistance = 15,
         AntiAim = false, SpinSpeed = 10,
-        BunnyHop = false, BhopSpeed = 1, -- NEW
+        BunnyHop = false, BhopSpeed = 1,
         MoveBeforeTime = false, FastReload = false,
         NoFlash = false, AntiSmoke = false,
+        BypassAntiBan = false,
+        ShotSc = false, 
     },
     Settings = { Blur = true, Animations = true, Sounds = false, Dark = true }
 }
@@ -166,7 +167,7 @@ local function setState(section, key, value)
 end
 
 -- ============================================================
--- TEAMMATE DETECTION
+-- TEAMMATE DETECTION & ENEMY LOGIC
 -- ============================================================
 
 local function isTeammate(player)
@@ -276,7 +277,7 @@ local HeaderTitle = label(Header, "SeraphiCA", 24, Theme.Text, Enum.Font.GothamB
 HeaderTitle.Position = UDim2.fromOffset(math.floor(28 * screenScale), math.floor(10 * screenScale))
 HeaderTitle.Size = UDim2.fromOffset(math.floor(260 * screenScale), math.floor(30 * screenScale))
 
-local HeaderSub = label(Header, "Fixes v16", 12, Theme.Secondary, Enum.Font.GothamMedium)
+local HeaderSub = label(Header, "v16 Aim Restored v22", 12, Theme.Secondary, Enum.Font.GothamMedium)
 HeaderSub.Position = UDim2.fromOffset(math.floor(29 * screenScale), math.floor(40 * screenScale))
 HeaderSub.Size = UDim2.fromOffset(math.floor(180 * screenScale), math.floor(20 * screenScale))
 
@@ -724,12 +725,15 @@ Pages.Misc = function()
     toggleRow("Move before time", "Removes spawn barriers collision during prep.", "Misc", "MoveBeforeTime")
 
     sectionHeader("Combat", "Legit wall penetration and rotation.")
+    toggleRow("ShotSc (Hitbox Expander)", "Massively increases enemy hitboxes for easy hits.", "Misc", "ShotSc")
     toggleRow("Fast Reload", "Instantly reloads weapon when ammo hits 0.", "Misc", "FastReload")
-    toggleRow("WallShot", "Bullets pass through walls ONLY when enemy is behind them.", "Misc", "WallShot")
     toggleRow("AntiAim / Spinbot", "Rotates your character. Camera stays still.", "Misc", "AntiAim")
     sliderRow("Spin Speed", "Rotation speed in degrees per frame.", "Misc", "SpinSpeed", 1, 30)
     toggleRow("No-Flash", "Blocks screen blinding from flashbangs.", "Misc", "NoFlash")
     toggleRow("Anti-Smoke", "Removes smoke particles for clear vision.", "Misc", "AntiSmoke")
+
+    sectionHeader("Safety", "Bypass and protection utilities.")
+    toggleRow("Bypass Anti-Ban", "Blocks kicks, reports, and disables local AC.", "Misc", "BypassAntiBan")
 
     sectionHeader("Camera", "View modifiers.")
     toggleRow("ThirdPerson", "Switch to 3rd person view.", "Misc", "ThirdPerson")
@@ -745,7 +749,7 @@ Pages.Settings = function()
     sectionHeader("Device")
     infoRow("Player", LocalPlayer.Name, Theme.Text)
     infoRow("Platform", "Android / Delta", Theme.Secondary)
-    infoRow("Version", "v16 — Movement Fixes", Theme.Green)
+    infoRow("Version", "v22 — v16 Aim Restored", Theme.Green)
 end
 
 -- ============================================================
@@ -914,7 +918,7 @@ end)
 -- ============================================================
 
 local RuntimeGui = Instance.new("ScreenGui")
-RuntimeGui.Name = "SeraphiCA_Runtime_v16"
+RuntimeGui.Name = "SeraphiCA_Runtime_v22"
 RuntimeGui.IgnoreGuiInset = true
 RuntimeGui.ResetOnSpawn = false
 RuntimeGui.DisplayOrder = 500
@@ -1022,6 +1026,120 @@ end)
 FlyDownButton.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then flyDown = false end
 end)
+
+-- ============================================================
+-- FEATURE LOGIC: BYPASS ANTI-BAN & SILENT AIM (RESTORED FROM v16)
+-- ============================================================
+
+local CachedSilentTarget = nil
+
+local function findSilentTarget()
+    local viewport = Camera.ViewportSize
+    local center = Vector2.new(viewport.X * 0.5, viewport.Y * 0.5)
+    local bestPart, bestScore = nil, math.huge
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and not isTeammate(player) and player.Character then
+            local char = player.Character
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                local targetPart = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+                if targetPart then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                    if onScreen and screenPos.Z > 0 then
+                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                        if dist <= State.AimBot.SilentFOV and dist < bestScore then
+                            bestScore = dist
+                            bestPart = targetPart
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return bestPart
+end
+
+-- ЕДИНЫЙ HOOK METAMETHOD ДЛЯ BYPASS ANTI-BAN И SILENT AIM (ИЗ v16)
+local oldNamecall
+if hookmetamethod then
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        
+        -- [BYPASS ANTI-BAN]
+        if State.Misc.BypassAntiBan then
+            if method == "Kick" and self == LocalPlayer then
+                return nil -- Блокируем кик
+            end
+            if (method == "FireServer" or method == "InvokeServer") and type(args[1]) == "string" and (args[1]:lower():match("ban") or args[1]:lower():match("kick") or args[1]:lower():match("report")) then
+                return nil -- Блокируем репорты
+            end
+        end
+        
+        -- [SILENT AIM (v16 LOGIC)]
+        if State.AimBot.SilentEnabled and CachedSilentTarget and not checkcaller() then
+            if method == "Raycast" and self == workspace then
+                local origin = args[1]
+                args[2] = (CachedSilentTarget.Position - origin)
+                return oldNamecall(self, unpack(args))
+            end
+        end
+        
+        return oldNamecall(self, ...)
+    end)
+end
+
+local function enableBypassAntiBan()
+    for _, v in ipairs(game:GetDescendants()) do
+        if v:IsA("LocalScript") or v:IsA("ModuleScript") then
+            local name = v.Name:lower()
+            if name:match("anticheat") or name:match("anti") or name:match("cheat") or name:match("ban") or name:match("kick") or name:match("detector") then
+                pcall(function() v:Destroy() end)
+            end
+        end
+    end
+end
+
+-- ============================================================
+-- FEATURE LOGIC: SHOTSC (HITBOX EXPANDER)
+-- ============================================================
+
+local originalSizes = {}
+local function disableShotSc()
+    for part, size in pairs(originalSizes) do
+        if part and part.Parent then
+            part.Size = size
+            part.Transparency = 0
+            part.Material = Enum.Material.Plastic
+            part.Color = Color3.fromRGB(163, 162, 165)
+            part.CanCollide = true
+        end
+    end
+    originalSizes = {}
+end
+
+local function updateShotSc()
+    if not State.Misc.ShotSc then return end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and not isTeammate(player) and player.Character then
+            local char = player.Character
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                for _, partName in ipairs({"Head", "HumanoidRootPart", "Torso", "UpperTorso", "LowerTorso"}) do
+                    local part = char:FindFirstChild(partName)
+                    if part and part.Size.X < 10 then
+                        if not originalSizes[part] then originalSizes[part] = part.Size end
+                        part.Size = Vector3.new(10, 10, 10)
+                        part.Transparency = 0.5
+                        part.Material = Enum.Material.Neon
+                        part.Color = Theme.Red
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end
+    end
+end
 
 -- ============================================================
 -- FEATURE LOGIC: COLOR WORLD & X-RAY
@@ -1284,7 +1402,7 @@ local function disableSoundESP()
 end
 
 -- ============================================================
--- FEATURE LOGIC: SILENT AIM, WALLSHOT, FLY, ESP
+-- FEATURE LOGIC: FLY & ESP RUNTIME
 -- ============================================================
 
 local EspObjects = {}
@@ -1428,34 +1546,6 @@ local function findAimTarget()
     return bestPlayer, bestPart
 end
 
-local CachedSilentTarget = nil
-
-local function findSilentTarget()
-    local viewport = Camera.ViewportSize
-    local center = Vector2.new(viewport.X * 0.5, viewport.Y * 0.5)
-    local bestPart, bestScore = nil, math.huge
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and not isTeammate(player) then
-            local character = player.Character
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            if humanoid and humanoid.Health > 0 then
-                local targetPart = character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
-                if targetPart then
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                    if onScreen and screenPos.Z > 0 then
-                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-                        if dist <= State.AimBot.SilentFOV and dist < bestScore then
-                            bestScore = dist
-                            bestPart = targetPart
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return bestPart
-end
-
 local function updateFov()
     local fovValue = State.AimBot.SilentEnabled and State.AimBot.SilentFOV or State.AimBot.FOV
     FovCircle.Size = UDim2.fromOffset(fovValue * 2, fovValue * 2)
@@ -1534,71 +1624,6 @@ local function updateEsp()
             end
         end
     end
-end
-
-local oldNamecall
-if hookmetamethod then
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        if State.AimBot.SilentEnabled and CachedSilentTarget and not checkcaller() then
-            local method = getnamecallmethod()
-            if method == "Raycast" and self == workspace then
-                local args = {...}
-                local origin = args[1]
-                args[2] = (CachedSilentTarget.Position - origin)
-                return oldNamecall(self, unpack(args))
-            end
-        end
-        return oldNamecall(self, ...)
-    end)
-end
-
-local wallShotConnection = nil
-local modifiedParts = {}
-local function restoreModifiedParts()
-    for part, _ in pairs(modifiedParts) do
-        if part and part.Parent then part.CanQuery = true end
-    end
-    modifiedParts = {}
-end
-local function enableWallShot()
-    if wallShotConnection then return end
-    wallShotConnection = RunService.RenderStepped:Connect(function()
-        if not State.Misc.WallShot then return end
-        local origin = Camera.CFrame.Position
-        local lookDir = Camera.CFrame.LookVector
-        local enemyChars = getEnemyCharacters()
-        if #enemyChars == 0 then restoreModifiedParts() return end
-        local enemyParams = RaycastParams.new()
-        enemyParams.FilterType = Enum.RaycastFilterType.Include
-        enemyParams.FilterDescendantsInstances = enemyChars
-        local enemyHit = Workspace:Raycast(origin, lookDir * 2000, enemyParams)
-        if enemyHit then
-            local enemyPos = enemyHit.Position
-            local dirToEnemy = (enemyPos - origin).Unit
-            restoreModifiedParts()
-            local excludeList = {LocalPlayer.Character}
-            for _, char in ipairs(enemyChars) do table.insert(excludeList, char) end
-            local wallParams = RaycastParams.new()
-            wallParams.FilterType = Enum.RaycastFilterType.Exclude
-            wallParams.FilterDescendantsInstances = excludeList
-            local currentPos = origin
-            for i = 1, 20 do
-                local remaining = (enemyPos - currentPos).Magnitude
-                if remaining < 1 then break end
-                local wallHit = Workspace:Raycast(currentPos, dirToEnemy * remaining, wallParams)
-                if not wallHit then break end
-                wallHit.Instance.CanQuery = false
-                modifiedParts[wallHit.Instance] = true
-                currentPos = wallHit.Position + dirToEnemy * 0.05
-            end
-        else
-            restoreModifiedParts()
-        end
-    end)
-end
-local function disableWallShot()
-    if wallShotConnection then wallShotConnection:Disconnect() wallShotConnection = nil end
-    restoreModifiedParts()
 end
 
 local flyConnection, noclipConnection, flyBodyVelocity = nil, nil, nil
@@ -1742,7 +1767,6 @@ end
 
 callbacks.Misc = {}
 callbacks.Misc.Fly = function(v) if v then enableFly() else disableFly() end end
-callbacks.Misc.WallShot = function(v) if v then enableWallShot() else disableWallShot() end end
 callbacks.Misc.ThirdPerson = function(v) if v then enableThirdPerson() else disableThirdPerson() end end
 callbacks.Misc.CamDistance = function(val)
     if State.Misc.ThirdPerson then
@@ -1759,6 +1783,31 @@ end
 callbacks.Misc.AntiSmoke = function(v)
     if v then enableAntiSmoke() else disableAntiSmoke() end
 end
+callbacks.Misc.BypassAntiBan = function(v)
+    if v then enableBypassAntiBan() end
+end
+callbacks.Misc.ShotSc = function(v)
+    if not v then disableShotSc() end
+end
+
+-- ============================================================
+-- BUNNYHOP INPUT TRACKING
+-- ============================================================
+
+local spacePressed = false
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Space then
+        spacePressed = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Space then
+        spacePressed = false
+    end
+end)
 
 -- ============================================================
 -- MAIN LOOP & HEARTBEAT LOGIC
@@ -1767,7 +1816,7 @@ end
 local bhopConn = RunService.Heartbeat:Connect(function()
     fastReloadLoop()
 
-    -- Spinbot Logic (Fixed: AutoRotate disabled)
+    -- Spinbot Logic
     local char = LocalPlayer.Character
     if char then
         local hum = char:FindFirstChildOfClass("Humanoid")
@@ -1783,32 +1832,34 @@ local bhopConn = RunService.Heartbeat:Connect(function()
             end
         end
     end
-
-    -- BunnyHop Logic (Fixed: State check + JumpPower multiplier)
-    if State.Misc.BunnyHop then
-        local c = LocalPlayer.Character
-        if c then
-            local h = c:FindFirstChildOfClass("Humanoid")
-            if h and h.Health > 0 then
-                h.JumpPower = 50 * State.Misc.BhopSpeed
-                if h.FloorMaterial ~= Enum.Material.Air then
-                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) or h.MoveDirection.Magnitude > 0.1 then
-                        h:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
-                end
-            end
-        end
-    end
 end)
 
 RunService.RenderStepped:Connect(function()
     Camera = Workspace.CurrentCamera or Camera
     updateFov()
 
-    -- Force Third Person (Fixed: Overrides game camera lock)
+    -- Update ShotSc Hitboxes
+    updateShotSc()
+
+    -- Force Third Person
     if State.Misc.ThirdPerson then
         LocalPlayer.CameraMaxZoomDistance = State.Misc.CamDistance
         LocalPlayer.CameraMinZoomDistance = State.Misc.CamDistance
+    end
+
+    -- User's BunnyHop Logic
+    if State.Misc.BunnyHop then
+        if spacePressed then
+            local character = LocalPlayer.Character
+            if character then
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+                    humanoid.UseJumpPower = true
+                    humanoid.JumpPower = 50 * State.Misc.BhopSpeed
+                    humanoid.Jump = true
+                end
+            end
+        end
     end
 
     if State.AimBot.SilentEnabled then
@@ -1897,4 +1948,4 @@ Players.PlayerRemoving:Connect(clearEsp)
 updateFov()
 selectTab("AimBot")
 
-print("[SeraphiCA] Defuse Edition v16 loaded. BunnyHop, ThirdPerson, Spinbot fixed.")
+print("[SeraphiCA] Defuse Edition v22 loaded. v16 Silent Aim logic restored.")
